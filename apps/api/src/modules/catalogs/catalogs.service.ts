@@ -2,10 +2,14 @@ import { Injectable } from '@nestjs/common';
 import type { AuthenticatedUser } from '@ventascatalogo/contracts';
 import { CatalogsRepository } from './catalogs.repository';
 import { AppException } from '../../common/errors/app-exception';
+import { PUBLIC_PRODUCT_IMAGE_URL_TTL_SECONDS, StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class CatalogsService {
-  constructor(private readonly repo: CatalogsRepository) {}
+  constructor(
+    private readonly repo: CatalogsRepository,
+    private readonly storage: StorageService,
+  ) {}
 
   async list(user: AuthenticatedUser) {
     const rows = await this.repo.listForMember(user.organizationId, user.id, user.audience);
@@ -29,6 +33,29 @@ export class CatalogsService {
     if (!catalog || !catalog.activeVersion) {
       throw new AppException('CATALOG_NOT_FOUND', 404);
     }
+    const products = await Promise.all(
+      catalog.activeVersion.products.map(async (product) => ({
+        id: product.id,
+        sku: product.sku,
+        name: product.name,
+        description: product.description,
+        category: product.category,
+        brand: product.brand,
+        priceMinor: product.priceMinor.toString(),
+        currency: product.currency,
+        stock: product.stock,
+        imageKey: product.imageKey,
+        // El catálogo público es una cara de solo lectura: la URL firmada dura 1 h
+        // para que la página no dependa de recargar el listado cada 15 minutos.
+        imageUrl: product.imageKey
+          ? await this.storage.presignGetObjectSafe(
+              product.imageKey,
+              PUBLIC_PRODUCT_IMAGE_URL_TTL_SECONDS,
+            )
+          : null,
+      })),
+    );
+
     return {
       id: catalog.id,
       name: catalog.name,
@@ -40,18 +67,7 @@ export class CatalogsService {
       currency: catalog.activeVersion.currency,
       taxRateBp: catalog.activeVersion.taxRateBp,
       taxIncluded: catalog.activeVersion.taxIncluded,
-      products: catalog.activeVersion.products.map((product) => ({
-        id: product.id,
-        sku: product.sku,
-        name: product.name,
-        description: product.description,
-        category: product.category,
-        brand: product.brand,
-        priceMinor: product.priceMinor.toString(),
-        currency: product.currency,
-        stock: product.stock,
-        imageKey: product.imageKey,
-      })),
+      products,
     };
   }
 }

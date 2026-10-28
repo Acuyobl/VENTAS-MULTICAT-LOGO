@@ -1475,7 +1475,7 @@ svg {
 .product-card {
   position: relative;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto auto 1fr auto;
   min-height: 19rem;
   padding: 1.1rem;
   background: var(--paper-2);
@@ -1491,6 +1491,87 @@ svg {
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.5rem;
+}
+
+.product-card__media {
+  display: grid;
+  place-items: center;
+  margin-top: 0.85rem;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--paper-3);
+}
+
+.product-card__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-card__placeholder {
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  font-weight: 500;
+  color: var(--line-strong);
+}
+
+/* Miniatura de producto en el backoffice */
+.thumb {
+  display: block;
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper-3);
+}
+
+.thumb--empty {
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--ink-faint);
+}
+
+.thumb-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.thumb-cell__actions {
+  display: grid;
+  gap: 0.25rem;
+  justify-items: start;
+}
+
+.thumb-input {
+  max-width: 10.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--ink-soft);
+}
+
+.thumb-remove {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--coral);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.thumb-remove:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .product-card__index {

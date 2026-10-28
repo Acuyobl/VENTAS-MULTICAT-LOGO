@@ -135,13 +135,20 @@ describe('F1 catálogo: importación CSV/XLSX, versionado y productos por versi�
       quarantineRows: 5,
     });
     expect(firstImport.importJobId).toMatch(/^[0-9a-f-]{36}$/);
-    expect(firstImport.issues).toHaveLength(5);
 
-    const codes = firstImport.issues.map((issue) => issue.code);
+    // Issues = errores de cuarentena + warnings de imagen. Las URLs relativas del
+    // fixture (`img/sku-001.jpg`) ya no se guardan como key inválida: generan un
+    // warning IMAGE_UNRESOLVED por producto válido.
+    const errors = firstImport.issues.filter((issue) => issue.severity === 'error');
+    const warnings = firstImport.issues.filter((issue) => issue.severity === 'warning');
+    expect(errors).toHaveLength(5);
+    expect(warnings).toHaveLength(37);
+    expect(warnings.every((issue) => issue.code === 'IMAGE_UNRESOLVED')).toBe(true);
+
+    const codes = errors.map((issue) => issue.code);
     expect(codes.filter((code) => code === 'DUPLICATE_SKU')).toHaveLength(3);
     expect(codes.filter((code) => code === 'MISSING_PRICE')).toHaveLength(2);
     for (const issue of firstImport.issues) {
-      expect(issue.severity).toBe('error');
       expect(issue.rawData).toBeTypeOf('object');
       expect(issue.rowNumber).toBeGreaterThan(1);
     }
@@ -223,7 +230,13 @@ describe('F1 catálogo: importación CSV/XLSX, versionado y productos por versi�
       importedRows: 37,
       quarantineRows: 5,
     });
-    expect(response.body.issues).toHaveLength(5);
+    // Mismo resultado que el 201 original: 5 errores + 37 warnings de imagen.
+    expect(
+      response.body.issues.filter((issue: { severity: string }) => issue.severity === 'error'),
+    ).toHaveLength(5);
+    expect(
+      response.body.issues.filter((issue: { severity: string }) => issue.severity === 'warning'),
+    ).toHaveLength(37);
 
     expect(await prisma.catalogVersion.count({ where: { catalogId: catalog.catalogId } })).toBe(1);
     expect(await prisma.importJob.count({ where: { catalogId: catalog.catalogId } })).toBe(1);
@@ -248,7 +261,12 @@ describe('F1 catálogo: importación CSV/XLSX, versionado y productos por versi�
       quarantineRows: 5,
       idempotent: false,
     });
-    expect(response.body.issues).toHaveLength(5);
+    expect(
+      response.body.issues.filter((issue: { severity: string }) => issue.severity === 'error'),
+    ).toHaveLength(5);
+    expect(
+      response.body.issues.filter((issue: { severity: string }) => issue.severity === 'warning'),
+    ).toHaveLength(37);
     expect(response.body.issues[0]).toMatchObject({
       rowNumber: expect.any(Number),
       code: expect.any(String),

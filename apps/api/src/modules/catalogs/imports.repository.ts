@@ -3,7 +3,8 @@ import type { CatalogVersion, ImportJob, ImportRowIssue, Prisma } from '@prisma/
 import { PrismaService } from '../../prisma/prisma.service';
 import type { Currency } from '@ventascatalogo/contracts';
 import type { ResolvedMapping } from './import/normalize-header';
-import type { ImportProductData, ImportRowIssueData } from './import/row-validator';
+import type { ImportRowIssueData } from './import/row-validator';
+import type { ResolvedImportProduct } from './import/import-images';
 
 export type ImportJobWithIssues = ImportJob & { issues: ImportRowIssue[] };
 
@@ -14,6 +15,8 @@ export interface ExistingImport {
 
 export interface PersistImportInput {
   catalogId: string;
+  /** Id de la versión generado antes de subir imágenes: su key las incluye. */
+  versionId: string;
   createdByUserId: string;
   currency: Currency;
   taxRateBp: number;
@@ -24,7 +27,7 @@ export interface PersistImportInput {
   mapping: ResolvedMapping;
   totalRows: number;
   quarantineRows: number;
-  products: ImportProductData[];
+  products: ResolvedImportProduct[];
   issues: ImportRowIssueData[];
 }
 
@@ -100,6 +103,7 @@ export class ImportsRepository {
 
       const version = await tx.catalogVersion.create({
         data: {
+          id: input.versionId,
           catalogId: input.catalogId,
           versionNumber,
           status: 'VALIDATED',
@@ -149,6 +153,7 @@ export class ImportsRepository {
       if (input.products.length > 0) {
         await tx.product.createMany({
           data: input.products.map((product) => ({
+            id: product.id,
             catalogId: input.catalogId,
             catalogVersionId: version.id,
             sku: product.sku,

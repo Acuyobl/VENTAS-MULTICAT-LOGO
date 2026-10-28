@@ -21,6 +21,8 @@ export function ProductsBrowser({ catalogId, versions, initialPage }: ProductsBr
   const [versionId, setVersionId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const categories = Array.from(
     new Set(initialPage.items.map((item) => item.category).filter((value): value is string => Boolean(value))),
@@ -61,6 +63,57 @@ export function ProductsBrowser({ catalogId, versions, initialPage }: ProductsBr
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void load(true);
+  }
+
+  async function uploadImage(productId: string, file: File) {
+    setUploadingId(productId);
+    setUploadError(null);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const response = await fetch(`/api/v1/products/${productId}/image`, {
+        method: 'POST',
+        body: form,
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        imageKey?: string | null;
+        imageUrl?: string | null;
+        message?: string;
+      } | null;
+      if (!response.ok) {
+        throw new Error(payload?.message ?? 'No pudimos subir la imagen.');
+      }
+      setItems((current) =>
+        current.map((item) =>
+          item.id === productId
+            ? { ...item, imageKey: payload?.imageKey ?? item.imageKey, imageUrl: payload?.imageUrl ?? null }
+            : item,
+        ),
+      );
+    } catch (caught) {
+      setUploadError(caught instanceof Error ? caught.message : 'Error inesperado.');
+    } finally {
+      setUploadingId(null);
+    }
+  }
+
+  async function removeImage(productId: string) {
+    setUploadingId(productId);
+    setUploadError(null);
+    try {
+      const response = await fetch(`/api/v1/products/${productId}/image`, { method: 'DELETE' });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+        throw new Error(payload?.message ?? 'No pudimos quitar la imagen.');
+      }
+      setItems((current) =>
+        current.map((item) => (item.id === productId ? { ...item, imageKey: null, imageUrl: null } : item)),
+      );
+    } catch (caught) {
+      setUploadError(caught instanceof Error ? caught.message : 'Error inesperado.');
+    } finally {
+      setUploadingId(null);
+    }
   }
 
   return (
@@ -123,6 +176,7 @@ export function ProductsBrowser({ catalogId, versions, initialPage }: ProductsBr
 
         <div aria-live="polite">
           {error ? <div className="alert">{error}</div> : null}
+          {uploadError ? <div className="alert">{uploadError}</div> : null}
         </div>
       </div>
 
@@ -132,6 +186,7 @@ export function ProductsBrowser({ catalogId, versions, initialPage }: ProductsBr
             <table className="table">
               <thead>
                 <tr>
+                  <th>Imagen</th>
                   <th>SKU</th>
                   <th>Producto</th>
                   <th>Categoría</th>
@@ -143,6 +198,50 @@ export function ProductsBrowser({ catalogId, versions, initialPage }: ProductsBr
               <tbody>
                 {items.map((product) => (
                   <tr key={product.id}>
+                    <td>
+                      <div className="thumb-cell">
+                        {product.imageUrl ? (
+                          <img
+                            className="thumb"
+                            src={product.imageUrl}
+                            alt={`Imagen de ${product.name}`}
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <span className="thumb thumb--empty" aria-hidden>
+                            —
+                          </span>
+                        )}
+                        <span className="thumb-cell__actions">
+                          <input
+                            className="thumb-input"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                            aria-label={`Subir imagen de ${product.name}`}
+                            disabled={uploadingId !== null}
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              if (file) void uploadImage(product.id, file);
+                              event.target.value = '';
+                            }}
+                          />
+                          {product.imageUrl ? (
+                            <button
+                              type="button"
+                              className="thumb-remove"
+                              disabled={uploadingId !== null}
+                              onClick={() => void removeImage(product.id)}
+                            >
+                              Quitar
+                            </button>
+                          ) : null}
+                          {uploadingId === product.id ? (
+                            <span className="mono faint">Subiendo…</span>
+                          ) : null}
+                        </span>
+                      </div>
+                    </td>
                     <td className="table__num">{product.sku}</td>
                     <td>
                       <span className="table__primary">

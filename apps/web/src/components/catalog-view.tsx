@@ -97,6 +97,21 @@ export function CatalogView({ catalog, category, basePath }: CatalogViewProps) {
                 key={product.id}
                 style={{ '--i': Math.min(index, 8) } as CSSProperties}
               >
+                <div className="product-card__media">
+                  {product.imageUrl ? (
+                    <img
+                      className="product-card__img"
+                      src={product.imageUrl}
+                      alt={product.name}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  ) : (
+                    <span className="product-card__placeholder" aria-hidden>
+                      {(product.name.trim()[0] ?? '·').toUpperCase()}
+                    </span>
+                  )}
+                </div>
                 <div className="product-card__top">
                   <span className="product-card__index">
                     {String(index + 1).padStart(2, '0')}

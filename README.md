@@ -17,8 +17,9 @@ administradores y colaboradores, y tienda/portal para los clientes.
 
 > Estado actual: **F0 cerrado con CI verde y primer incremento de F1 entregado** — monorepo,
 > auth de dos audiencias, RBAC, web biparte, versionado de catálogo, importación CSV/XLSX con
-> cuarentena, productos por versión y UI de backoffice, con 79 pruebas automáticas. Pendiente de
-> F0: cronometrar el bootstrap (criterio 8) y demo/tag `v0.1.0`. Detalle en
+> cuarentena, productos por versión, **imágenes de producto (subida, importación y visualización en
+> las dos caras)** y UI de backoffice, con más de 150 pruebas automáticas. Pendiente de F0:
+> cronometrar el bootstrap (criterio 8) y demo/tag `v0.1.0`. Detalle en
 > [`docs/07-ESTADO-IMPLEMENTACION.md`](docs/07-ESTADO-IMPLEMENTACION.md) y
 > [`docs/08-ESTADO-F1.md`](docs/08-ESTADO-F1.md).
 

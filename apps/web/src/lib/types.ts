@@ -37,6 +37,8 @@ export interface ProductSummary {
   currency: 'CRC' | 'USD';
   stock: number | null;
   imageKey: string | null;
+  /** URL firmada de la imagen (MinIO); null si el producto no tiene imagen. */
+  imageUrl?: string | null;
 }
 
 export interface PublicCatalog {

@@ -109,7 +109,7 @@ describe('pipeline del fixture real catalogo-demo.csv', () => {
     expect(sku1?.costMinor).toBe(8050n);
     expect(sku1?.stock).toBe(3);
     expect(sku1?.category).toBe('Jardín');
-    expect(sku1?.imageKey).toBe('img/sku-001.jpg');
+    expect(sku1?.imageRef).toBe('img/sku-001.jpg');
   });
 
   it('la cuarentena guarda la fila original en rawData', () => {

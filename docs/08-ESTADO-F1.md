@@ -22,6 +22,7 @@ Bitácora del primer incremento de F1 (`docs/04-GUIA-IMPLEMENTACION.md` §4.2). 
 | F1.5 Mapeo de columnas | ✅ | Auto-detección por sinónimos + override explícito desde la UI |
 | F1.6 Productos por versión con cursor | ✅ | Búsqueda `q` (SKU/nombre), filtros categoría/marca, nunca mezcla versiones |
 | F1.9 Catálogo público `/c/[slug]` | ✅ (F0) | Ya existente; sigue sirviendo la versión activa |
+| Imágenes de producto (F1.4/F1.6/F1.9) | ✅ | Subida a MinIO, URLs firmadas, imágenes en importación, seed y las dos caras |
 | F1.1/F1.2 Google Drive (OAuth + cliente) | ⏸️ | Requiere credenciales de Google Cloud del usuario; contrato listo para conectar |
 | F1.4 Drive (descarga/snapshot remoto) | ⏸️ | El pipeline ya acepta un buffer; falta el origen Drive |
 | F1.7/F1.8 Cotizaciones, pedidos y PDF | ⏳ | Siguiente incremento |
@@ -60,6 +61,38 @@ UI /panel/productos?catalogo= → 200 con SKU-001, filtros y "Cargar más"
 Pruebas automáticas: **65 unitarios** (antes 36) y **27 e2e** (antes 16) en `apps/api`, incluidos
 importación real, idempotencia, activación con histórico, cursor, 404 multi-organización,
 403 de audiencia y errores 400/409 de archivo y versión.
+
+## 3.1 Imágenes de producto (agregado tras F1 inicial)
+
+El brief pide catálogos con imágenes: ahora se pueden **subir, importar, ver y quitar**.
+
+| Pieza | Detalle |
+|---|---|
+| Permiso | `product:write` (org_admin, catalog_admin, superadmin; el vendedor recibe 403) |
+| Subida | `POST /products/:productId/image` multipart `file` (JPEG/PNG/WebP/SVG, ≤ 5 MB) → `{ imageKey, imageUrl }` firmada 900 s |
+| Borrado | `DELETE /products/:productId/image` → limpia `imageKey` y el objeto (best-effort) |
+| Listado backoffice | `GET /products` devuelve `imageUrl` firmada por producto (o `null` si MinIO no responde) |
+| Catálogo público | `GET /catalogs/public/:slug` devuelve `imageUrl` firmada 3600 s además de `imageKey` |
+| Importación | Si la columna `imagen` es `http(s)` se descarga (8 s, ≤5 MB, tipos permitidos) y se guarda en MinIO; URL rota → warning `IMAGE_DOWNLOAD_FAILED`; valor relativo → `IMAGE_UNRESOLVED`. Los warnings **no** bloquean ni cuentan cuarentena |
+| Seed | 49 SVG determinísticos (12 de la v1 demo + 37 de la v2 activa), 49 objetos en `vc-products`, 0 huérfanos |
+| UI | Catálogo público y tienda: imagen en la tarjeta (con inicial como fallback). Backoffice: columna **Imagen** con miniatura, subida y borrado por producto |
+
+Verificación ejecutada:
+
+```text
+POST /products/:id/image (PNG real) → 201 imageKey + imageUrl presignada → descarga 200 image/png 70 B
+GET /products                → imageUrl presente y descargable (200 image/svg+xml 718 B)
+GET /catalogs/public/demo    → 37/37 productos con imageUrl; descarga 200
+/panel/productos (HTML)      → 20 miniaturas presignadas + control de subida por fila
+/c/catalogo-demo (HTML)      → 37 <img> presignadas, sin placeholders
+DELETE /products/:id/image   → imageKey null
+Vendedor sin product:write   → 403
+```
+
+**Límites conocidos:** las URLs firmadas caducan (900 s backoffice / 3600 s público) y se regeneran
+en cada render SSR; no hay CDN ni transformación de tamaño todavía.
+
+
 
 ## 4. Decisiones tomadas
 

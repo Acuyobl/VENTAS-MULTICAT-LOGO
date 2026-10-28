@@ -3,9 +3,20 @@ import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { ProductListQuery, VersionedProductSummary } from '@ventascatalogo/contracts';
 
+/** Fila del listado sin la URL firmada: `ProductsService` la agrega por producto. */
+export type ProductListRow = Omit<VersionedProductSummary, 'imageUrl'>;
+
 export interface ProductPage {
-  items: VersionedProductSummary[];
+  items: ProductListRow[];
   nextCursor: string | null;
+}
+
+export interface ProductForImage {
+  id: string;
+  catalogId: string;
+  catalogVersionId: string;
+  imageKey: string | null;
+  catalog: { organizationId: string; deletedAt: Date | null };
 }
 
 @Injectable()
@@ -17,6 +28,32 @@ export class ProductsRepository {
     return this.prisma.catalogVersion.findFirst({
       where: { id: versionId, catalogId },
       select: { id: true, versionNumber: true, status: true },
+    });
+  }
+
+  /**
+   * Producto + organización de su catálogo. La comprobación de pertenencia se
+   * hace en el servicio para responder `404 NOT_FOUND` (nunca 403) si el
+   * producto es de otra organización.
+   */
+  async findProductForImage(productId: string): Promise<ProductForImage | null> {
+    return this.prisma.product.findFirst({
+      where: { id: productId, deletedAt: null },
+      select: {
+        id: true,
+        catalogId: true,
+        catalogVersionId: true,
+        imageKey: true,
+        catalog: { select: { organizationId: true, deletedAt: true } },
+      },
+    });
+  }
+
+  async updateImageKey(productId: string, imageKey: string | null) {
+    return this.prisma.product.update({
+      where: { id: productId },
+      data: { imageKey },
+      select: { id: true, imageKey: true },
     });
   }
 

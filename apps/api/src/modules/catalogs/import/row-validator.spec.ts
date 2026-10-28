@@ -103,7 +103,7 @@ describe('validateImportRows', () => {
       priceMinor: 2500n,
       costMinor: 1000n,
       stock: 7,
-      imageKey: 'img/x.jpg',
+      imageRef: 'img/x.jpg',
     });
   });
 

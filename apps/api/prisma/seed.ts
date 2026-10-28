@@ -1,7 +1,10 @@
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import { hash } from 'argon2';
+import { Client as MinioClient } from 'minio';
+import { productImageKey } from '../src/modules/storage/image-utils';
 
 /**
  * El seed es idempotente: se puede ejecutar varias veces sin duplicar
@@ -19,7 +22,10 @@ if (existsSync(seedEnvPath)) {
     const separator = trimmed.indexOf('=');
     if (separator < 1) continue;
     const key = trimmed.slice(0, separator).trim();
-    const value = trimmed.slice(separator + 1).trim().replace(/^["']|["']$/g, '');
+    const value = trimmed
+      .slice(separator + 1)
+      .trim()
+      .replace(/^["']|["']$/g, '');
     process.env[key] ??= value;
   }
 }
@@ -30,6 +36,7 @@ const PERMISSIONS = [
   ['catalog:read', 'organization', 'Ver catálogos'],
   ['catalog:write', 'organization', 'Importar y activar catálogos'],
   ['product:read', 'organization', 'Ver productos'],
+  ['product:write', 'organization', 'Subir y quitar imágenes de producto'],
   ['order:read', 'organization', 'Ver pedidos y cotizaciones'],
   ['order:create', 'organization', 'Crear pedidos y cotizaciones'],
   ['payment:read', 'organization', 'Ver pagos'],
@@ -62,6 +69,7 @@ const ROLES = [
       'catalog:read',
       'catalog:write',
       'product:read',
+      'product:write',
       'order:read',
       'order:create',
       'payment:read',
@@ -78,7 +86,7 @@ const ROLES = [
   {
     key: 'catalog_admin',
     name: 'Administrador de catálogo',
-    permissions: ['catalog:read', 'catalog:write', 'product:read'],
+    permissions: ['catalog:read', 'catalog:write', 'product:read', 'product:write'],
   },
   {
     key: 'vendedor',
@@ -208,6 +216,110 @@ async function ensureCustomerAccount(userId: string, organizationId: string, cus
   return prisma.customerAccount.create({
     data: { userId, organizationId, customerId, status: 'ACTIVE' },
   });
+}
+
+const DEMO_IMAGE_COLORS = [
+  '#0f766e',
+  '#b45309',
+  '#7c3aed',
+  '#be123c',
+  '#0369a1',
+  '#4d7c0f',
+  '#a16207',
+  '#9d174d',
+  '#1d4ed8',
+  '#065f46',
+  '#7f1d1d',
+  '#5b21b6',
+] as const;
+
+function demoSvg(name: string, sku: string, color: string): string {
+  const safeName = name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480" role="img" aria-label="${safeName}">
+  <rect width="640" height="480" fill="${color}"/>
+  <circle cx="540" cy="80" r="130" fill="#ffffff" fill-opacity="0.12"/>
+  <circle cx="90" cy="430" r="90" fill="#ffffff" fill-opacity="0.08"/>
+  <text x="40" y="230" font-family="Georgia, 'Times New Roman', serif" font-size="42" fill="#ffffff">${safeName}</text>
+  <text x="40" y="292" font-family="ui-monospace, monospace" font-size="28" fill="#ffffff" fill-opacity="0.85">${sku}</text>
+  <text x="40" y="430" font-family="ui-sans-serif, sans-serif" font-size="18" fill="#ffffff" fill-opacity="0.65">VentasCatálogo · imagen demo</text>
+</svg>`;
+}
+
+/** Color estable por SKU: el mismo producto siempre recibe el mismo SVG. */
+function demoColorForSku(sku: string): string {
+  let hash = 0;
+  for (const char of sku) hash = (hash * 31 + char.charCodeAt(0)) % 997;
+  return DEMO_IMAGE_COLORS[hash % DEMO_IMAGE_COLORS.length]!;
+}
+
+/**
+ * Sube un SVG demo por producto (color y texto propios, determinísticos por SKU)
+ * al bucket privado `vc-products` y lo asigna como `imageKey`. Cubre la versión
+ * demo y la versión activa del catálogo (si el staff activó una importación, sus
+ * productos también quedan con imagen para poder probar la UI). Es best-effort:
+ * si MinIO no está disponible el seed termina igual y deja un aviso.
+ */
+async function seedDemoProductImages(
+  prisma: PrismaClient,
+  input: { catalogId: string; versionIds: string[] },
+): Promise<void> {
+  const bucket = process.env.MINIO_BUCKET_PRODUCTS ?? 'vc-products';
+  try {
+    const client = new MinioClient({
+      endPoint: process.env.MINIO_ENDPOINT ?? 'localhost',
+      port: Number(process.env.MINIO_PORT ?? 9000),
+      useSSL: process.env.MINIO_USE_SSL === 'true',
+      accessKey: process.env.MINIO_ACCESS_KEY ?? 'minioadmin',
+      secretKey: process.env.MINIO_SECRET_KEY ?? 'minioadmin',
+    });
+    if (!(await client.bucketExists(bucket))) await client.makeBucket(bucket);
+
+    const products = await prisma.product.findMany({
+      where: { catalogId: input.catalogId, catalogVersionId: { in: input.versionIds } },
+      orderBy: [{ catalogVersionId: 'asc' }, { sku: 'asc' }],
+      select: { id: true, sku: true, name: true, catalogVersionId: true },
+    });
+
+    for (const product of products) {
+      const svg = demoSvg(product.name, product.sku, demoColorForSku(product.sku));
+      const body = Buffer.from(svg, 'utf8');
+      const checksum = createHash('sha256').update(body).digest('hex');
+      const key = productImageKey({
+        catalogId: input.catalogId,
+        catalogVersionId: product.catalogVersionId,
+        productId: product.id,
+        checksum,
+        ext: 'svg',
+      });
+      await client.putObject(bucket, key, body, body.length, {
+        'Content-Type': 'image/svg+xml',
+      });
+      await prisma.product.update({ where: { id: product.id }, data: { imageKey: key } });
+    }
+
+    // Limpia objetos huérfanos de versiones demo anteriores del mismo catálogo
+    // (seed idempotente: la clave cambia si cambia el SVG del producto).
+    const referenced = new Set(
+      (
+        await prisma.product.findMany({
+          where: { catalogId: input.catalogId, imageKey: { not: null } },
+          select: { imageKey: true },
+        })
+      ).map((product) => product.imageKey),
+    );
+    const prefix = `products/${input.catalogId}/`;
+    for await (const object of client.listObjectsV2(bucket, prefix, true)) {
+      if (object.name && !referenced.has(object.name)) {
+        await client.removeObject(bucket, object.name);
+      }
+    }
+
+    console.log(`  Imágenes: ${products.length} SVG demo en ${bucket}`);
+  } catch (error) {
+    console.warn(
+      `  Aviso: no se pudieron subir las imágenes demo (${error instanceof Error ? error.message : 'MinIO no disponible'}).`,
+    );
+  }
 }
 
 async function main(): Promise<void> {
@@ -358,6 +470,17 @@ async function main(): Promise<void> {
     data: { productCount: 12 },
   });
 
+  const catalogForImages = await prisma.catalog.findUniqueOrThrow({
+    where: { id: catalog.id },
+    select: { activeVersionId: true },
+  });
+  const imageVersionIds = [
+    ...new Set(
+      [version.id, catalogForImages.activeVersionId].filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  await seedDemoProductImages(prisma, { catalogId: catalog.id, versionIds: imageVersionIds });
+
   if (demoShouldBeActive) {
     // Si el catálogo no tenía versión activa (o la activa era la demo), la demo manda
     // y se archiva cualquier otra versión activa para mantener la invariante: una sola ACTIVE.
@@ -377,9 +500,13 @@ async function main(): Promise<void> {
   }
 
   console.log('Seed listo.');
-  console.log('  Staff:    admin@ventascatalogo.local / Demo1234! (MFA obligatorio en el primer login)');
+  console.log(
+    '  Staff:    admin@ventascatalogo.local / Demo1234! (MFA obligatorio en el primer login)',
+  );
   console.log('  Cliente:  cliente@ventascatalogo.local / Demo1234!');
-  console.log('  Mixto:    mixto@ventascatalogo.local / Demo1234! (staff en Demo, cliente en Aliada)');
+  console.log(
+    '  Mixto:    mixto@ventascatalogo.local / Demo1234! (staff en Demo, cliente en Aliada)',
+  );
   console.log('  Catálogo: /c/catalogo-demo · 12 productos');
 }
 

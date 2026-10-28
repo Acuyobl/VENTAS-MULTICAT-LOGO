@@ -1,18 +1,27 @@
 import { toMinorAmount, type Currency } from '@ventascatalogo/contracts';
 import type { ResolvedMapping } from './normalize-header';
 
-export type ImportIssueCode =
+export type ImportErrorCode =
   'DUPLICATE_SKU' | 'MISSING_PRICE' | 'INVALID_PRICE' | 'MISSING_NAME' | 'MISSING_SKU';
+
+/** Advertencias (no bloquean la fila) que produce la resolución de imágenes. */
+export type ImportWarningCode = 'IMAGE_DOWNLOAD_FAILED' | 'IMAGE_UNRESOLVED';
+
+export type ImportIssueCode = ImportErrorCode | ImportWarningCode;
+
+export type ImportIssueSeverity = 'error' | 'warning';
 
 export interface ImportRowIssueData {
   rowNumber: number;
-  severity: 'error';
+  severity: ImportIssueSeverity;
   code: ImportIssueCode;
   message: string;
   rawData: Record<string, unknown>;
 }
 
-export interface ImportProductData {
+/** Producto validado antes de resolver su imagen (la columna trae texto crudo). */
+export interface ImportProductRow {
+  rowNumber: number;
   sku: string;
   name: string;
   description: string | null;
@@ -21,12 +30,13 @@ export interface ImportProductData {
   priceMinor: bigint;
   costMinor: bigint | null;
   stock: number | null;
-  imageKey: string | null;
+  imageRef: string | null;
+  rawData: Record<string, unknown>;
 }
 
 export interface ValidateRowsResult {
   totalRows: number;
-  products: ImportProductData[];
+  products: ImportProductRow[];
   issues: ImportRowIssueData[];
   /** Filas distintas con al menos un error (las que van a cuarentena). */
   quarantineRows: number;
@@ -51,7 +61,7 @@ export function validateImportRows(
   options: ValidateRowsOptions,
 ): ValidateRowsResult {
   const { mapping, currency } = options;
-  const products: ImportProductData[] = [];
+  const products: ImportProductRow[] = [];
   const issues: ImportRowIssueData[] = [];
   const seenSkus = new Map<string, number>();
   const errorRows = new Set<number>();
@@ -63,7 +73,7 @@ export function validateImportRows(
     const name = collapseSpaces(cellText(row, mapping.name));
     let rowHasError = false;
 
-    const addIssue = (code: ImportIssueCode, message: string): void => {
+    const addIssue = (code: ImportErrorCode, message: string): void => {
       issues.push({ rowNumber, severity: 'error', code, message, rawData });
       rowHasError = true;
     };
@@ -96,6 +106,7 @@ export function validateImportRows(
     }
 
     products.push({
+      rowNumber,
       sku,
       name,
       description: nullableText(cellText(row, mapping.description)),
@@ -104,7 +115,8 @@ export function validateImportRows(
       priceMinor,
       costMinor: parseOptionalMinor(cellText(row, mapping.cost), currency),
       stock: parseStock(cellText(row, mapping.stock)),
-      imageKey: nullableText(cellText(row, mapping.image)),
+      imageRef: nullableText(cellText(row, mapping.image)),
+      rawData,
     });
   });
 

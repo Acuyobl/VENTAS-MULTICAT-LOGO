@@ -33,6 +33,8 @@ export const versionedProductSummarySchema = z.object({
   currency: z.enum(['CRC', 'USD']),
   stock: z.number().int().nullable(),
   imageKey: z.string().nullable(),
+  /** URL firmada de descarga (MinIO). null si el producto no tiene imagen o el storage no está configurado. */
+  imageUrl: z.string().nullable(),
   isActive: z.boolean(),
 });
 

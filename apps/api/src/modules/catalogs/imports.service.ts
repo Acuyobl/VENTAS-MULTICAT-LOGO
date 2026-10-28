@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   importOptionsSchema,
   type AuthenticatedUser,
@@ -22,6 +22,8 @@ import {
 } from './import/parse-import-file';
 import { resolveHeaderMapping } from './import/normalize-header';
 import { validateImportRows } from './import/row-validator';
+import { resolveImportImages } from './import/import-images';
+import { downloadImage } from './import/image-downloader';
 
 export const MAX_IMPORT_FILE_BYTES = 10 * 1024 * 1024;
 
@@ -210,8 +212,22 @@ export class ImportsService {
     }
 
     const sourceFileId = await this.snapshot(catalogId, checksum, extension, file.buffer);
+
+    // Las imágenes se suben antes de persistir porque la key incluye el id de la
+    // versión y el del producto, que se generan aquí y se reutilizan en la
+    // transacción. Un fallo de imagen nunca bloquea la fila: queda como warning.
+    const versionId = randomUUID();
+    const images = await resolveImportImages(validation.products, {
+      catalogId,
+      catalogVersionId: versionId,
+      download: downloadImage,
+      upload: (key, buffer, contentType) => this.storage.putObject(key, buffer, contentType),
+    });
+    const issues = [...validation.issues, ...images.warnings];
+
     const persisted = await this.repo.persist({
       catalogId,
+      versionId,
       createdByUserId: user.id,
       currency: options.currency,
       taxRateBp: options.taxRateBp,
@@ -222,8 +238,8 @@ export class ImportsService {
       mapping,
       totalRows: validation.totalRows,
       quarantineRows: validation.quarantineRows,
-      products: validation.products,
-      issues: validation.issues,
+      products: images.products,
+      issues,
     });
 
     await this.audit.write({
@@ -238,15 +254,16 @@ export class ImportsService {
         sourceChecksum: checksum,
         sourceFileId,
         totalRows: validation.totalRows,
-        importedRows: validation.products.length,
+        importedRows: images.products.length,
         quarantineRows: validation.quarantineRows,
+        warnings: images.warnings.length,
       },
       ip: meta.ip,
       userAgent: meta.userAgent,
       traceId: meta.traceId,
     });
 
-    return toImportResult(persisted.job, persisted.version, false, validation.issues);
+    return toImportResult(persisted.job, persisted.version, false, issues);
   }
 
   async getJob(user: AuthenticatedUser, catalogId: string, jobId: string): Promise<ImportResult> {
