@@ -195,7 +195,7 @@ exportación (F2.5–F2.11). Para Stripe real hacen falta `STRIPE_SECRET_KEY` y
 | Rechazo | `POST /refunds/:id/reject` → `REJECTED` sin tocar saldos |
 | Segregación | Quien solicita **no puede** aprobar → 409 `REFUND_SEGREGATION_REQUIRED`; aprobar dos veces → 409 sin duplicar montos |
 | Consulta | `GET /orders/:id/refunds` (`refundedMinor`, `balanceMinor`) y `GET /payments/:id/refunds` |
-| UI | `/panel/pedidos/[orderId]`: pagos con monto disponible, reembolsos con estado y botones Aprobar/Rechazar (según permisos), y solicitud en diálogo |
+| UI | `/panel/pedidos/[orderId]`: pagos con monto disponible, reembolsos con estado, botones Aprobar/Rechazar (según permisos) y solicitud en diálogo. Si el reembolso lo pidió el mismo usuario, la fila dice «Solicitado por vos» y **no ofrece Aprobar**; los errores explican la regla (segregación, monto disponible) en lugar de mostrar «Error» |
 | Seed | `finanzas.demo@ventascatalogo.local` (solicita) y `aprobador.demo@ventascatalogo.local` (aprueba), ambos `Demo1234!` |
 
 Verificación ejecutada:
