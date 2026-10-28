@@ -7,6 +7,9 @@ fecha: 2026-10-28
 
 # VentasCatálogo
 
+[![CI](https://github.com/Acuyobl/VENTAS-MULTICAT-LOGO/actions/workflows/ci.yml/badge.svg)](https://github.com/Acuyobl/VENTAS-MULTICAT-LOGO/actions/workflows/ci.yml)
+[![Repo](https://img.shields.io/badge/repo-Acuyobl%2FVENTAS--MULTICAT--LOGO-2f6b4f)](https://github.com/Acuyobl/VENTAS-MULTICAT-LOGO)
+
 Aplicación de ventas multicatálogo con IA: importa catálogos desde Google Drive, vende, cobra,
 lleva finanzas, atiende por WhatsApp y chat, y genera contenido para redes sociales con IA.
 Cada catálogo es una unidad de negocio aislada. El producto tiene **dos caras**: backoffice para

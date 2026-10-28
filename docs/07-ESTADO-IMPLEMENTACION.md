@@ -29,7 +29,7 @@ La fuente de verdad del diseño sigue siendo el paquete documental (`docs/00`–
 | MFA TOTP, magic link, recuperación (F0.10) | ✅ flujo staff completo; magic link y reset implementados y expuestos |
 | Guards y permisos (F0.11) | ✅ `AudienceGuard` (403 `AUTH_WRONG_AUDIENCE`) + `PermissionsGuard` + scopes |
 | Health, errores, Swagger (F0.12) | ✅ `/health` y `/health/ready` con `database`, `redis`, `storage`, `queues` |
-| CI + Husky (F0.13) | ⚠️ workflow y hooks creados; falta ejecutar la CI en GitHub |
+| CI + Husky (F0.13) | ✅ CI en GitHub Actions verde (80–89 s) y cobertura de API/web publicada como artefacto |
 | Web con dos caras (F0.14) | ✅ route groups `(backoffice)`, `(tienda)`, `(portal)`, `(auth)`, middleware por host |
 | Pruebas automáticas | ✅ 36 tests unitarios + 16 e2e en verde (`apps/api`), más los specs de `packages/contracts`, `packages/ai` y `apps/web` |
 
@@ -73,6 +73,9 @@ Host tienda.localhost /mi-cuenta    → 307 a /mi-cuenta/entrar
 pnpm test                          → 6/6 tareas OK: 36 unit API + 16 e2e API + 6 contracts + 2 ai + 6 web
 docker compose stop redis          → /health/ready 503 {redis:down, queues:down}; al reiniciar → 200
 git commit 9ad0a77                 → 193 archivos, 36.853 líneas (primer commit de F0)
+git push origin main               → https://github.com/Acuyobl/VENTAS-MULTICAT-LOGO (repo público)
+CI run 40711946749 (717a9b3)       → success, 80 s (lint, typecheck, test, build)
+CI run 40712350231 (6d44a25)       → success, 89 s + artefacto `coverage` (326 KB, API y web)
 ```
 
 ## 4. Defectos encontrados y corregidos en esta fase
@@ -92,17 +95,17 @@ git commit 9ad0a77                 → 193 archivos, 36.853 líneas (primer comm
 
 ## 5. Pendiente antes de cerrar F0
 
-1. **CI en GitHub**: ejecutar el workflow y comprobar que tarda < 8 minutos (criterio 7).
-2. **Criterio 8**: cronometrar el bootstrap completo de un dev nuevo (< 30 min) y corregir la guía.
-3. **Demo de F0** con las dos caras y tag `v0.1.0`.
-4. **Alinear la convención de dinero** en `docs/03`: §3.4 define descuento antes de impuesto y
+1. **Criterio 8**: cronometrar el bootstrap completo de un dev nuevo (< 30 min) y corregir la guía.
+2. **Demo de F0** con las dos caras y tag `v0.1.0`.
+3. **Alinear la convención de dinero** en `docs/03`: §3.4 define descuento antes de impuesto y
    `subtotal = Σ neto`, mientras que el `CHECK` de `quotes`/`orders` usa
    `total = subtotal + IVA − descuento`. La implementación sigue §3.4; el `CHECK` debe ajustarse.
-5. **Blocklist de `jti`/`sid`** (hallazgo de QA): el access token no lleva identificador de sesión,
+4. **Blocklist de `jti`/`sid`** (hallazgo de QA): el access token no lleva identificador de sesión,
    así que la revocación es efectiva vía refresh (criterio §4.1.5 cumplido) pero no hay corte
    inmediato del access token en vuelo (A-R13). Planificado para F1.
-6. Aviso de `path-to-regexp` en Swagger: migrar la ruta comodín a `/*path` para no depender del
+5. Aviso de `path-to-regexp` en Swagger: migrar la ruta comodín a `/*path` para no depender del
    conversor legacy.
+6. **Cobertura**: hoy se publica como artefacto; falta fijar umbrales mínimos por app en F1.
 
 ## 6. Cómo levantar el proyecto hoy
 
