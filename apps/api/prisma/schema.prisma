@@ -136,6 +136,7 @@ model Organization {
   slug                  String       @unique
   plan                  Plan         @default(FREE)
   allowSelfApproval     Boolean      @default(false)
+  imageDesign           String       @default("CLASICA")
   defaultCurrency       Currency     @default(CRC)
   timezone              String       @default("America/Costa_Rica")
   aiMonthlyQuotaTokens  Int          @default(2000000)
@@ -796,6 +797,7 @@ model SocialPost {
   imagePrompt       String?
   imageProvider     String?
   imageModel        String?
+  imageDesign       String?
   productIds        String[]         @default([]) @db.Uuid
   status            SocialPostStatus @default(DRAFT)
   promptTemplateKey String

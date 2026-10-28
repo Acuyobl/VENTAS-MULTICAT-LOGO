@@ -93,3 +93,49 @@ describe('buildMockSocialSvg · foto del producto', () => {
     expect(first).not.toBe(second);
   });
 });
+
+describe('buildMockSocialSvg · diseños configurables', () => {
+  const photoDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==';
+
+  it('genera los 3 diseños con data-design y data-photo', () => {
+    const classic = buildMockSocialSvg({ ...base, design: 'CLASICA', photoDataUri });
+    const editorial = buildMockSocialSvg({ ...base, design: 'EDITORIAL', photoDataUri });
+    const promo = buildMockSocialSvg({ ...base, design: 'PROMO', photoDataUri });
+
+    expect(classic).toContain('data-design="CLASICA"');
+    expect(editorial).toContain('data-design="EDITORIAL"');
+    expect(promo).toContain('data-design="PROMO"');
+    for (const svg of [classic, editorial, promo]) {
+      expect(svg).toContain(`data:image/png;base64,`);
+      expect(svg).toContain('data-photo="true"');
+      expect(svg.startsWith('<svg ')).toBe(true);
+      expect(svg.endsWith('</svg>')).toBe(true);
+    }
+    expect(new Set([classic, editorial, promo]).size).toBe(3);
+  });
+
+  it('EDITORIAL usa panel crema y la foto a la derecha', () => {
+    const svg = buildMockSocialSvg({ ...base, design: 'EDITORIAL', photoDataUri });
+    expect(svg).toContain('fill="#fbf8f1"');
+    expect(svg).toContain('x="486"');
+    expect(svg).toContain('font-family="Georgia, serif"');
+    expect(svg).toContain('text-decoration="underline"');
+  });
+
+  it('PROMO usa badge OFERTA, banda diagonal y píldora', () => {
+    const svg = buildMockSocialSvg({ ...base, design: 'PROMO', photoDataUri });
+    expect(svg).toContain('OFERTA');
+    expect(svg).toContain('rotate(-12');
+    expect(svg).toContain('rx="46"');
+    expect(svg).toContain('#ff7a59');
+  });
+
+  it('sin foto cada diseño mantiene data-photo=false y su degradado', () => {
+    for (const design of ['CLASICA', 'EDITORIAL', 'PROMO'] as const) {
+      const svg = buildMockSocialSvg({ ...base, design });
+      expect(svg).toContain('data-photo="false"');
+      expect(svg).not.toContain('<image ');
+      expect(svg).toContain(`data-design="${design}"`);
+    }
+  });
+});

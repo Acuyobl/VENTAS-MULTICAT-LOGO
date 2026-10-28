@@ -10,8 +10,10 @@ import {
   type SocialPostGenerateInput,
   type SocialPostImageGenerateInput,
   type SocialPostListResponse,
+  type ImageDesignListResponse,
 } from '@ventascatalogo/contracts';
 import { SocialPostsService } from './social-posts.service';
+import { buildImageDesignCatalog } from './image/image-designs';
 import { salesMetaFrom, type RequestWithTrace } from '../sales/sales-meta';
 import { Audience } from '../../common/decorators/audience.decorator';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -69,5 +71,16 @@ export class SocialPostsController {
     @Req() req: RequestWithTrace,
   ): Promise<SocialPost> {
     return this.posts.decide(user, id, body, salesMetaFrom(req));
+  }
+}
+
+/** Catálogo de diseños visuales disponibles para las imágenes de contenido. */
+@Controller('ai')
+@Audience('staff')
+export class ImageDesignsController {
+  @Get('image-designs')
+  @RequirePermissions('social:generate')
+  list(): ImageDesignListResponse {
+    return buildImageDesignCatalog();
   }
 }

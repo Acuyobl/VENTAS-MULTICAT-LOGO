@@ -19,12 +19,16 @@ export class OrgSettingsService {
   async get(user: AuthenticatedUser): Promise<OrgSettings> {
     const organization = await this.prisma.organization.findUnique({
       where: { id: user.organizationId },
-      select: { allowSelfApproval: true },
+      select: { allowSelfApproval: true, imageDesign: true },
     });
     if (!organization) throw new AppException('NOT_FOUND', 404, { resource: 'organization' });
-    return { allowSelfApproval: organization.allowSelfApproval };
+    return {
+      allowSelfApproval: organization.allowSelfApproval,
+      imageDesign: organization.imageDesign as OrgSettings['imageDesign'],
+    };
   }
 
+  /** PATCH parcial: permite cambiar solo `imageDesign` o solo `allowSelfApproval`. */
   async update(
     user: AuthenticatedUser,
     input: OrgSettingsUpdateInput,
@@ -33,9 +37,18 @@ export class OrgSettingsService {
     const before = await this.get(user);
     const organization = await this.prisma.organization.update({
       where: { id: user.organizationId },
-      data: { allowSelfApproval: input.allowSelfApproval },
-      select: { allowSelfApproval: true },
+      data: {
+        ...(input.allowSelfApproval !== undefined
+          ? { allowSelfApproval: input.allowSelfApproval }
+          : {}),
+        ...(input.imageDesign !== undefined ? { imageDesign: input.imageDesign } : {}),
+      },
+      select: { allowSelfApproval: true, imageDesign: true },
     });
+    const after: OrgSettings = {
+      allowSelfApproval: organization.allowSelfApproval,
+      imageDesign: organization.imageDesign as OrgSettings['imageDesign'],
+    };
 
     await this.audit.write({
       organizationId: user.organizationId,
@@ -44,12 +57,12 @@ export class OrgSettingsService {
       entityType: 'organization',
       entityId: user.organizationId,
       before,
-      after: organization,
+      after,
       ip: meta.ip,
       userAgent: meta.userAgent,
       traceId: meta.traceId,
     });
 
-    return { allowSelfApproval: organization.allowSelfApproval };
+    return after;
   }
 }

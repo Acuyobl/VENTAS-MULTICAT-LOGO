@@ -425,6 +425,39 @@ sin imagen de producto → degradado de marca
 
 
 
+## 3.17 Diseños de imagen configurables (F3)
+
+La organización elige el estilo con el que se compone la foto del producto y los datos. Se cambia en
+**Ajustes** cuando el administrador quiera y aplica a las imágenes nuevas y a las que se regeneren.
+
+| Diseño | Composición |
+|---|---|
+| `CLASICA` | Foto a sangre, overlay oscuro, título/producto/precio/CTA abajo y marca arriba a la derecha |
+| `EDITORIAL` | Panel crema a la izquierda + foto a sangre en el 55 % derecho, título en serif (Georgia), líneas finas y CTA subrayado |
+| `PROMO` | Overlay verde + acento coral, badge circular «OFERTA», banda diagonal, precio enorme y CTA en píldora |
+
+| Pieza | Detalle |
+|---|---|
+| Ajuste | `GET/PATCH /organizations/settings` con `imageDesign` (enum validado); PATCH parcial real y auditado |
+| Catálogo de diseños | `GET /ai/image-designs` devuelve los 3 con `previewDataUri` (`data:image/svg+xml;base64`, sin foto) para las tarjetas |
+| Uso | `POST /ai/social-posts` usa el diseño de la organización; `POST /:id/image` acepta `design` como override; se guarda en `SocialPost.imageDesign` |
+| UI | `/panel/ajustes` muestra las **3 tarjetas con vista previa**, marca el activo y permite **«Usar este diseño»** |
+
+Verificación ejecutada:
+
+```text
+GET /ai/image-designs → CLASICA (2.586 B) · EDITORIAL (2.962 B) · PROMO (3.466 B) en previews data URI
+PATCH imageDesign=PROMO → 200 · auditado · publicación nueva → imageDesign=PROMO
+SVG descargado → data-design="PROMO" · 259 KB · foto del producto embebida
+regenerar con design=EDITORIAL → data-design="EDITORIAL" · hash distinto · 258 KB
+/panel/ajustes → 200 con 3 tarjetas, «Activo» y «Usar este diseño»
+```
+
+Los diseños son deterministas y no necesitan credenciales; con `IMAGE_PROVIDER=openai` el estilo
+elegido se usa como guía del prompt de edición.
+
+
+
 ## 4. Decisiones tomadas
 
 1. **Códigos de error promovidos al contrato**: los 5 códigos de F1 se agregaron a

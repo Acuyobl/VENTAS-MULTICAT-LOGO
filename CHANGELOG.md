@@ -3,7 +3,22 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
-## [0.1.6] — 2026-10-28
+## [0.1.7] — 2026-10-28
+
+### Añadido
+- **Tres diseños de imagen** para contenido, configurables por organización: `CLASICA` (foto a
+  sangre con overlay), `EDITORIAL` (panel crema + foto al 55 %, tipografía serif) y `PROMO` (badge
+  «OFERTA», banda diagonal, precio grande).
+- Selector en **`/panel/ajustes`** con tarjetas de vista previa (`GET /ai/image-designs`) y botón
+  **«Usar este diseño»**; el cambio queda auditado y aplica a imágenes nuevas y regeneradas.
+- `imageDesign` en `Organization` y `SocialPost`; override por publicación al regenerar
+  (`POST /ai/social-posts/:id/image` con `design`).
+- Los tres estilos embeben la foto real del producto y caen a un degradado de marca si no hay foto.
+
+### Pruebas
+- API: **273 unit** (46 archivos) y **118 e2e** (19 archivos). Web: 19 pruebas. CI con cobertura.
+
+
 
 ### Añadido
 - **Importador inteligente A+B+C**: analizador que infiere tipos de columna, mapea por sinónimos y

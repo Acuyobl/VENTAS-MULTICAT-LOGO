@@ -70,6 +70,13 @@ export class SocialPostsRepository {
     });
   }
 
+  findOrganizationDesign(organizationId: string) {
+    return this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { imageDesign: true },
+    });
+  }
+
   updateImage(
     id: string,
     data: {
@@ -77,6 +84,7 @@ export class SocialPostsRepository {
       imagePrompt: string;
       imageProvider: string;
       imageModel: string;
+      imageDesign: string;
     },
   ): Promise<SocialPost> {
     return this.prisma.socialPost.update({ where: { id }, data });

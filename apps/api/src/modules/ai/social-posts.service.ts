@@ -14,6 +14,7 @@ import type { Product, SocialPost as SocialPostRow } from '@prisma/client';
 import { AiProviderFactory } from './ai-provider.factory';
 import { ImageProviderFactory } from './image/image-provider.factory';
 import { buildImagePrompt } from './image/image-prompt';
+import type { ImageDesignKey } from '@ventascatalogo/contracts';
 import { detectImageContentType } from './image/image-data-uri';
 import type { ProductPhoto } from './image/image-provider';
 import { buildSocialPrompt, type SocialPromptProduct } from './prompt-builder';
@@ -153,7 +154,14 @@ export class SocialPostsService {
     // post de texto queda creado con imageUrl=null.
     let finalPost = post;
     try {
-      finalPost = await this.generateImage(user, post, orderedProducts, undefined, meta);
+      finalPost = await this.generateImage(
+        user,
+        post,
+        orderedProducts,
+        undefined,
+        await this.organizationDesign(user.organizationId),
+        meta,
+      );
     } catch (error) {
       this.logger.warn({ err: error, postId: post.id }, 'ai_social_post_image_generation_failed');
     }
@@ -169,7 +177,8 @@ export class SocialPostsService {
     const post = await this.repo.find(user.organizationId, postId);
     if (!post) throw new AppException('NOT_FOUND', 404, { resource: 'socialPost' });
     const products = await this.repo.findProductsByIds(post.productIds);
-    const updated = await this.generateImage(user, post, products, input.prompt, meta);
+    const design = input.design ?? (await this.organizationDesign(user.organizationId));
+    const updated = await this.generateImage(user, post, products, input.prompt, design, meta);
     return this.toDto(updated);
   }
 
@@ -215,16 +224,18 @@ export class SocialPostsService {
     post: SocialPostRow,
     products: Product[],
     customPrompt: string | undefined,
+    design: ImageDesignKey,
     meta: AuditMeta,
   ): Promise<SocialPostRow> {
     const provider = this.imageFactory.createProvider();
-    const imagePrompt = buildImagePrompt({ post, products, customPrompt });
+    const imagePrompt = buildImagePrompt({ post, products, customPrompt, design });
     const productImage = await this.loadProductPhoto(products);
     const generated = await provider.generate({
       prompt: imagePrompt,
       post,
       products,
       productImage,
+      design,
     });
 
     const key = `${IMAGE_KEY_PREFIX}/${user.organizationId}/${post.id}.${generated.ext}`;
@@ -234,6 +245,7 @@ export class SocialPostsService {
       imagePrompt,
       imageProvider: provider.name,
       imageModel: provider.model,
+      imageDesign: design,
     });
 
     await this.audit.write({
@@ -257,7 +269,15 @@ export class SocialPostsService {
     return updated;
   }
 
-    /** Lee la foto del primer producto desde el bucket de productos (null si no hay). */
+  /** Diseño configurado por la organización (default CLASICA). */
+  private async organizationDesign(organizationId: string): Promise<ImageDesignKey> {
+    const organization = await this.repo.findOrganizationDesign(organizationId);
+    const design = organization?.imageDesign;
+    if (design === 'EDITORIAL' || design === 'PROMO') return design;
+    return 'CLASICA';
+  }
+
+  /** Lee la foto del primer producto desde el bucket de productos (null si no hay). */
   private async loadProductPhoto(products: Product[]): Promise<ProductPhoto | null> {
     const featured = products[0];
     if (!featured?.imageKey) return null;
@@ -306,6 +326,7 @@ export function toSocialPost(post: SocialPostRow, imageUrl: string | null = null
     imageUrl,
     imagePrompt: post.imagePrompt,
     imageProvider: post.imageProvider,
+    imageDesign: post.imageDesign,
     aiProvider: post.aiProvider,
     aiModel: post.aiModel,
     tokensIn: post.tokensIn,

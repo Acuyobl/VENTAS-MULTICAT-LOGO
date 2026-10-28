@@ -7,10 +7,10 @@ producto (subida a MinIO, URLs firmadas e importación con imágenes), ventas
 (clientes, cotizaciones con PDF y conversión a pedido), la cara B (checkout
 invitado con token público, reclamo de cuenta y portal de pedidos).
 
-- **Unit:** 267 tests en 46 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
+- **Unit:** 273 tests en 47 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
   infraestructura: los servicios externos (ioredis, MinIO) se sustituyen por
   dobles.
-- **E2E:** 113 tests en 18 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
+- **E2E:** 118 tests en 19 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
   una instancia real de Nest (`Test.createTestingModule({ imports: [AppModule] })`)
   en el mismo proceso. No abren puerto fijo ni dependen del `pnpm dev` de la API.
 
@@ -104,6 +104,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `src/modules/catalogs/import/adaptive/agent-proposal.parser.spec.ts` | parser del agente: JSON válido/fences, JSON inválido o texto → null, descarte de columnas/claves inexistentes                                                                                                                                                                                                                             | Importador adaptativo   |
 | `src/modules/catalogs/import/adaptive/attribute-coercion.spec.ts`    | coacción NUMBER/CURRENCY (CRC/USD)/BOOLEAN/DATE/TEXT, celdas vacías fuera y MERGE por SKU + errores bloqueantes                                                                                                                                                                                                                           | Importador adaptativo   |
 | `src/modules/ai/image/image-data-uri.spec.ts`                        | detección MIME por magic bytes (PNG/JPEG/WEBP/SVG), data URI base64 y variant FNV-1a determinista                                                                                                                                                                                                                                         | Imágenes con foto       |
+| `src/modules/ai/image/image-designs.spec.ts`                         | catálogo de 3 diseños con previews `data:image/svg+xml;base64`, `data-design` correcto, `data-photo="false"`, determinista y liviano (<200 KB)                                                                                                                                                                                            | Diseños de imagen       |
 
 ### E2E
 
@@ -127,6 +128,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `test/ai-images.e2e-spec.ts`                  | `POST /ai/social-posts` con `IMAGE_PROVIDER=mock` → 201 con `imageUrl` firmada e `imageProvider=mock`; la URL descarga 200 `image/svg+xml` con el SVG; `POST /:id/image` con prompt custom cambia `imagePrompt` y sobrescribe la misma key (audit `ai.social_post_image_generated`); listado con `imageUrl`; 403 sin `social:generate`, 404 cross-org y 409 con `IMAGE_PROVIDER=openai` sin key en app nueva                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Imágenes con IA                 |
 | `test/adaptive-import.e2e-spec.ts`            | `POST /catalogs` (slug autogenerado, 409 duplicado, audit `catalog.created`); preview de CSV raro (`Código, Artículo, Precio final ₡, Cant., Medida, Material, Total`) → mapping + extraFields Medida/Material + Total ignorado; agente mock (`agent.provider=mock`) y heurística sin IA (`agent:null` + warning); import REPLACE + extraFields → atributos en DB; MERGE conserva A2 que no viene en el archivo y REPLACE no; plantilla guardada, reutilizada como `preset` y `usageCount` incrementado; 403 sin `catalog:write` y 404 cross-org                                                                                                                                                                                                                                                                                                             | Importador adaptativo           |
 | `test/ai-images-photo.e2e-spec.ts`            | producto con foto real en `vc-products` → `POST /ai/social-posts` genera SVG con `data:image/png;base64,<foto>` descargable 200 `image/svg+xml`; dos productos con fotos distintas → imágenes distintas; regenerar con prompt custom cambia la imagen; producto sin foto → degradado `data-photo=false`; 403 sin `social:generate` y 404 cross-org; limpia objetos en `afterAll`                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Imágenes con foto               |
+| `test/ai-image-designs.e2e-spec.ts`           | `GET /ai/image-designs` → 3 diseños con preview `data:image/svg+xml`; `PATCH /organizations/settings {imageDesign:'PROMO'}` → 200 y auditado (y sigue aceptando solo `allowSelfApproval`); crear publicación usa PROMO y el SVG descargado trae `data-design="PROMO"` + foto; regenerar con `design:'EDITORIAL'` → otro hash con `data-design="EDITORIAL"`; 403 sin permisos                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Diseños de imagen               |
 
 Criterio §4.1.1 (`lint` + `typecheck` + `test` en verde) se comprueba con
 `pnpm lint`, `pnpm typecheck` y los dos comandos de test de este README. El
@@ -240,6 +242,24 @@ unitarios de `HealthService`.
   `AUTH_WRONG_AUDIENCE`.
 - El checkout reutiliza el patrón de snapshots de ventas y la secuencia
   `PED-YYYY-NNNNNN`; los warnings de imágenes no aplican aquí.
+
+## Hallazgos de diseños de imagen configurables (F3)
+
+- Migración `20261028230000_image_designs`: `Organization.imageDesign` (default
+  `CLASICA`) y `SocialPost.imageDesign`.
+- `GET /ai/image-designs` (`social:generate`) devuelve los 3 diseños con
+  `previewDataUri` (SVG sin foto, `data-photo="false"`): CLASICA (foto a sangre +
+  overlay), EDITORIAL (panel crema + foto a la derecha, título serif, CTA
+  subrayado) y PROMO (badge OFERTA, banda diagonal, precio enorme y píldora).
+  Cada SVG exporta `data-design` y `data-photo`.
+- `GET/PATCH /organizations/settings` incluye `imageDesign`; el PATCH es parcial
+  (solo `imageDesign` o solo `allowSelfApproval`) y audita
+  `organization.settings_updated` con before/after.
+- La generación usa `Organization.imageDesign`; `POST /ai/social-posts/:id/image`
+  acepta `design` como override, guarda `SocialPost.imageDesign` y lo devuelve en
+  `socialPostSchema`. Cambiar de diseño cambia el `variant` del hash (FNV-1a), por
+  lo que el SVG es distinto aunque el resto de datos sea igual.
+- Sin foto cada diseño mantiene su fallback con degradado y `data-photo="false"`.
 
 ## Hallazgos de imágenes con foto del producto (F3)
 

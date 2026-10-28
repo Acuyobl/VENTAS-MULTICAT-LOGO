@@ -1,3 +1,4 @@
+import type { ImageDesignKey } from '@ventascatalogo/contracts';
 import type { Product, SocialPost } from '@prisma/client';
 
 export interface ProductPhoto {
@@ -11,6 +12,8 @@ export interface ImageGenerationInput {
   products: Product[];
   /** Foto del primer producto leída de MinIO (null si no tiene). */
   productImage?: ProductPhoto | null;
+  /** Diseño visual elegido (default CLASICA). */
+  design?: ImageDesignKey;
 }
 
 export interface GeneratedImage {

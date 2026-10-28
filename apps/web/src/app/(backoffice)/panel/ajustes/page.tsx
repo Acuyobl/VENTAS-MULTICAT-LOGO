@@ -1,9 +1,14 @@
 import type { Metadata } from 'next';
-import type { GatewayConfigListResponse, OrgSettings } from '@ventascatalogo/contracts';
+import type {
+  GatewayConfigListResponse,
+  ImageDesignListResponse,
+  OrgSettings,
+} from '@ventascatalogo/contracts';
 import { tryApiFetch } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { SettingsForm } from '@/components/backoffice/settings-form';
 import { GatewayConfigPanel } from '@/components/backoffice/gateway-config';
+import { ImageDesignPicker } from '@/components/backoffice/image-design-picker';
 
 export const metadata: Metadata = {
   title: 'Ajustes',
@@ -12,10 +17,11 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function SettingsPage() {
-  const [session, settings, gateways] = await Promise.all([
+  const [session, settings, gateways, designs] = await Promise.all([
     getSession(),
     tryApiFetch<OrgSettings>('/organizations/settings'),
     tryApiFetch<GatewayConfigListResponse>('/organizations/payment-gateways'),
+    tryApiFetch<ImageDesignListResponse>('/ai/image-designs'),
   ]);
   const canManage = session?.permissions.includes('settings:manage') ?? false;
 
@@ -33,12 +39,17 @@ export default async function SettingsPage() {
           </p>
         </div>
         <div className="page-head__aside">
-          <strong>2</strong>
+          <strong>3</strong>
           <span>políticas configurables</span>
         </div>
       </header>
 
       <SettingsForm initial={settings} canManage={canManage} />
+      <ImageDesignPicker
+        designs={designs?.items ?? []}
+        initialDesign={settings?.imageDesign ?? 'CLASICA'}
+        canManage={canManage}
+      />
       <GatewayConfigPanel initial={gateways?.items ?? []} canManage={canManage} />
     </div>
   );

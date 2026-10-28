@@ -31,6 +31,9 @@ export const socialPostGenerateSchema = z
 
 export type SocialPostGenerateInput = z.infer<typeof socialPostGenerateSchema>;
 
+export const imageDesignKeySchema = z.enum(['CLASICA', 'EDITORIAL', 'PROMO']);
+export type ImageDesignKey = z.infer<typeof imageDesignKeySchema>;
+
 export const socialPostSchema = z.object({
   id: z.string().uuid(),
   catalogId: z.string().uuid(),
@@ -46,6 +49,7 @@ export const socialPostSchema = z.object({
   imageUrl: z.string().nullable(),
   imagePrompt: z.string().nullable(),
   imageProvider: z.string().nullable(),
+  imageDesign: z.string().nullable(),
   aiProvider: z.string(),
   aiModel: z.string(),
   tokensIn: z.number().int(),
@@ -72,10 +76,26 @@ export type SocialPostDecisionInput = z.infer<typeof socialPostDecisionSchema>;
 export const socialPostImageGenerateSchema = z
   .object({
     prompt: z.string().trim().min(3).max(500).optional(),
+    design: imageDesignKeySchema.optional(),
   })
   .strict();
 
 export type SocialPostImageGenerateInput = z.infer<typeof socialPostImageGenerateSchema>;
+
+export const imageDesignSchema = z.object({
+  key: imageDesignKeySchema,
+  label: z.string(),
+  description: z.string(),
+  previewDataUri: z.string(),
+});
+
+export type ImageDesign = z.infer<typeof imageDesignSchema>;
+
+export const imageDesignListResponseSchema = z.object({
+  items: z.array(imageDesignSchema),
+});
+
+export type ImageDesignListResponse = z.infer<typeof imageDesignListResponseSchema>;
 
 export const whatsappSendSchema = z
   .object({

@@ -2493,3 +2493,46 @@ svg {
   border: 1px solid var(--line);
   display: block;
 }
+
+/* Selector de diseños de imagen */
+.design-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.design-card {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.design-card:hover {
+  transform: translateY(-2px);
+}
+
+.design-card[data-active='true'] {
+  border-color: var(--coral);
+  box-shadow: 0 0 0 2px var(--coral);
+}
+
+.design-card__preview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.design-card__body {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.7rem 0.8rem;
+  font-size: 0.82rem;
+}

@@ -1,11 +1,12 @@
 import type { Product, SocialPost } from '@prisma/client';
-import { formatMoney } from '@ventascatalogo/contracts';
+import { formatMoney, type ImageDesignKey } from '@ventascatalogo/contracts';
 
 /** Prompt de imagen determinista a partir del post + productos + instrucciones. */
 export function buildImagePrompt(input: {
   post: Pick<SocialPost, 'title' | 'cta' | 'visualSuggestion' | 'platform'>;
   products: Product[];
   customPrompt?: string;
+  design?: ImageDesignKey;
 }): string {
   const featured = input.products[0];
   const price = featured ? formatMoney(featured.priceMinor, featured.currency) : null;

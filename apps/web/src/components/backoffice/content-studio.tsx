@@ -336,6 +336,7 @@ export function ContentStudio({ catalogs, initialPosts }: ContentStudioProps) {
             {selected.imageProvider ? (
               <p className="mono faint" style={{ fontSize: '0.68rem' }}>
                 Imagen generada con {selected.imageProvider}
+                {selected.imageDesign ? ` · diseño ${selected.imageDesign}` : ''}
                 {selected.imagePrompt ? ` · ${selected.imagePrompt.slice(0, 90)}` : ''}
               </p>
             ) : null}

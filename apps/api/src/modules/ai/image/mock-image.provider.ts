@@ -18,6 +18,7 @@ export class MockImageProvider implements ImageProvider {
     const photoDataUri = photo
       ? toDataUri(photo.buffer, photo.contentType || detectImageContentType(photo.buffer))
       : null;
+    const design = input.design ?? 'CLASICA';
     const variant = stableVariant(
       [
         input.prompt,
@@ -25,6 +26,7 @@ export class MockImageProvider implements ImageProvider {
         input.post.title,
         featured?.id ?? 'sin-producto',
         featured?.imageKey ?? 'sin-foto',
+        design,
       ].join('|'),
     );
 
@@ -36,6 +38,7 @@ export class MockImageProvider implements ImageProvider {
       visualSuggestion: input.post.visualSuggestion,
       photoDataUri,
       variant,
+      design,
     });
     return {
       buffer: Buffer.from(svg, 'utf8'),
