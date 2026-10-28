@@ -15,11 +15,11 @@ lleva finanzas, atiende por WhatsApp y chat, y genera contenido para redes socia
 Cada catálogo es una unidad de negocio aislada. El producto tiene **dos caras**: backoffice para
 administradores y colaboradores, y tienda/portal para los clientes.
 
-> Estado actual: **F0 cerrado con CI verde y F1 avanzado** — monorepo, auth de dos audiencias,
+> Estado actual: **F0 cerrado con CI verde y F1 casi completo** — monorepo, auth de dos audiencias,
 > RBAC, web biparte, versionado de catálogo, importación CSV/XLSX con cuarentena, productos por
-> versión, imágenes de producto, **clientes, cotizaciones con PDF y conversión a pedidos**, con más
-> de 180 pruebas automáticas. Pendiente de F0: cronometrar el bootstrap (criterio 8) y demo/tag
-> `v0.1.0`; de F1: Drive, tienda con carrito y portal. Detalle en
+> versión, imágenes, clientes, cotizaciones con PDF, pedidos, **carrito, checkout de invitado con
+> token público y portal de pedidos**, con más de 190 pruebas automáticas. Pendiente: Drive, PWA de
+> tienda, links de pago (F2), bootstrap cronometrado y demo/tag `v0.1.0`. Detalle en
 > [`docs/07-ESTADO-IMPLEMENTACION.md`](docs/07-ESTADO-IMPLEMENTACION.md) y
 > [`docs/08-ESTADO-F1.md`](docs/08-ESTADO-F1.md).
 
