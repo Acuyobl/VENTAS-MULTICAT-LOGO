@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { LoginResponse, MfaEnrollment } from '@/lib/types';
+import { generateTotp, secondsRemaining } from '@/lib/totp';
 
 type Step = 'credentials' | 'enroll' | 'challenge';
 
@@ -10,6 +11,8 @@ interface LoginFormProps {
   initialEmail: string;
   nextPath: string;
 }
+
+const DEV_HELPERS = process.env.NEXT_PUBLIC_DEV_AUTH_HELPERS === 'true';
 
 export function LoginForm({ initialEmail, nextPath }: LoginFormProps) {
   const [step, setStep] = useState<Step>('credentials');
@@ -20,6 +23,67 @@ export function LoginForm({ initialEmail, nextPath }: LoginFormProps) {
   const [enrollment, setEnrollment] = useState<MfaEnrollment | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [autoFilled, setAutoFilled] = useState(false);
+  const [manual, setManual] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
+  // Enrolamiento: el cliente ya tiene el secreto (el QR), así que puede generar el TOTP
+  // y autocompletar el código. Solo en desarrollo: en producción se exige la app real.
+  useEffect(() => {
+    if (!DEV_HELPERS || step !== 'enroll' || !enrollment?.secret || manual) return;
+    let cancelled = false;
+
+    async function refresh() {
+      try {
+        const value = await generateTotp(enrollment!.secret);
+        if (cancelled) return;
+        setCode(value);
+        setAutoFilled(true);
+        setCountdown(secondsRemaining());
+      } catch {
+        if (!cancelled) setAutoFilled(false);
+      }
+    }
+
+    void refresh();
+    const timer = setInterval(() => void refresh(), 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [step, enrollment, manual]);
+
+  // Segundo factor de un login posterior: la web no tiene el secreto, así que en desarrollo
+  // pide el código al helper de la API (flag DEV_AUTH_HELPERS). En producción no se llama.
+  useEffect(() => {
+    if (!DEV_HELPERS || step !== 'challenge' || !mfaToken || manual) return;
+    let cancelled = false;
+
+    async function fillFromHelper() {
+      try {
+        const response = await fetch('/api/v1/auth/dev/totp', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ mfaToken }),
+        });
+        if (!response.ok) return;
+        const payload = (await response.json()) as { code?: string; expiresInSeconds?: number };
+        if (cancelled || !payload.code) return;
+        setCode(payload.code);
+        setAutoFilled(true);
+        setCountdown(payload.expiresInSeconds ?? 30);
+      } catch {
+        // Sin helper disponible: el usuario escribe el código de su app.
+      }
+    }
+
+    void fillFromHelper();
+    const timer = setInterval(() => void fillFromHelper(), 25_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [step, mfaToken, manual]);
 
   async function post<T>(path: string, body: unknown): Promise<T> {
     const response = await fetch(`/api/v1${path}`, {
@@ -40,6 +104,8 @@ export function LoginForm({ initialEmail, nextPath }: LoginFormProps) {
     event.preventDefault();
     setError(null);
     setLoading(true);
+    setManual(false);
+    setAutoFilled(false);
     try {
       const result = await post<LoginResponse>('/auth/login', {
         email: email.trim(),
@@ -97,6 +163,22 @@ export function LoginForm({ initialEmail, nextPath }: LoginFormProps) {
     setError(null);
   }
 
+  function handleCodeChange(value: string) {
+    setCode(value);
+    setManual(true);
+    setAutoFilled(false);
+  }
+
+  function autoCodeHint() {
+    if (!autoFilled) return null;
+    return (
+      <span className="field__hint" aria-live="polite">
+        Código completado automáticamente (modo desarrollo)
+        {countdown > 0 ? ` · caduca en ${countdown} s` : null}
+      </span>
+    );
+  }
+
   if (step === 'enroll') {
     return (
       <form className="auth__form" onSubmit={handleVerify}>
@@ -141,9 +223,10 @@ export function LoginForm({ initialEmail, nextPath }: LoginFormProps) {
             pattern="[0-9]{6}"
             required
             value={code}
-            onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+            onChange={(event) => handleCodeChange(event.target.value.replace(/\D/g, '').slice(0, 6))}
             placeholder="000000"
           />
+          {autoCodeHint()}
         </label>
 
         <button className="btn btn--wide" type="submit" disabled={loading || code.length !== 6}>
@@ -156,6 +239,8 @@ export function LoginForm({ initialEmail, nextPath }: LoginFormProps) {
             setStep('credentials');
             setCode('');
             setError(null);
+            setManual(false);
+            setAutoFilled(false);
           }}
         >
           ← Volver
@@ -190,14 +275,20 @@ export function LoginForm({ initialEmail, nextPath }: LoginFormProps) {
             required
             autoFocus
             value={code}
-            onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+            onChange={(event) => handleCodeChange(event.target.value.replace(/\D/g, '').slice(0, 6))}
             placeholder="000000"
           />
+          {autoCodeHint()}
         </label>
 
         <button className="btn btn--wide" type="submit" disabled={loading || code.length !== 6}>
           {loading ? 'Verificando…' : 'Entrar al backoffice'}
         </button>
+        {DEV_HELPERS && !autoFilled ? (
+          <button className="btn btn--ghost" type="button" onClick={() => setManual(false)}>
+            Completar código automáticamente
+          </button>
+        ) : null}
         <button
           className="btn btn--ghost"
           type="button"
@@ -205,6 +296,8 @@ export function LoginForm({ initialEmail, nextPath }: LoginFormProps) {
             setStep('credentials');
             setCode('');
             setError(null);
+            setManual(false);
+            setAutoFilled(false);
           }}
         >
           ← Usar otra cuenta

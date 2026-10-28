@@ -82,6 +82,10 @@ importación real, idempotencia, activación con histórico, cursor, 404 multi-o
 7. **MFA de demo reiniciable**: el seed limpia `mfaEnabled`/`mfaSecretEnc` de los usuarios demo y
    se añadió `pnpm --filter @ventascatalogo/api mfa:dev reset|code <email>` para demos y pruebas
    (`apps/api/scripts/mfa-dev.ts`, solo desarrollo).
+8. **Autocompletado del MFA en desarrollo**: la web genera el TOTP del enrolamiento con WebCrypto
+   (RFC 6238) y, en logins posteriores, lo pide a `POST /auth/dev/totp`. Ambos caminos dependen de
+   `DEV_AUTH_HELPERS`/`NEXT_PUBLIC_DEV_AUTH_HELPERS`; el helper responde `404` apagado y la API
+   aborta el arranque si está activo en producción.
 
 ## 5. Cómo probarlo
 

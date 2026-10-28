@@ -61,10 +61,13 @@ async function bootstrap(): Promise<void> {
 
   const port = config.get<number>('API_PORT', 3001);
   await app.listen(port, '0.0.0.0');
-  logger.log(
-    { port, prefix, docs: `http://localhost:${port}/api/docs` },
-    'api_started',
-  );
+  logger.log({ port, prefix, docs: `http://localhost:${port}/api/docs` }, 'api_started');
 }
 
-void bootstrap();
+void bootstrap().catch((error: unknown) => {
+  // Fail-fast de arranque: la configuración inválida (p. ej. DEV_AUTH_HELPERS con
+  // NODE_ENV=production) aborta el proceso con un mensaje claro.
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`API no iniciada: ${message}`);
+  process.exit(1);
+});

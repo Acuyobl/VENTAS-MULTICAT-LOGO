@@ -147,6 +147,30 @@ pnpm --filter @ventascatalogo/api mfa:dev code admin@ventascatalogo.local
 
 Los códigos TOTP cambian cada 30 segundos: un código copiado de una sesión anterior ya no sirve.
 
+### 6.2 Autocompletado del código en desarrollo
+
+Con `DEV_AUTH_HELPERS=true` (API) y `NEXT_PUBLIC_DEV_AUTH_HELPERS=true` (web) **el campo se llena
+solo** y el usuario únicamente confirma:
+
+- **Enrolamiento**: la web recibe el `secret` del QR y genera el TOTP en el navegador
+  (`apps/web/src/lib/totp.ts`, validado con los vectores del RFC 6238). El campo se refresca cada
+  segundo con la cuenta atrás de la ventana.
+- **Logins posteriores**: la web llama a `POST /auth/dev/totp` con el `mfaToken` del login y recibe
+  `{ code, expiresInSeconds }` para completar el campo (se refresca cada 25 s).
+- **El código se sigue validando** en `/auth/mfa/verify`; el helper no salta la verificación.
+- **Producción**: ambos flags deben estar en `false`. La API **aborta el arranque** si
+  `NODE_ENV=production` con `DEV_AUTH_HELPERS=true`, y el endpoint responde `404` cuando el flag
+  está apagado.
+
+```powershell
+# .env (raíz) y apps/web/.env.local — solo desarrollo
+DEV_AUTH_HELPERS=true
+NEXT_PUBLIC_DEV_AUTH_HELPERS=true
+```
+
+Recordá reiniciar la API y **recompilar la web** al cambiar el flag (Next lo inlinea en el build).
+
+
 
 ## 7. Siguiente hito
 

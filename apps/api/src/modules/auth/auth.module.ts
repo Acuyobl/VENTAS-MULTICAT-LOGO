@@ -9,17 +9,15 @@ import { MfaService } from './mfa.service';
 import { MagicLinkService } from './magic-link.service';
 import { PasswordResetService } from './password-reset.service';
 import { SessionsController } from './sessions.controller';
+import { DevAuthController } from './dev-auth.controller';
+import { DevAuthService } from './dev-auth.service';
 import { StaffJwtStrategy } from './strategies/staff-jwt.strategy';
 import { CustomerJwtStrategy } from './strategies/customer-jwt.strategy';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [
-    UsersModule,
-    PassportModule.register({ session: false }),
-    JwtModule.register({}),
-  ],
-  controllers: [AuthController, SessionsController],
+  imports: [UsersModule, PassportModule.register({ session: false }), JwtModule.register({})],
+  controllers: [AuthController, SessionsController, DevAuthController],
   providers: [
     AuthService,
     TokenService,
@@ -27,6 +25,7 @@ import { UsersModule } from '../users/users.module';
     MfaService,
     MagicLinkService,
     PasswordResetService,
+    DevAuthService,
     StaffJwtStrategy,
     CustomerJwtStrategy,
   ],

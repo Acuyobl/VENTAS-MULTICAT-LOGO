@@ -32,6 +32,12 @@ export const envSchema = z
     AUTH_LOGIN_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
     AUTH_LOGIN_LOCK_MINUTES: z.coerce.number().int().positive().default(15),
     MFA_ENFORCE_ADMINS: boolFromString.default(true),
+    /**
+     * Helpers de autenticación SOLO para desarrollo (p. ej. `POST /auth/dev/totp`).
+     * Nunca debe activarse en producción: `validateEnv` aborta el arranque si
+     * `NODE_ENV=production` y el flag está encendido.
+     */
+    DEV_AUTH_HELPERS: boolFromString.default(false),
     ENCRYPTION_KEY: z.string().min(1),
     LOG_LEVEL: z.string().default('info'),
     RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
@@ -86,6 +92,12 @@ export function validateEnv(config: Record<string, unknown>): Env {
       .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
       .join('\n');
     throw new Error(`Configuración de entorno inválida:\n${details}`);
+  }
+
+  if (result.data.NODE_ENV === 'production' && result.data.DEV_AUTH_HELPERS) {
+    throw new Error(
+      'DEV_AUTH_HELPERS=true no está permitido con NODE_ENV=production: expone POST /auth/dev/totp y permitiría obtener códigos TOTP. Apagá el flag.',
+    );
   }
 
   const keyLength = Buffer.from(result.data.ENCRYPTION_KEY, 'base64').length;
