@@ -28,6 +28,7 @@ en orden, pero cada uno sirve por separado.
 | 05 | [Nuevas ideas](05-IDEAS.md) | 31 ideas priorizadas con scoring I/E, roadmap de 12 meses, 10 descartadas, 3 experimentos y guardrails | 1.165 | 60 min |
 | 06 | [Costos y precios](06-COSTOS-Y-PRECIOS.md) | Cuánto cuesta construirlo (3 escenarios × 3 alcances), año 1, unit economics, escalera de precios, break-even, LTV/CAC y plan de venta masiva | 1.442 | 60 min |
 | 07 | [Estado de implementación](07-ESTADO-IMPLEMENTACION.md) | Bitácora de F0: qué está construido y verificado, desviaciones del entorno, defectos corregidos y pendientes antes de F1 | 140 | 10 min |
+| 08 | [Estado F1](08-ESTADO-F1.md) | Incremento de catálogo: versionado, importación CSV/XLSX con cuarentena, productos por versión y UI del backoffice | 130 | 10 min |
 
 Además, `graphify-out/` contiene el grafo de conocimiento del corpus (ver más abajo).
 

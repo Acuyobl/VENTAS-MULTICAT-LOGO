@@ -15,11 +15,12 @@ lleva finanzas, atiende por WhatsApp y chat, y genera contenido para redes socia
 Cada catálogo es una unidad de negocio aislada. El producto tiene **dos caras**: backoffice para
 administradores y colaboradores, y tienda/portal para los clientes.
 
-> Estado actual: **F0 implementado y verificado** — monorepo pnpm/Turborepo, API NestJS con auth de
-> dos audiencias (`staff`/`customer`), módulo de usuarios con RBAC, PostgreSQL migrado y sembrado,
-> web Next.js con las dos caras y build en verde. Pendiente para cerrar F0: suite de pruebas,
-> ejecución de CI y demo. Detalle y desviaciones del entorno en
-> [`docs/07-ESTADO-IMPLEMENTACION.md`](docs/07-ESTADO-IMPLEMENTACION.md).
+> Estado actual: **F0 cerrado con CI verde y primer incremento de F1 entregado** — monorepo,
+> auth de dos audiencias, RBAC, web biparte, versionado de catálogo, importación CSV/XLSX con
+> cuarentena, productos por versión y UI de backoffice, con 79 pruebas automáticas. Pendiente de
+> F0: cronometrar el bootstrap (criterio 8) y demo/tag `v0.1.0`. Detalle en
+> [`docs/07-ESTADO-IMPLEMENTACION.md`](docs/07-ESTADO-IMPLEMENTACION.md) y
+> [`docs/08-ESTADO-F1.md`](docs/08-ESTADO-F1.md).
 
 ## Qué hay en esta carpeta
 
@@ -32,6 +33,8 @@ administradores y colaboradores, y tienda/portal para los clientes.
 | [`docs/04-GUIA-IMPLEMENTACION.md`](docs/04-GUIA-IMPLEMENTACION.md) | Bootstrap, plan de 15 semanas, patrones de código, CI/CD y operación |
 | [`docs/06-COSTOS-Y-PRECIOS.md`](docs/06-COSTOS-Y-PRECIOS.md) | Inversión de implementación (3 escenarios), año 1, precios, break-even y venta masiva |
 | [`docs/07-ESTADO-IMPLEMENTACION.md`](docs/07-ESTADO-IMPLEMENTACION.md) | Bitácora de F0: qué está hecho, qué se verificó, defectos corregidos y pendientes |
+| [`docs/08-ESTADO-F1.md`](docs/08-ESTADO-F1.md) | Incremento F1: versionado, importación CSV/XLSX, productos por versión y UI |
+| [`tools/fixtures/`](tools/fixtures/catalogo-demo.csv) | Fixture de importación (42 filas: 37 válidas, 3 duplicadas, 2 sin precio) |
 | [`infra/`](infra/postgres/init/01-extensions.sql) | Inicialización de Postgres (extensiones) y artefactos de despliegue |
 | [`graphify-out/`](graphify-out/RESUMEN-GRAPHIFY.md) | Grafo de conocimiento del corpus: `graph.json`, informe, visualización HTML y consultas |
 | `APLICACIÓN DE VENTAS MULTICATÁLOGO CON IA.txt` | Brief original del cliente (Windows-1252); versión legible en `docs/00-BRIEF.md` |

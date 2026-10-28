@@ -10,6 +10,7 @@ import type { Request, Response } from 'express';
 import { Logger } from 'nestjs-pino';
 import { isErrorCode, type ErrorCode } from '@ventascatalogo/contracts';
 import { AppException } from '../errors/app-exception';
+import { isApiErrorCode, type ApiErrorCode } from '../errors/api-error-codes';
 
 interface ErrorResponseBody {
   code?: string;
@@ -36,11 +37,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     const rawCode = body?.code;
-    const code: ErrorCode = isErrorCode(rawCode)
+    const code: ErrorCode | ApiErrorCode = isErrorCode(rawCode)
       ? rawCode
-      : status >= 500
-        ? 'INTERNAL_ERROR'
-        : 'HTTP_ERROR';
+      : isApiErrorCode(rawCode)
+        ? rawCode
+        : status >= 500
+          ? 'INTERNAL_ERROR'
+          : 'HTTP_ERROR';
     const message =
       status >= 500
         ? 'Error interno del servidor'

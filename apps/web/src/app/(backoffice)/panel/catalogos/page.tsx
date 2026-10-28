@@ -53,6 +53,9 @@ export default async function CatalogsPage() {
                       {catalog.currency} · {formatDate(catalog.updatedAt)}
                     </span>
                     <span className="inline" style={{ marginTop: '0.5rem' }}>
+                      <Link className="btn btn--small" href={`/panel/catalogos/${catalog.id}`}>
+                        Versiones e importar
+                      </Link>
                       <Link
                         className="btn btn--small btn--secondary"
                         href={`/panel/productos?catalogo=${catalog.id}`}
@@ -87,7 +90,8 @@ export default async function CatalogsPage() {
             </div>
           )}
           <div className="panel__foot">
-            Importación desde Google Drive, validación y activación: fase F1.
+            Importación CSV/XLSX con cuarentena, versionado y activación ya disponibles. Google
+            Drive llega en el siguiente incremento de F1.
           </div>
         </section>
 
@@ -102,8 +106,8 @@ export default async function CatalogsPage() {
                 vuelve a comprobar membership o cuenta de cliente.
               </p>
               <p>
-                <strong>Catálogo:</strong> la API exige <code>X-Catalog-Id</code> y resuelve la
-                versión activa en el guard.
+                <strong>Catálogo:</strong> la API exige <code>catalogId</code> explícito y resuelve
+                la versión activa para cada listado.
               </p>
               <p>
                 <strong>Rol:</strong> los permisos se evalúan por asignación y scope, no por un

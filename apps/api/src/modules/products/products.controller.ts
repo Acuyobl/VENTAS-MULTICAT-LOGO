@@ -1,25 +1,25 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { cursorPageSchema, type CursorPageQuery } from '@ventascatalogo/contracts';
+import { Controller, Get, Query } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+import { productListQuerySchema, type ProductListQuery } from '@ventascatalogo/contracts';
 import { ProductsService } from './products.service';
-import { CatalogScopeGuard } from '../../common/guards/catalog-scope.guard';
-import { CatalogScope } from '../../common/decorators/catalog-scope.decorator';
 import { Audience } from '../../common/decorators/audience.decorator';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import type { CatalogScope as CatalogScopeType } from '../../common/catalog/catalog-scope.types';
+import type { AuthenticatedUser } from '@ventascatalogo/contracts';
 
 @Controller('products')
 @Audience('staff')
-@RequirePermissions('product:read')
-@UseGuards(CatalogScopeGuard)
+@RequirePermissions('catalog:read')
+@ApiTags('products')
 export class ProductsController {
   constructor(private readonly products: ProductsService) {}
 
   @Get()
   list(
-    @CatalogScope() scope: CatalogScopeType,
-    @Query(new ZodValidationPipe(cursorPageSchema)) query: CursorPageQuery,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query(new ZodValidationPipe(productListQuerySchema)) query: ProductListQuery,
   ) {
-    return this.products.list(scope, query);
+    return this.products.list(user, query);
   }
 }

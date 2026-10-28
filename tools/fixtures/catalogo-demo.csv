@@ -1,0 +1,43 @@
+SKU,Nombre,Descripción,Categoría,Marca,Precio,Costo,Stock,Imagen
+SKU-001,Producto 1,Descripción del producto 1,Jardín,TicaPro,12600,8050,3,img/sku-001.jpg
+SKU-002,Producto 2,Descripción del producto 2,Hogar,Sur,12700,8100,6,img/sku-002.jpg
+SKU-003,Producto 3,Descripción del producto 3,Iluminación,MarcaAndina,12.800,8150,9,img/sku-003.jpg
+SKU-004,Producto 4,Descripción del producto 4,Ferretería,TicaPro,12900,8200,12,img/sku-004.jpg
+SKU-005,Producto 5,Descripción del producto 5,Herramientas,Sur,13000,8250,15,img/sku-005.jpg
+SKU-006,Producto 6,Descripción del producto 6,Jardín,MarcaAndina,13.100,8300,18,img/sku-006.jpg
+SKU-007,Producto 7,"Artículo de prueba con acentos: ñandú, café, medición",Hogar,TicaPro,13200,8350,21,img/sku-007.jpg
+SKU-008,Producto 8,Descripción del producto 8,Iluminación,Sur,13300,8400,24,img/sku-008.jpg
+SKU-009,Producto 9,Descripción del producto 9,Ferretería,MarcaAndina,13.400,8450,27,img/sku-009.jpg
+SKU-010,Producto 10,Descripción del producto 10,Herramientas,TicaPro,13500,8500,30,img/sku-010.jpg
+SKU-011,Producto 11,Descripción del producto 11,Jardín,Sur,13600,8550,33,img/sku-011.jpg
+SKU-012,Producto 12,Descripción del producto 12,Hogar,MarcaAndina,13.700,8600,36,img/sku-012.jpg
+SKU-013,Producto 13,Descripción del producto 13,Iluminación,TicaPro,13800,8650,39,img/sku-013.jpg
+SKU-014,Producto 14,"Artículo de prueba con acentos: ñandú, café, medición",Ferretería,Sur,13900,8700,42,img/sku-014.jpg
+SKU-015,Producto 15,Descripción del producto 15,Herramientas,MarcaAndina,14.000,8750,45,img/sku-015.jpg
+SKU-016,Producto 16,Descripción del producto 16,Jardín,TicaPro,14100,8800,48,img/sku-016.jpg
+SKU-017,Producto 17,Descripción del producto 17,Hogar,Sur,14200,8850,51,img/sku-017.jpg
+SKU-018,Producto 18,Descripción del producto 18,Iluminación,MarcaAndina,14.300,8900,54,img/sku-018.jpg
+SKU-019,Producto 19,Descripción del producto 19,Ferretería,TicaPro,14400,8950,57,img/sku-019.jpg
+SKU-020,Producto 20,Descripción del producto 20,Herramientas,Sur,14500,9000,60,img/sku-020.jpg
+SKU-021,Producto 21,"Artículo de prueba con acentos: ñandú, café, medición",Jardín,MarcaAndina,14.600,9050,63,img/sku-021.jpg
+SKU-022,Producto 22,Descripción del producto 22,Hogar,TicaPro,14700,9100,66,img/sku-022.jpg
+SKU-023,Producto 23,Descripción del producto 23,Iluminación,Sur,14800,9150,69,img/sku-023.jpg
+SKU-024,Producto 24,Descripción del producto 24,Ferretería,MarcaAndina,14.900,9200,72,img/sku-024.jpg
+SKU-025,Producto 25,Descripción del producto 25,Herramientas,TicaPro,15000,9250,75,img/sku-025.jpg
+SKU-026,Producto 26,Descripción del producto 26,Jardín,Sur,15100,9300,78,img/sku-026.jpg
+SKU-027,Producto 27,Descripción del producto 27,Hogar,MarcaAndina,15.200,9350,81,img/sku-027.jpg
+SKU-028,Producto 28,"Artículo de prueba con acentos: ñandú, café, medición",Iluminación,TicaPro,15300,9400,84,img/sku-028.jpg
+SKU-029,Producto 29,Descripción del producto 29,Ferretería,Sur,15400,9450,87,img/sku-029.jpg
+SKU-030,Producto 30,Descripción del producto 30,Herramientas,MarcaAndina,15.500,9500,90,img/sku-030.jpg
+SKU-031,Producto 31,Descripción del producto 31,Jardín,TicaPro,15600,9550,93,img/sku-031.jpg
+SKU-032,Producto 32,Descripción del producto 32,Hogar,Sur,15700,9600,96,img/sku-032.jpg
+SKU-033,Producto 33,Descripción del producto 33,Iluminación,MarcaAndina,15.800,9650,99,img/sku-033.jpg
+SKU-034,Producto 34,Descripción del producto 34,Ferretería,TicaPro,15900,9700,102,img/sku-034.jpg
+SKU-035,Producto 35,"Artículo de prueba con acentos: ñandú, café, medición",Herramientas,Sur,16000,9750,105,img/sku-035.jpg
+SKU-036,Producto 36,Descripción del producto 36,Jardín,MarcaAndina,16.100,9800,108,img/sku-036.jpg
+SKU-037,Producto 37,Descripción del producto 37,Hogar,TicaPro,16200,9850,111,img/sku-037.jpg
+SKU-005,Producto duplicado SKU-005,Fila duplicada a propósito,Herramientas,TicaPro,9999,7000,5,
+SKU-012,Producto duplicado SKU-012,Fila duplicada a propósito,Herramientas,TicaPro,9999,7000,5,
+SKU-020,Producto duplicado SKU-020,Fila duplicada a propósito,Herramientas,TicaPro,9999,7000,5,
+SKU-901,Producto sin precio 1,Sin precio en el archivo,Hogar,Sur,,5000,2,
+SKU-902,Producto sin precio 2,Sin precio en el archivo,Hogar,Sur,,5000,2,

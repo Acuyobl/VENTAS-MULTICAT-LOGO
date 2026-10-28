@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { apiFetch, tryApiFetch } from '@/lib/api';
-import { formatMoney } from '@/lib/format';
-import type { CatalogSummary, ProductSummary } from '@/lib/types';
+import type { CatalogVersionSummary, ProductListResponse } from '@ventascatalogo/contracts';
+import { ApiError, apiFetch, tryApiFetch } from '@/lib/api';
+import type { CatalogSummary } from '@/lib/types';
+import { ProductsBrowser } from '@/components/backoffice/products-browser';
 
 export const metadata: Metadata = {
   title: 'Productos',
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 interface ProductsPageProps {
-  searchParams: Promise<{ catalogo?: string }>;
+  searchParams: Promise<{ catalogo?: string; version?: string; q?: string; categoria?: string }>;
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
@@ -20,16 +21,54 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const items = catalogs?.items ?? [];
   const selected = items.find((catalog) => catalog.id === params.catalogo) ?? items[0] ?? null;
 
-  let products: ProductSummary[] = [];
+  if (!selected) {
+    return (
+      <div>
+        <header className="page-head">
+          <div>
+            <span className="eyebrow">Productos</span>
+            <h1 className="display">
+              El estante <em>real</em>.
+            </h1>
+            <p>Necesitás un catálogo con al menos una versión importada.</p>
+          </div>
+        </header>
+        <div className="empty">
+          <span className="empty__mark">∅</span>
+          <h3>No hay catálogos visibles</h3>
+          <p>
+            Corré el seed o importá un catálogo desde{' '}
+            <Link className="mono" href="/panel/catalogos">
+              Catálogos
+            </Link>
+            .
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const versionsPage = await tryApiFetch<{ items: CatalogVersionSummary[] }>(
+    `/catalogs/${selected.id}/versions`,
+  );
+  const versions = versionsPage?.items ?? [];
+
+  const query = new URLSearchParams({ catalogId: selected.id, limit: '20' });
+  if (params.version) query.set('versionId', params.version);
+  if (params.q) query.set('q', params.q);
+  if (params.categoria) query.set('category', params.categoria);
+
+  let initialPage: ProductListResponse | null = null;
   let loadError: string | null = null;
-  if (selected) {
-    try {
-      const page = await apiFetch<{ items: ProductSummary[]; nextCursor: string | null }>(
-        '/products?limit=50',
-        { headers: { 'X-Catalog-Id': selected.id } },
-      );
-      products = page.items;
-    } catch (caught) {
+  try {
+    initialPage = await apiFetch<ProductListResponse>(`/products?${query.toString()}`);
+  } catch (caught) {
+    if (caught instanceof ApiError) {
+      loadError =
+        caught.code === 'NO_ACTIVE_VERSION'
+          ? 'Este catálogo no tiene versión activa. Importá y activá una versión.'
+          : caught.message;
+    } else {
       loadError = caught instanceof Error ? caught.message : 'No pudimos leer los productos.';
     }
   }
@@ -38,18 +77,17 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     <div>
       <header className="page-head">
         <div>
-          <span className="eyebrow">Productos · versión activa</span>
+          <span className="eyebrow">Productos · por versión</span>
           <h1 className="display">
             El estante <em>real</em>.
           </h1>
           <p>
-            {selected
-              ? `Leyendo ${selected.name} · versión ${selected.activeVersionNumber ?? '—'} · ${selected.currency}.`
-              : 'Elegí un catálogo para ver sus productos.'}
+            Leyendo {selected.name} · {selected.currency}. Los productos siempre pertenecen a una
+            versión; activar otra no reescribe el pasado.
           </p>
         </div>
         <div className="page-head__aside">
-          <strong>{products.length}</strong>
+          <strong>{initialPage?.items.length ?? 0}</strong>
           <span>productos en esta página</span>
         </div>
       </header>
@@ -59,7 +97,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           {items.map((catalog) => (
             <Link
               className="filter-chip"
-              data-active={catalog.id === selected?.id}
+              data-active={catalog.id === selected.id}
               href={`/panel/productos?catalogo=${catalog.id}`}
               key={catalog.id}
             >
@@ -69,68 +107,28 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         </div>
       ) : null}
 
-      <section className="panel">
-        <div className="panel__head">
-          <h2>{selected?.name ?? 'Sin catálogo'}</h2>
-          <span className="mono faint">
-            {selected ? `X-Catalog-Id ${selected.id.slice(0, 8)}…` : '—'}
-          </span>
-        </div>
-
-        {loadError ? (
+      {loadError ? (
+        <section className="panel">
           <div className="panel__body">
             <div className="alert">{loadError}</div>
+            <Link className="btn btn--small btn--secondary" href={`/panel/catalogos/${selected.id}`}>
+              Importar o activar una versión
+            </Link>
           </div>
-        ) : products.length > 0 ? (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>SKU</th>
-                  <th>Producto</th>
-                  <th>Categoría</th>
-                  <th>Precio</th>
-                  <th>Stock</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => (
-                  <tr key={product.id}>
-                    <td className="table__num">{product.sku}</td>
-                    <td>
-                      <span className="table__primary">
-                        <strong>{product.name}</strong>
-                        <span>{product.description ?? 'Sin descripción'}</span>
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge">{product.category ?? 'General'}</span>
-                    </td>
-                    <td className="table__num">
-                      {formatMoney(product.priceMinor, product.currency)}
-                    </td>
-                    <td className="table__num">{product.stock ?? '∞'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="empty">
-            <span className="empty__mark">∅</span>
-            <h3>No hay productos para mostrar</h3>
-            <p>
-              {selected
-                ? 'La versión activa está vacía o el catálogo no tiene una versión publicada. Corré el seed para cargar los 12 productos demo.'
-                : 'Primero necesitás un catálogo con una versión activa.'}
-            </p>
-          </div>
-        )}
-
-        <div className="panel__foot">
-          Paginación por cursor lista para F1 · límite 50 en esta vista.
+        </section>
+      ) : initialPage ? (
+        <ProductsBrowser
+          catalogId={selected.id}
+          versions={versions}
+          initialPage={initialPage}
+        />
+      ) : (
+        <div className="empty">
+          <span className="empty__mark">∅</span>
+          <h3>Sin productos</h3>
+          <p>Importá una versión del catálogo para empezar.</p>
         </div>
-      </section>
+      )}
     </div>
   );
 }

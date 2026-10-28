@@ -220,10 +220,34 @@ export async function deleteUserFixture(prisma: PrismaService, userId: string): 
   await prisma.user.deleteMany({ where: { id: userId } });
 }
 
+/**
+ * Borra el catálogo efímero en orden de FKs. F1 agrega `ImportJob` (que apunta a
+ * `CatalogVersion` y arrastra `ImportRowIssue`) y deja `Catalog.activeVersionId`
+ * apuntando a una versión: hay que limpiar el puntero antes de borrarlas o
+ * Postgres rechaza el DELETE. También se borra el `audit_log` generado para
+ * estas entidades (no tiene FK, así que no cae por cascada).
+ */
 export async function deleteCatalogFixture(
   prisma: PrismaService,
   catalogId: string,
 ): Promise<void> {
+  const versions = await prisma.catalogVersion.findMany({
+    where: { catalogId },
+    select: { id: true },
+  });
+  const jobs = await prisma.importJob.findMany({ where: { catalogId }, select: { id: true } });
+  const auditedIds = [
+    catalogId,
+    ...versions.map((version) => version.id),
+    ...jobs.map((job) => job.id),
+  ];
+
+  await prisma.auditLog.deleteMany({ where: { entityId: { in: auditedIds } } });
+  await prisma.importJob.deleteMany({ where: { catalogId } });
+  await prisma.catalog.updateMany({
+    where: { id: catalogId },
+    data: { activeVersionId: null },
+  });
   await prisma.product.deleteMany({ where: { catalogId } });
   await prisma.catalogVersion.deleteMany({ where: { catalogId } });
   await prisma.catalog.deleteMany({ where: { id: catalogId } });
