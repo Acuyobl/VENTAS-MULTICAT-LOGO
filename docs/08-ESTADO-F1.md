@@ -339,6 +339,38 @@ GET /ai/social-posts → las publicaciones nuevas traen imageUrl; las 2 antiguas
 
 
 
+## 3.13 Catálogo real con fotos cargado (Despensa de Altura)
+
+Se creó un segundo catálogo demostrativo con **productos reales y fotografías reales** obtenidas de
+Wikimedia Commons (licencias libres; se acredita la fuente en el script).
+
+| Dato | Valor |
+|---|---|
+| Catálogo | `Despensa de Altura` · slug `despensa-de-altura` · CRC · versión **v1 ACTIVE** |
+| Productos | **20** (café, miel, chocolate, repostería, conservas, tés, especias, frutos secos, aceites) |
+| Imágenes | **20/20** descargadas y almacenadas en MinIO (`vc-products`), servidas con URL firmada |
+| Origen | Wikimedia Commons vía API (`generator=search`, miniaturas de 900 px) |
+| Herramientas | `apps/api/scripts/load-real-catalog.mjs` (crea catálogo + CSV) y `tools/fixtures/despensa-altura.csv` |
+
+Verificación ejecutada:
+
+```text
+script: 20/20 productos con imagen · CSV de 6.183 B
+import: 20 filas válidas · 0 en cuarentena · 1 warning IMAGE_DOWNLOAD_FAILED (Wikimedia 429)
+        → esa foto se corrigió subiéndola por POST /products/:id/image (ahora 20/20)
+activación: v1 → ACTIVE
+GET /catalogs/public/despensa-de-altura → 20 productos · 20 con imageUrl descargable (200 image/jpeg)
+/panel/catalogos y /panel/catalogos/<id> → 200 con el catálogo, v1 ACTIVE y 20 productos
+http://tienda.localhost:3010/c/despensa-de-altura → 200 · 20 <img> firmadas
+```
+
+Para recrearlo: `pnpm --filter @ventascatalogo/api exec dotenv -e ../../.env -- node scripts/load-real-catalog.mjs`
+(crea el catálogo y el CSV; el script reintenta si Wikimedia limita) y luego importar el CSV desde
+`/panel/catalogos/<id>` → **Importar** y activar la versión. El CSV también sirve para probar el
+importador fuera de este entorno.
+
+
+
 ## 4. Decisiones tomadas
 
 1. **Códigos de error promovidos al contrato**: los 5 códigos de F1 se agregaron a

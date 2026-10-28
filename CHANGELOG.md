@@ -3,7 +3,20 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
-## [0.1.4] — 2026-10-28
+## [0.1.5] — 2026-10-28
+
+### Añadido
+- **Catálogo real "Despensa de Altura"**: 20 productos con fotografías reales de Wikimedia Commons,
+  importados por el pipeline (descarga + almacenamiento en MinIO), con versión v1 activa y visible en
+  la tienda pública.
+- Script reproducible `apps/api/scripts/load-real-catalog.mjs` y fixture
+  `tools/fixtures/despensa-altura.csv`; el script reintenta si Wikimedia responde 429.
+
+### Pruebas
+- Gates verdes (lint, typecheck, unit, e2e, build). Verificación manual del catálogo en la API y en
+  las dos caras.
+
+
 
 ### Añadido
 - **Imágenes generadas con IA** en las publicaciones de contenido: al crear una publicación se
