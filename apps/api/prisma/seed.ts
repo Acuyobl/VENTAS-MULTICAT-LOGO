@@ -155,6 +155,12 @@ async function ensureUser(email: string, fullName: string, passwordPlain: string
       fullName,
       status: 'ACTIVE',
       emailVerifiedAt: new Date(),
+      // El seed es una operación de desarrollo: devuelve los usuarios demo a un estado
+      // conocido (sin MFA enrolado y sin bloqueos) para que el primer login muestre el QR.
+      mfaEnabled: false,
+      mfaSecretEnc: null,
+      failedLoginCount: 0,
+      lockedUntil: null,
     },
   });
 }
@@ -271,22 +277,33 @@ async function main(): Promise<void> {
       description: 'Colección de prueba para recorrer la tienda y el backoffice.',
     },
   });
+  // El seed no debe pisar la versión activa de un catálogo que ya tiene datos reales:
+  // solo activa la versión demo si el catálogo no tiene ninguna activa todavía.
+  const currentCatalog = await prisma.catalog.findUniqueOrThrow({ where: { id: catalog.id } });
+  const existingDemoVersion = await prisma.catalogVersion.findUnique({
+    where: { catalogId_versionNumber: { catalogId: catalog.id, versionNumber: 1 } },
+  });
+  const demoShouldBeActive =
+    currentCatalog.activeVersionId === null ||
+    currentCatalog.activeVersionId === existingDemoVersion?.id;
+  const demoStatus = demoShouldBeActive ? 'ACTIVE' : 'ARCHIVED';
+
   const version = await prisma.catalogVersion.upsert({
     where: { catalogId_versionNumber: { catalogId: catalog.id, versionNumber: 1 } },
     create: {
       catalogId: catalog.id,
       versionNumber: 1,
-      status: 'ACTIVE',
-      activatedAt: new Date(),
-      validatedAt: new Date(),
+      status: demoStatus,
       createdByUserId: staff.id,
       currency: 'CRC',
       taxRateBp: 1300,
       taxIncluded: true,
+      ...(demoShouldBeActive ? { activatedAt: new Date() } : {}),
+      validatedAt: new Date(),
     },
     update: {
-      status: 'ACTIVE',
-      activatedAt: new Date(),
+      status: demoStatus,
+      ...(demoShouldBeActive ? { activatedAt: new Date() } : {}),
     },
   });
 
@@ -336,14 +353,23 @@ async function main(): Promise<void> {
     });
   }
 
-  await prisma.catalog.update({
-    where: { id: catalog.id },
-    data: { activeVersionId: version.id },
-  });
   await prisma.catalogVersion.update({
     where: { id: version.id },
     data: { productCount: 12 },
   });
+
+  if (demoShouldBeActive) {
+    // Si el catálogo no tenía versión activa (o la activa era la demo), la demo manda
+    // y se archiva cualquier otra versión activa para mantener la invariante: una sola ACTIVE.
+    await prisma.catalog.update({
+      where: { id: catalog.id },
+      data: { activeVersionId: version.id },
+    });
+    await prisma.catalogVersion.updateMany({
+      where: { catalogId: catalog.id, status: 'ACTIVE', id: { not: version.id } },
+      data: { status: 'ARCHIVED', archivedAt: new Date() },
+    });
+  }
 
   const memberInvitationSeed = process.env.SEED_INVITATION_EMAIL;
   if (memberInvitationSeed) {

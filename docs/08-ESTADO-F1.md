@@ -74,6 +74,14 @@ importación real, idempotencia, activación con histórico, cursor, 404 multi-o
    almacenamiento falla, la importación continúa con warning (no se pierde el dato de negocio).
 5. **CSV se decodifica a UTF-8 antes de SheetJS** (evita mojibake con acentos) y se parsea con
    `raw:false` para conservar separadores de miles; XLSX va por buffer.
+6. **Seed no destructivo**: antes volvía a marcar la versión demo como `ACTIVE` y movía
+   `activeVersionId`, dejando dos versiones activas a la vez. Ahora solo activa la demo si el
+   catálogo no tiene versión activa; si ya tiene una, la demo queda `ARCHIVED` y el puntero no se
+   toca. Al activar la demo archiva cualquier otra `ACTIVE` para mantener la invariante
+   «una sola versión activa por catálogo».
+7. **MFA de demo reiniciable**: el seed limpia `mfaEnabled`/`mfaSecretEnc` de los usuarios demo y
+   se añadió `pnpm --filter @ventascatalogo/api mfa:dev reset|code <email>` para demos y pruebas
+   (`apps/api/scripts/mfa-dev.ts`, solo desarrollo).
 
 ## 5. Cómo probarlo
 

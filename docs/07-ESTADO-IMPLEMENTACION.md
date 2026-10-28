@@ -129,6 +129,25 @@ curl http://localhost:3001/api/v1/health/ready
 Usuarios demo (`Demo1234!`): `admin@ventascatalogo.local` (org_admin, MFA obligatorio),
 `cliente@ventascatalogo.local` (cliente), `mixto@ventascatalogo.local` (staff en Demo y cliente en Aliada).
 
+### 6.1 MFA de los usuarios demo
+
+`org_admin` exige segundo factor. En desarrollo el seed **reinicia** el MFA de los usuarios demo
+(sin secreto y sin bloqueos), así que el primer login muestra el **QR de enrolamiento** con la
+clave manual; se escanea con Google Authenticator, Authy o 1Password y se confirma con los 6 dígitos.
+
+Si el login pide un código que no tenés (por ejemplo, tras una prueba automatizada):
+
+```powershell
+# Desactiva MFA del usuario y permite enrolarse de nuevo con QR
+pnpm --filter @ventascatalogo/api mfa:dev reset admin@ventascatalogo.local
+
+# Imprime el código TOTP vigente (útil para demos guiadas o scripts)
+pnpm --filter @ventascatalogo/api mfa:dev code admin@ventascatalogo.local
+```
+
+Los códigos TOTP cambian cada 30 segundos: un código copiado de una sesión anterior ya no sirve.
+
+
 ## 7. Siguiente hito
 
 **F1 — Catálogo y ventas** (`docs/04` §4.2): OAuth de Google Drive, pipeline de importación
