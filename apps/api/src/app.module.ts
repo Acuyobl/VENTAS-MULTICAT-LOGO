@@ -10,6 +10,8 @@ import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CatalogsModule } from './modules/catalogs/catalogs.module';
 import { ProductsModule } from './modules/products/products.module';
+import { CustomersModule } from './modules/customers/customers.module';
+import { SalesModule } from './modules/sales/sales.module';
 import { HealthModule } from './modules/health/health.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
@@ -34,7 +36,11 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
         return {
           pinoHttp: {
             level: config.get<string>('LOG_LEVEL', 'info'),
-            redact: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
+            redact: [
+              'req.headers.authorization',
+              'req.headers.cookie',
+              'res.headers["set-cookie"]',
+            ],
             transport: isDev
               ? {
                   target: 'pino-pretty',
@@ -64,6 +70,8 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     AuthModule,
     CatalogsModule,
     ProductsModule,
+    CustomersModule,
+    SalesModule,
     HealthModule,
     OutboxModule,
   ],

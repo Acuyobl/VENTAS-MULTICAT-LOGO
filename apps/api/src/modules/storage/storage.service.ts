@@ -105,6 +105,45 @@ export class StorageService implements OnModuleInit {
     }
   }
 
+  /** Sube un documento (p. ej. el PDF de una cotización) al bucket privado `vc-docs`. */
+  async putDocument(key: string, buffer: Buffer, contentType: string): Promise<void> {
+    try {
+      await this.client.putObject(this.docsBucket, key, buffer, buffer.length, {
+        'Content-Type': contentType,
+      });
+    } catch (error) {
+      throw this.storageException('put_document', key, error);
+    }
+  }
+
+  /** URL firmada de descarga de un documento de `vc-docs`. */
+  async presignDocument(key: string, ttlSeconds = 300): Promise<string> {
+    try {
+      return await this.client.presignedGetObject(this.docsBucket, key, ttlSeconds);
+    } catch (error) {
+      throw this.storageException('presign_document', key, error);
+    }
+  }
+
+  /** Igual que `presignDocument`, pero `null` si MinIO no responde. */
+  async presignDocumentSafe(key: string, ttlSeconds = 300): Promise<string | null> {
+    try {
+      return await this.presignDocument(key, ttlSeconds);
+    } catch (error) {
+      this.logger.warn({ err: error, key }, 'storage_presign_document_failed');
+      return null;
+    }
+  }
+
+  /** Borra un documento de `vc-docs` (limpieza best-effort). */
+  async removeDocument(key: string): Promise<void> {
+    try {
+      await this.client.removeObject(this.docsBucket, key);
+    } catch (error) {
+      throw this.storageException('remove_document', key, error);
+    }
+  }
+
   private storageException(operation: string, key: string, error: unknown): AppException {
     this.logger.error({ err: error, operation, key }, 'storage_operation_failed');
     return new AppException(

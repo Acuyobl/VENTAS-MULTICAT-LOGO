@@ -7,8 +7,10 @@ const items = [
   { href: '/panel', label: 'Resumen', index: '01' },
   { href: '/panel/catalogos', label: 'Catálogos', index: '02' },
   { href: '/panel/productos', label: 'Productos', index: '03' },
-  { href: '/panel/usuarios', label: 'Equipo', index: '04' },
-  { href: '/panel/sesiones', label: 'Sesiones', index: '05' },
+  { href: '/panel/cotizaciones', label: 'Cotizaciones', index: '04' },
+  { href: '/panel/pedidos', label: 'Pedidos', index: '05' },
+  { href: '/panel/usuarios', label: 'Equipo', index: '06' },
+  { href: '/panel/sesiones', label: 'Sesiones', index: '07' },
 ];
 
 export function BackofficeNav() {

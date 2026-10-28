@@ -25,7 +25,8 @@ Bitácora del primer incremento de F1 (`docs/04-GUIA-IMPLEMENTACION.md` §4.2). 
 | Imágenes de producto (F1.4/F1.6/F1.9) | ✅ | Subida a MinIO, URLs firmadas, imágenes en importación, seed y las dos caras |
 | F1.1/F1.2 Google Drive (OAuth + cliente) | ⏸️ | Requiere credenciales de Google Cloud del usuario; contrato listo para conectar |
 | F1.4 Drive (descarga/snapshot remoto) | ⏸️ | El pipeline ya acepta un buffer; falta el origen Drive |
-| F1.7/F1.8 Cotizaciones, pedidos y PDF | ⏳ | Siguiente incremento |
+| F1.7/F1.8 Cotizaciones, pedidos y PDF | ✅ | Clientes, cotizaciones con snapshot y PDF, conversión a pedido, entrega y cancelación |
+| F1.4 Drive (descarga/snapshot remoto) | ⏸️ | El pipeline ya acepta un buffer; falta el origen Drive |
 | F1.10–F1.13 Tienda, carrito, portal, PWA | ⏳ | Siguiente incremento |
 
 ## 2. API nueva (staff, `catalog:read` / `catalog:write`)
@@ -97,6 +98,37 @@ se sirven en **cualquier host**, de modo que el backoffice puede previsualizar e
 desde `app.localhost`. Solo `/panel` se reescribe bajo el host `app.` y sigue protegido por sesión
 staff. Cubierto por `apps/web/src/lib/faces.test.ts`.
 
+## 3.2 Ventas: cotizaciones, pedidos y PDF (F1.7/F1.8)
+
+| Pieza | Detalle |
+|---|---|
+| Clientes | `GET /customers?q&cursor&limit` y `POST /customers` (permisos `customer:read/create`) |
+| Cotización | `POST /quotes`: toma la versión activa, congela `skuSnapshot`/precio/IVA por ítem, valida stock y versión, calcula con `calculateTotals`, número `COT-YYYY-NNNNNN` (lock de Postgres, año comercial UTC-6), vigencia 15 días por defecto |
+| PDF | `POST /quotes/:id/send` lo genera con pdf-lib (A4, Helvetica/WinAnsi, acentos), lo guarda en `vc-docs` y devuelve `pdfUrl` firmada 300 s; `GET /quotes/:id/pdf` la renueva |
+| Estados | `DRAFT → SENT → ACCEPTED → CONVERTED`; aceptar una expirada da `409 QUOTE_EXPIRED` |
+| Conversión | `POST /quotes/:id/convert` crea `PED-YYYY-NNNNNN` con los mismos snapshots y totales (no recalcula); reconvertir da `409 QUOTE_ALREADY_CONVERTED` con `details.orderId` |
+| Pedidos | `GET /orders`, `GET /orders/:id`, `POST /orders/:id/cancel` (bloquea con pagos: `409 ORDER_HAS_PAYMENTS`) y `POST /orders/:id/fulfill` |
+| Permisos | `quote:read/create/send/convert`, `order:read/create/cancel`, `customer:read/create` sembrados por rol |
+
+Verificación ejecutada sobre la API real y la UI:
+
+```text
+COT-2026-000001 · producto ₡12.900 × 2 · IVA incluido 13 %
+  → subtotal 22.831 · IVA 2.969 · total 25.800
+POST /quotes/:id/send   → SENT + pdfUrl → descarga 200 application/pdf (2.073 B, %PDF-)
+POST /quotes/:id/accept → ACCEPTED
+POST /quotes/:id/convert → PED-2026-000001 PENDING_PAYMENT con el mismo total
+Segunda conversión     → 409 QUOTE_ALREADY_CONVERTED con details.orderId
+POST /orders/:id/fulfill → FULFILLED
+Otra cotización→pedido→cancelar → PED-2026-000002 CANCELLED
+Cantidad 999 con stock 12 → 409 PRODUCT_OUT_OF_STOCK available=12
+UI /panel/cotizaciones y /panel/pedidos → 200 con datos reales y acciones
+```
+
+**Deuda registrada:** `Customer.type` se persiste dentro de `customer.notes` (no hay columna y no se
+permitieron migraciones en este incremento) y el motivo de cancelación se concatena en
+`order.notes`; ambos deben migrarse a columnas propias. `accept` reutiliza `quote:send`.
+
 
 
 ## 4. Decisiones tomadas
@@ -144,10 +176,10 @@ curl -F "file=@tools/fixtures/catalogo-demo.csv;type=text/csv" `
 
 ## 6. Pendiente para cerrar F1
 
-1. **Google Drive** (F1.1/F1.2): crear cliente OAuth en Google Cloud con scope
-   `drive.readonly` y `access_type=offline`; el pipeline de importación ya está listo para recibir
-   el buffer descargado.
-2. **Sales** (F1.7/F1.8): cotizaciones, pedidos, snapshots de precio y PDF server-side.
+1. **Google Drive** (F1.1/F1.2): crear cliente OAuth en Google Cloud con scope `drive.readonly` y
+   `access_type=offline`; el pipeline de importación ya está listo para recibir el buffer descargado.
+2. **Deuda de ventas a migrar**: columna propia para `Customer.type` y `Order.cancelReason`
+   (hoy en `notes`), y permiso dedicado para `accept`.
 3. **Tienda y portal** (F1.10–F1.12): carrito, checkout de invitado, reclamo de cuenta y
    `/mi-cuenta` con filtro `self` en repositorio.
 4. **PWA de tienda** (F1.13): manifest, service worker e IndexedDB del catálogo activo.

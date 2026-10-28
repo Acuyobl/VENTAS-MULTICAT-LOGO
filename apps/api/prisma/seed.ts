@@ -37,8 +37,15 @@ const PERMISSIONS = [
   ['catalog:write', 'organization', 'Importar y activar catálogos'],
   ['product:read', 'organization', 'Ver productos'],
   ['product:write', 'organization', 'Subir y quitar imágenes de producto'],
+  ['customer:read', 'organization', 'Ver clientes'],
+  ['customer:create', 'organization', 'Crear clientes'],
+  ['quote:read', 'organization', 'Ver cotizaciones'],
+  ['quote:create', 'organization', 'Crear cotizaciones'],
+  ['quote:send', 'organization', 'Enviar cotizaciones y generar su PDF'],
+  ['quote:convert', 'organization', 'Convertir cotizaciones en pedidos'],
   ['order:read', 'organization', 'Ver pedidos y cotizaciones'],
   ['order:create', 'organization', 'Crear pedidos y cotizaciones'],
+  ['order:cancel', 'organization', 'Cancelar y cumplir pedidos'],
   ['payment:read', 'organization', 'Ver pagos'],
   ['payment:write', 'organization', 'Registrar y conciliar pagos'],
   ['expense:write', 'organization', 'Registrar gastos'],
@@ -70,8 +77,15 @@ const ROLES = [
       'catalog:write',
       'product:read',
       'product:write',
+      'customer:read',
+      'customer:create',
+      'quote:read',
+      'quote:create',
+      'quote:send',
+      'quote:convert',
       'order:read',
       'order:create',
+      'order:cancel',
       'payment:read',
       'payment:write',
       'expense:write',
@@ -86,17 +100,51 @@ const ROLES = [
   {
     key: 'catalog_admin',
     name: 'Administrador de catálogo',
-    permissions: ['catalog:read', 'catalog:write', 'product:read', 'product:write'],
+    permissions: [
+      'catalog:read',
+      'catalog:write',
+      'product:read',
+      'product:write',
+      'customer:read',
+      'customer:create',
+      'quote:read',
+      'quote:create',
+      'quote:send',
+      'quote:convert',
+      'order:read',
+      'order:create',
+      'order:cancel',
+    ],
   },
   {
     key: 'vendedor',
     name: 'Vendedor',
-    permissions: ['catalog:read', 'product:read', 'order:read', 'order:create', 'chat:write'],
+    permissions: [
+      'catalog:read',
+      'product:read',
+      'customer:read',
+      'customer:create',
+      'quote:read',
+      'quote:create',
+      'quote:send',
+      'quote:convert',
+      'order:read',
+      'order:create',
+      'chat:write',
+    ],
   },
   {
     key: 'finanzas',
     name: 'Finanzas',
-    permissions: ['order:read', 'payment:read', 'payment:write', 'expense:write', 'finance:read'],
+    permissions: [
+      'customer:read',
+      'quote:read',
+      'order:read',
+      'payment:read',
+      'payment:write',
+      'expense:write',
+      'finance:read',
+    ],
   },
   {
     key: 'social_manager',
@@ -201,6 +249,34 @@ async function ensureAssignment(
 async function ensureCustomer(organizationId: string, email: string, name: string) {
   const existing = await prisma.customer.findFirst({ where: { organizationId, email } });
   return existing ?? prisma.customer.create({ data: { organizationId, name, email } });
+}
+
+/**
+ * Cliente de ventas para la demo/backoffice. Idempotente por
+ * `organización + email`; si ya existe se completan teléfono y cédula.
+ */
+async function ensureSalesCustomer(
+  organizationId: string,
+  input: { name: string; email: string; phone: string; taxId: string },
+) {
+  const existing = await prisma.customer.findFirst({
+    where: { organizationId, email: input.email },
+  });
+  if (existing) {
+    return prisma.customer.update({
+      where: { id: existing.id },
+      data: { name: input.name, phone: input.phone, taxId: input.taxId },
+    });
+  }
+  return prisma.customer.create({
+    data: {
+      organizationId,
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+      taxId: input.taxId,
+    },
+  });
 }
 
 async function ensureCustomerAccount(userId: string, organizationId: string, customerId: string) {
@@ -369,6 +445,26 @@ async function main(): Promise<void> {
   const customerAsCustomer = await ensureCustomer(orgA.id, customer.email, customer.fullName);
   await ensureCustomerAccount(customer.id, orgA.id, customerAsCustomer.id);
   await ensureAssignment(customer.id, roles.get('customer')!.id, orgA.id, null);
+
+  // Clientes demo para probar cotizaciones/pedidos desde el backoffice.
+  await ensureSalesCustomer(orgA.id, {
+    name: customer.fullName,
+    email: customer.email,
+    phone: '+506 8888-0000',
+    taxId: '1-0000-0000',
+  });
+  await ensureSalesCustomer(orgA.id, {
+    name: 'María Solís Vega',
+    email: 'maria.solis@ventascatalogo.local',
+    phone: '+506 8888-1111',
+    taxId: '1-1111-1111',
+  });
+  await ensureSalesCustomer(orgA.id, {
+    name: 'Empresa Demo S.A.',
+    email: 'compras@ventascatalogo.local',
+    phone: '+506 2222-3333',
+    taxId: '3-101-999999',
+  });
 
   const dualMembership = await ensureMembership(orgA.id, dual.id);
   await ensureAssignment(dual.id, roles.get('vendedor')!.id, orgA.id, dualMembership.id);
