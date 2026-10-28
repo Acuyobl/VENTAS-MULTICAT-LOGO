@@ -4,6 +4,9 @@ import { createHash, randomUUID } from 'node:crypto';
 import {
   importOptionsSchema,
   type AuthenticatedUser,
+  type ColumnMapping,
+  type ExtraFieldProposal,
+  type ImportMode,
   type ImportOptions,
   type ImportResult,
 } from '@ventascatalogo/contracts';
@@ -24,6 +27,10 @@ import { resolveHeaderMapping } from './import/normalize-header';
 import { validateImportRows } from './import/row-validator';
 import { resolveImportImages } from './import/import-images';
 import { downloadImage } from './import/image-downloader';
+import { parseAdaptiveImportOptions } from './import/adaptive/import-plan';
+import { headersSignature } from './import/adaptive/heuristic-mapping';
+import { coerceExtraAttributes } from './import/adaptive/attribute-coercion';
+import { ImportTemplatesRepository } from './import-templates.repository';
 
 export const MAX_IMPORT_FILE_BYTES = 10 * 1024 * 1024;
 
@@ -45,9 +52,19 @@ export interface ImportFileInput {
  * `mapping` llega como JSON serializado; los campos vacíos se descartan para que
  * el formulario web pueda enviar inputs sin completar.
  */
+const IMPORT_OPTION_KEYS = new Set([
+  'currency',
+  'taxRateBp',
+  'taxIncluded',
+  'mapping',
+  'delimiter',
+  'updateDraftVersionId',
+]);
+
 export function parseImportOptions(body: Record<string, unknown>): ImportOptions {
   const cleaned: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(body)) {
+    if (!IMPORT_OPTION_KEYS.has(key)) continue;
     if (value === undefined || value === null || value === '') continue;
     cleaned[key] = value;
   }
@@ -139,6 +156,7 @@ export class ImportsService {
     private readonly repo: ImportsRepository,
     private readonly storage: StorageService,
     private readonly audit: AuditService,
+    private readonly templates: ImportTemplatesRepository,
     config: ConfigService,
   ) {
     this.docsBucket = config.get<string>('MINIO_BUCKET_DOCS', 'vc-docs');
@@ -183,17 +201,37 @@ export class ImportsService {
 
     const extension = resolveImportExtension(file.originalname);
     const options = parseImportOptions(input.body);
+    const plan = parseAdaptiveImportOptions(input.body);
     const checksum = createHash('sha256').update(file.buffer).digest('hex');
 
     // Idempotencia real por SHA-256: mismo archivo ⇒ misma versión, cero productos
     // duplicados. Se responde 200 con el resultado existente.
     const existing = await this.repo.findExisting(catalogId, checksum);
-    if (existing)
-      return toImportResult(existing.job, existing.version, true, storedIssues(existing.job));
+    if (existing) {
+      const base = toImportResult(existing.job, existing.version, true, storedIssues(existing.job));
+      return withPlan(base, (existing.job.mode as ImportMode) ?? 'REPLACE', 0);
+    }
 
     const parsed = this.parse(file.buffer, extension, options);
 
-    const { mapping, unmatchedColumns } = resolveHeaderMapping(parsed.headers, options.mapping);
+    // C (aprendizaje): si el archivo coincide con una plantilla y no se envió
+    // mapping explícito, se usa la plantilla como base del plan.
+    const signature = headersSignature(parsed.headers);
+    const matchedTemplate = options.mapping
+      ? null
+      : await this.templates.findBestMatch(
+          user.organizationId,
+          catalogId,
+          parsed.headers,
+          signature,
+        );
+    const baseMapping = options.mapping ?? (matchedTemplate?.mapping as ColumnMapping | undefined);
+    const extraFields: ExtraFieldProposal[] =
+      plan.extraFields.length > 0
+        ? plan.extraFields
+        : ((matchedTemplate?.extraFields as ExtraFieldProposal[] | undefined) ?? []);
+
+    const { mapping, unmatchedColumns } = resolveHeaderMapping(parsed.headers, baseMapping);
     if (unmatchedColumns.length > 0) {
       throw new AppException('VALIDATION_FAILED', 400, {
         fieldErrors: { mapping: [`No existen en el archivo: ${unmatchedColumns.join(', ')}`] },
@@ -211,13 +249,19 @@ export class ImportsService {
       );
     }
 
+    // Extra fields → atributos con el tipo coaccionado (las celdas vacías no van).
+    const productsWithAttributes = validation.products.map((product) => ({
+      ...product,
+      attributes: coerceExtraAttributes(product.rawData, extraFields, options.currency),
+    }));
+
     const sourceFileId = await this.snapshot(catalogId, checksum, extension, file.buffer);
 
     // Las imágenes se suben antes de persistir porque la key incluye el id de la
     // versión y el del producto, que se generan aquí y se reutilizan en la
     // transacción. Un fallo de imagen nunca bloquea la fila: queda como warning.
     const versionId = randomUUID();
-    const images = await resolveImportImages(validation.products, {
+    const images = await resolveImportImages(productsWithAttributes, {
       catalogId,
       catalogVersionId: versionId,
       download: downloadImage,
@@ -240,7 +284,43 @@ export class ImportsService {
       quarantineRows: validation.quarantineRows,
       products: images.products,
       issues,
+      mode: plan.mode,
+      extraFields,
+      templateId: matchedTemplate?.id ?? null,
     });
+
+    if (matchedTemplate) {
+      await this.templates.incrementUsage(matchedTemplate.id).catch(() => undefined);
+    }
+
+    let savedTemplateId: string | null = matchedTemplate?.id ?? null;
+    // El mapeo es independiente de las filas malas: se guarda aunque haya cuarentena.
+    if (plan.saveTemplate) {
+      const template = await this.templates.upsert({
+        organizationId: user.organizationId,
+        catalogId,
+        name: plan.templateName ?? `Plantilla ${new Date().toISOString().slice(0, 10)}`,
+        headers: parsed.headers,
+        headersSignature: signature,
+        mapping: Object.fromEntries(
+          Object.entries(mapping).filter(([, value]) => value !== undefined),
+        ) as ColumnMapping,
+        extraFields,
+        createdByUserId: user.id,
+      });
+      savedTemplateId = template.id;
+      await this.audit.write({
+        organizationId: user.organizationId,
+        actorUserId: user.id,
+        action: 'import.template_saved',
+        entityType: 'import_mapping_template',
+        entityId: template.id,
+        after: { catalogId, name: template.name, headersSignature: signature, mode: plan.mode },
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+        traceId: meta.traceId,
+      });
+    }
 
     await this.audit.write({
       organizationId: user.organizationId,
@@ -257,13 +337,39 @@ export class ImportsService {
         importedRows: images.products.length,
         quarantineRows: validation.quarantineRows,
         warnings: images.warnings.length,
+        mode: plan.mode,
+        carriedOver: persisted.carriedOver,
+        templateId: savedTemplateId,
       },
       ip: meta.ip,
       userAgent: meta.userAgent,
       traceId: meta.traceId,
     });
 
-    return toImportResult(persisted.job, persisted.version, false, issues);
+    await this.audit.write({
+      organizationId: user.organizationId,
+      actorUserId: user.id,
+      action: 'import.completed',
+      entityType: 'catalog_version',
+      entityId: persisted.version.id,
+      after: {
+        catalogId,
+        mode: plan.mode,
+        carriedOver: persisted.carriedOver,
+        templateId: savedTemplateId,
+        importedRows: images.products.length,
+        quarantineRows: validation.quarantineRows,
+      },
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      traceId: meta.traceId,
+    });
+
+    return withPlan(
+      toImportResult(persisted.job, persisted.version, false, issues),
+      plan.mode,
+      persisted.carriedOver,
+    );
   }
 
   async getJob(user: AuthenticatedUser, catalogId: string, jobId: string): Promise<ImportResult> {
@@ -335,4 +441,18 @@ export class ImportsService {
       return null;
     }
   }
+}
+
+/** El resultado del import incluye el plan aplicado (extra al contrato). */
+export type ImportResultWithPlan = ImportResult & {
+  mode: ImportMode;
+  carriedOver: number;
+};
+
+export function withPlan(
+  result: ImportResult,
+  mode: ImportMode,
+  carriedOver: number,
+): ImportResultWithPlan {
+  return { ...result, mode, carriedOver };
 }

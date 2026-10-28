@@ -66,3 +66,30 @@ describe('buildMockSocialSvg', () => {
     expect((svg.match(/<\/svg>/g) ?? []).length).toBe(1);
   });
 });
+
+describe('buildMockSocialSvg · foto del producto', () => {
+  it('usa la foto como fondo a sangre con overlay y data:image', () => {
+    const photoDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==';
+    const svg = buildMockSocialSvg({ ...base, photoDataUri, variant: 3 });
+    expect(svg).toContain(`<image href="${photoDataUri}" x="0" y="0" width="1080" height="1080"`);
+    expect(svg).toContain('preserveAspectRatio="xMidYMid slice"');
+    expect(svg).toContain('id="overlay"');
+    expect(svg).toContain('data-photo="true"');
+    expect(svg).toContain('data-variant="3"');
+    expect(svg).toContain('Café de altura');
+    expect(svg).toContain('CRC 6 000');
+  });
+
+  it('sin foto usa el degradado y marca data-photo=false', () => {
+    const svg = buildMockSocialSvg({ ...base, photoDataUri: null });
+    expect(svg).toContain('data-photo="false"');
+    expect(svg).not.toContain('<image ');
+    expect(svg).toContain('fill="url(#bg)"');
+  });
+
+  it('distinta variant cambia el SVG', () => {
+    const first = buildMockSocialSvg({ ...base, photoDataUri: null, variant: 1 });
+    const second = buildMockSocialSvg({ ...base, photoDataUri: null, variant: 2 });
+    expect(first).not.toBe(second);
+  });
+});

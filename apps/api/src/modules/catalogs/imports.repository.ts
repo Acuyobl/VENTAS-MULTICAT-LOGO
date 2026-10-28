@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { CatalogVersion, ImportJob, ImportRowIssue, Prisma } from '@prisma/client';
+import type { ExtraFieldProposal, ImportMode } from '@ventascatalogo/contracts';
+import { pickCarriedOverProducts } from './import/adaptive/merge';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { Currency } from '@ventascatalogo/contracts';
 import type { ResolvedMapping } from './import/normalize-header';
@@ -29,11 +31,16 @@ export interface PersistImportInput {
   quarantineRows: number;
   products: ResolvedImportProduct[];
   issues: ImportRowIssueData[];
+  mode: ImportMode;
+  extraFields: ExtraFieldProposal[];
+  templateId: string | null;
+  proposal?: Prisma.InputJsonValue | null;
 }
 
 export interface PersistedImport {
   job: ImportJob;
   version: CatalogVersion;
+  carriedOver: number;
 }
 
 @Injectable()
@@ -100,6 +107,22 @@ export class ImportsRepository {
       });
       const versionNumber = (aggregate._max.versionNumber ?? 0) + 1;
       const now = new Date();
+      const importedSkus = input.products.map((product) => product.sku);
+      const activeCatalog = await tx.catalog.findUnique({
+        where: { id: input.catalogId },
+        select: { activeVersionId: true },
+      });
+      const activeProducts =
+        input.mode === 'MERGE' && activeCatalog?.activeVersionId
+          ? await tx.product.findMany({
+              where: {
+                catalogVersionId: activeCatalog.activeVersionId,
+                deletedAt: null,
+                isActive: true,
+              },
+            })
+          : [];
+      const carried = pickCarriedOverProducts(activeProducts, importedSkus, input.mode);
 
       const version = await tx.catalogVersion.create({
         data: {
@@ -110,7 +133,7 @@ export class ImportsRepository {
           currency: input.currency,
           taxRateBp: input.taxRateBp,
           taxIncluded: input.taxIncluded,
-          productCount: input.products.length,
+          productCount: input.products.length + carried.length,
           sourceFileId: input.sourceFileId,
           sourceChecksum: input.checksum,
           importedAt: now,
@@ -128,6 +151,13 @@ export class ImportsRepository {
           fileName: input.fileName,
           fileChecksum: input.checksum,
           columnMapping: columnMapping as Prisma.InputJsonValue,
+          mode: input.mode,
+          extraFields:
+            input.extraFields.length > 0
+              ? (input.extraFields as unknown as Prisma.InputJsonValue)
+              : undefined,
+          templateId: input.templateId ?? undefined,
+          proposal: input.proposal ?? undefined,
           totalRows: input.totalRows,
           importedRows: input.products.length,
           quarantineRows: input.quarantineRows,
@@ -166,11 +196,39 @@ export class ImportsRepository {
             currency: input.currency,
             stock: product.stock,
             imageKey: product.imageKey,
+            attributes:
+              product.attributes && Object.keys(product.attributes).length > 0
+                ? (product.attributes as Prisma.InputJsonValue)
+                : undefined,
           })),
         });
       }
 
-      return { job, version };
+      if (carried.length > 0) {
+        await tx.product.createMany({
+          data: carried.map((product) => ({
+            catalogId: input.catalogId,
+            catalogVersionId: version.id,
+            sku: product.sku,
+            name: product.name,
+            description: product.description,
+            category: product.category,
+            brand: product.brand,
+            priceMinor: product.priceMinor,
+            costMinor: product.costMinor,
+            currency: product.currency,
+            stock: product.stock,
+            allowBackorder: product.allowBackorder,
+            imageKey: product.imageKey,
+            attributes:
+              product.attributes && typeof product.attributes === 'object'
+                ? (product.attributes as Prisma.InputJsonValue)
+                : undefined,
+          })),
+        });
+      }
+
+      return { job, version, carriedOver: carried.length };
     });
   }
 }

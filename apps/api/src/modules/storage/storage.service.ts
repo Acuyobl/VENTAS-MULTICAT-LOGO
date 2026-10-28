@@ -59,6 +59,37 @@ export class StorageService implements OnModuleInit {
     }
   }
 
+  /** Nombre del bucket privado de imágenes de producto. */
+  get productBucketName(): string {
+    return this.productsBucket;
+  }
+
+  /** Nombre del bucket público (`vc-public`). */
+  get publicBucketName(): string {
+    return this.publicBucket;
+  }
+
+  /**
+   * Lee un objeto de cualquier bucket como Buffer (o `null` si no existe o
+   * MinIO falla). Se usa para componer las imágenes de contenido con la foto
+   * del producto.
+   */
+  async getObjectBuffer(bucket: string, key: string): Promise<Buffer | null> {
+    try {
+      const stream = await this.client.getObject(bucket, key);
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream as AsyncIterable<Buffer | Uint8Array>) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      return Buffer.concat(chunks);
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+      if (code === 'NoSuchKey' || code === 'NoSuchBucket' || code === 'NotFound') return null;
+      this.logger.warn({ err: error, bucket, key }, 'storage_get_object_failed');
+      return null;
+    }
+  }
+
   /** Sube un objeto al bucket privado de productos. */
   async putObject(key: string, buffer: Buffer, contentType: string): Promise<void> {
     try {

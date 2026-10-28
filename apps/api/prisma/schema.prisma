@@ -420,6 +420,10 @@ model ImportJob {
   fileName         String?
   fileChecksum     String?
   columnMapping    Json?
+  mode             String           @default("REPLACE")
+  extraFields      Json?
+  templateId       String?          @db.Uuid
+  proposal         Json?
   totalRows        Int              @default(0)
   importedRows     Int              @default(0)
   quarantineRows   Int              @default(0)
@@ -434,6 +438,25 @@ model ImportJob {
   @@unique([catalogId, fileChecksum])
   @@index([catalogId, status, createdAt])
   @@map("import_jobs")
+}
+
+model ImportMappingTemplate {
+  id               String   @id @default(uuid(7)) @db.Uuid
+  organizationId   String   @db.Uuid
+  catalogId        String   @db.Uuid
+  name             String
+  headersSignature String
+  headers          String[]
+  mapping          Json
+  extraFields      Json
+  usageCount       Int      @default(0)
+  createdByUserId  String   @db.Uuid
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([catalogId, headersSignature])
+  @@index([organizationId, catalogId])
+  @@map("import_mapping_templates")
 }
 
 model ImportRowIssue {

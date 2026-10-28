@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   Post,
   Req,
@@ -14,8 +16,17 @@ import { ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import type { AuthenticatedUser, ImportResult } from '@ventascatalogo/contracts';
+import {
+  mappingTemplateCreateSchema,
+  type AuthenticatedUser,
+  type ImportPreview,
+  type ImportResult,
+  type MappingTemplate,
+  type MappingTemplateCreateInput,
+  type MappingTemplateListResponse,
+} from '@ventascatalogo/contracts';
 import { ImportsService, MAX_IMPORT_FILE_BYTES } from './imports.service';
+import { AdaptiveImportService } from './adaptive-import.service';
 import { Audience } from '../../common/decorators/audience.decorator';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -45,7 +56,10 @@ function metaFrom(req: RequestWithTrace): AuditMeta {
 @Audience('staff')
 @ApiTags('catalogs')
 export class CatalogImportsController {
-  constructor(private readonly imports: ImportsService) {}
+  constructor(
+    private readonly imports: ImportsService,
+    private readonly adaptive: AdaptiveImportService,
+  ) {}
 
   @Post(':catalogId/imports')
   @RequirePermissions('catalog:write')
@@ -61,6 +75,11 @@ export class CatalogImportsController {
         taxIncluded: { type: 'boolean', default: true },
         mapping: { type: 'string', description: 'JSON de `columnMappingSchema`.' },
         delimiter: { type: 'string', maxLength: 1 },
+        mode: { type: 'string', enum: ['REPLACE', 'MERGE'], default: 'REPLACE' },
+        extraFields: { type: 'string', description: 'JSON de campos extra propuestos.' },
+        saveTemplate: { type: 'boolean', default: false },
+        templateName: { type: 'string' },
+        useAgent: { type: 'boolean', default: false },
       },
     },
   })
@@ -86,6 +105,60 @@ export class CatalogImportsController {
     return result;
   }
 
+  @Post(':catalogId/imports/preview')
+  @HttpCode(200)
+  @RequirePermissions('catalog:write')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MAX_IMPORT_FILE_BYTES, files: 1 } }),
+  )
+  preview(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('catalogId', new ZodValidationPipe(idSchema)) catalogId: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Body() body: Record<string, unknown>,
+    @Req() req: RequestWithTrace,
+  ): Promise<ImportPreview> {
+    return this.adaptive.preview({
+      user,
+      catalogId,
+      file,
+      body: body ?? {},
+      meta: metaFrom(req),
+    });
+  }
+
+  @Get(':catalogId/import-templates')
+  @RequirePermissions('catalog:read')
+  listTemplates(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('catalogId', new ZodValidationPipe(idSchema)) catalogId: string,
+  ): Promise<MappingTemplateListResponse> {
+    return this.adaptive.listTemplates(user.organizationId, catalogId);
+  }
+
+  @Post(':catalogId/import-templates')
+  @HttpCode(201)
+  @RequirePermissions('catalog:write')
+  createTemplate(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('catalogId', new ZodValidationPipe(idSchema)) catalogId: string,
+    @Body(new ZodValidationPipe(mappingTemplateCreateSchema)) body: MappingTemplateCreateInput,
+    @Req() req: RequestWithTrace,
+  ): Promise<MappingTemplate> {
+    return this.adaptive.createTemplate(user, catalogId, body, metaFrom(req));
+  }
+
+  @Delete(':catalogId/import-templates/:templateId')
+  @RequirePermissions('catalog:write')
+  removeTemplate(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('catalogId', new ZodValidationPipe(idSchema)) catalogId: string,
+    @Param('templateId', new ZodValidationPipe(idSchema)) templateId: string,
+    @Req() req: RequestWithTrace,
+  ): Promise<{ id: string; deleted: true }> {
+    return this.adaptive.removeTemplate(user, catalogId, templateId, metaFrom(req));
+  }
   @Get(':catalogId/imports/:jobId')
   @RequirePermissions('catalog:read')
   get(

@@ -24,13 +24,13 @@ export type ResolvedMapping = Record<ImportField, string | undefined>;
  */
 export const HEADER_SYNONYMS: Record<ImportField, readonly string[]> = {
   sku: ['sku', 'codigo', 'codigo producto', 'ref', 'referencia'],
-  name: ['nombre', 'producto', 'descripcion corta', 'titulo'],
+  name: ['nombre', 'producto', 'articulo', 'descripcion corta', 'titulo'],
   description: ['descripcion', 'detalle'],
   category: ['categoria', 'rubro', 'linea'],
   brand: ['marca', 'fabricante'],
-  price: ['precio', 'precio venta', 'pvp', 'precio unitario'],
+  price: ['precio', 'precio venta', 'precio final', 'pvp', 'precio unitario'],
   cost: ['costo', 'coste', 'precio compra', 'costo unitario'],
-  stock: ['stock', 'existencia', 'existencias', 'cantidad', 'disponible'],
+  stock: ['stock', 'existencia', 'existencias', 'cantidad', 'cant', 'disponible'],
   image: ['imagen', 'foto', 'url imagen', 'imagen url'],
 };
 

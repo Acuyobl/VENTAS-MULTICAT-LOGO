@@ -1,14 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import type { AuthenticatedUser } from '@ventascatalogo/contracts';
+import type {
+  AuthenticatedUser,
+  CatalogCreateInput,
+  CatalogSummary,
+} from '@ventascatalogo/contracts';
 import { CatalogsRepository } from './catalogs.repository';
 import { AppException } from '../../common/errors/app-exception';
 import { PUBLIC_PRODUCT_IMAGE_URL_TTL_SECONDS, StorageService } from '../storage/storage.service';
+import { AuditService } from '../audit/audit.service';
+import type { AuditMeta } from '../../common/audit/audit.types';
 
 @Injectable()
 export class CatalogsService {
   constructor(
     private readonly repo: CatalogsRepository,
     private readonly storage: StorageService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(user: AuthenticatedUser) {
@@ -28,6 +35,48 @@ export class CatalogsService {
     };
   }
 
+  async create(
+    user: AuthenticatedUser,
+    input: CatalogCreateInput,
+    meta: AuditMeta,
+  ): Promise<CatalogSummary> {
+    const slug = input.slug ?? slugifyName(input.name);
+    const existing = await this.repo.findCatalogBySlug(user.organizationId, slug);
+    if (existing) {
+      throw new AppException('VALIDATION_FAILED', 409, {
+        reason: 'catalog_slug_taken',
+        slug,
+      });
+    }
+    const catalog = await this.repo.createCatalog({
+      organizationId: user.organizationId,
+      name: input.name,
+      slug,
+      description: input.description ?? null,
+    });
+    await this.audit.write({
+      organizationId: user.organizationId,
+      actorUserId: user.id,
+      action: 'catalog.created',
+      entityType: 'catalog',
+      entityId: catalog.id,
+      after: { name: catalog.name, slug: catalog.slug, description: catalog.description },
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      traceId: meta.traceId,
+    });
+    return {
+      id: catalog.id,
+      name: catalog.name,
+      slug: catalog.slug,
+      description: catalog.description,
+      activeVersionId: catalog.activeVersionId,
+      activeVersionNumber: null,
+      productCount: 0,
+      currency: 'CRC',
+      updatedAt: catalog.updatedAt.toISOString(),
+    } as CatalogSummary;
+  }
   async getPublic(slug: string) {
     const catalog = await this.repo.findPublicBySlug(slug);
     if (!catalog || !catalog.activeVersion) {
@@ -44,6 +93,7 @@ export class CatalogsService {
         priceMinor: product.priceMinor.toString(),
         currency: product.currency,
         stock: product.stock,
+        attributes: product.attributes,
         imageKey: product.imageKey,
         // El catálogo público es una cara de solo lectura: la URL firmada dura 1 h
         // para que la página no dependa de recargar el listado cada 15 minutos.
@@ -70,4 +120,17 @@ export class CatalogsService {
       products,
     };
   }
+}
+
+/** Slug URL-safe a partir del nombre (sin acentos, guiones simples). */
+export function slugifyName(name: string): string {
+  return (
+    name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80) || 'catalogo'
+  );
 }

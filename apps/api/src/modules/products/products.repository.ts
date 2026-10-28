@@ -101,6 +101,7 @@ export class ProductsRepository {
         costMinor: true,
         currency: true,
         stock: true,
+        attributes: true,
         imageKey: true,
         isActive: true,
       },
@@ -111,6 +112,7 @@ export class ProductsRepository {
     return {
       items: page.map((row) => ({
         ...row,
+        attributes: (row.attributes ?? null) as Record<string, unknown> | null,
         priceMinor: row.priceMinor.toString(),
         costMinor: row.costMinor === null ? null : row.costMinor.toString(),
       })),

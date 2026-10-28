@@ -40,6 +40,7 @@ describe('buildImagePrompt', () => {
     expect(prompt).toContain('Escribinos por WhatsApp');
     expect(prompt).toContain('Fondo crema con taza humeante');
     expect(prompt).toContain('VentasCatálogo');
+    expect(prompt).toContain('mantené el producto reconocible');
     expect(prompt).not.toContain('Instrucciones adicionales');
   });
 

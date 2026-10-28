@@ -6,11 +6,7 @@ import type { Audience } from '@ventascatalogo/contracts';
 export class CatalogsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async assertMember(
-    organizationId: string,
-    userId: string,
-    audience: Audience,
-  ): Promise<boolean> {
+  async assertMember(organizationId: string, userId: string, audience: Audience): Promise<boolean> {
     if (audience === 'customer') {
       const account = await this.prisma.customerAccount.findFirst({
         where: { organizationId, userId, status: 'ACTIVE' },
@@ -38,6 +34,22 @@ export class CatalogsRepository {
       where: { id: catalogId, organizationId, deletedAt: null },
       include: { activeVersion: true },
     });
+  }
+
+  findCatalogBySlug(organizationId: string, slug: string) {
+    return this.prisma.catalog.findFirst({
+      where: { organizationId, slug },
+      select: { id: true },
+    });
+  }
+
+  createCatalog(input: {
+    organizationId: string;
+    name: string;
+    slug: string;
+    description: string | null;
+  }) {
+    return this.prisma.catalog.create({ data: input });
   }
 
   async findVersion(catalogId: string, versionId: string) {

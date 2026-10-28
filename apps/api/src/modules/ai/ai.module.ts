@@ -8,6 +8,6 @@ import { SocialPostsService } from './social-posts.service';
 @Module({
   controllers: [SocialPostsController],
   providers: [AiProviderFactory, ImageProviderFactory, SocialPostsRepository, SocialPostsService],
-  exports: [SocialPostsService],
+  exports: [AiProviderFactory, ImageProviderFactory, SocialPostsService],
 })
 export class AiModule {}

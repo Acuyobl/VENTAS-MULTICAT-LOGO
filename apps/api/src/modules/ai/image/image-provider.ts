@@ -1,9 +1,16 @@
 import type { Product, SocialPost } from '@prisma/client';
 
+export interface ProductPhoto {
+  buffer: Buffer;
+  contentType: string;
+}
+
 export interface ImageGenerationInput {
   prompt: string;
   post: SocialPost;
   products: Product[];
+  /** Foto del primer producto leída de MinIO (null si no tiene). */
+  productImage?: ProductPhoto | null;
 }
 
 export interface GeneratedImage {

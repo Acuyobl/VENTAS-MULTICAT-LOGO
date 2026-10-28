@@ -3,7 +3,31 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
-## [0.1.5] — 2026-10-28
+## [0.1.6] — 2026-10-28
+
+### Añadido
+- **Importador inteligente A+B+C**: analizador que infiere tipos de columna, mapea por sinónimos y
+  similitud, propone campos extra e ignora columnas de ruido; agente de IA (mock/deepseek) que
+  propone el plan en JSON validado y se autocorrige con fallback heurístico; plantillas de mapeo
+  reutilizables por firma de encabezados.
+- **Campos extra adaptativos**: las columnas sobrantes se guardan en `Product.attributes` y se
+  exponen en la API y el catálogo público.
+- **Reemplazo o fusión al cargar**: modo `REPLACE` (solo el archivo) o `MERGE` (conserva productos
+  que no vienen) y opción «Activar esta versión al importar» para que la tienda se actualice.
+- **Imágenes de contenido basadas en la foto del producto**: el mock compone la foto real con
+  overlay de marca, título, precio y CTA; varía por producto/prompt. OpenAI usa `images/edits` para
+  mantener el producto reconocible.
+- Wizard de importación con vista previa, mapeo editable, campos extra, plantillas y modo de carga.
+
+### Corregido
+- CSV parseado con parser propio: SheetJS convertía textos como `1/4` en fechas (`1/3/01`).
+- Tipos de columna: `ENUM` solo con valores repetidos; medidas y materiales quedan `TEXT`.
+- La plantilla de mapeo se guarda aunque haya filas en cuarentena.
+
+### Pruebas
+- API: **267 unit** (46 archivos) y **113 e2e** (18 archivos). Web: 19 pruebas. CI con cobertura.
+
+
 
 ### Añadido
 - **Catálogo real "Despensa de Altura"**: 20 productos con fotografías reales de Wikimedia Commons,

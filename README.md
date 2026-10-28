@@ -20,10 +20,12 @@ administradores y colaboradores, y tienda/portal para los clientes.
 > catálogo, importación CSV/XLSX, imágenes, cotizaciones con PDF, pedidos, tienda con carrito,
 > checkout de invitado, portal, **cobros (link de pago, Stripe/sandbox, webhook, pagos manuales),
 > reembolsos con segregación configurable, recordatorios, reportes, conciliación, gastos, utilidad,
-> exportación CSV y pasarelas por organización**, más **IA de contenido con imágenes generadas,
-> WhatsApp entrante/saliente y chat**, con más de 340 pruebas automáticas. Pendiente: Drive, PWA,
-> conciliación programada, campañas de WhatsApp, chat del cliente, publicación real en redes y
-> credenciales de proveedores de IA/imagen. Detalle en
+> exportación CSV y pasarelas por organización**, más **importador inteligente con IA (analiza
+> cualquier archivo, propone el mapeo, guarda campos extra y permite reemplazar o fusionar el
+> catálogo)**, **IA de contenido con imágenes basadas en la foto real del producto,
+> WhatsApp entrante/saliente y chat**, con más de 380 pruebas automáticas. Pendiente: Drive, PWA,
+> variantes, PDF/OCR, conciliación programada, campañas de WhatsApp, chat del cliente, publicación
+> real en redes y credenciales de proveedores de IA/imagen. Detalle en
 > [`docs/07-ESTADO-IMPLEMENTACION.md`](docs/07-ESTADO-IMPLEMENTACION.md),
 > [`docs/08-ESTADO-F1.md`](docs/08-ESTADO-F1.md) e hitos en
 > [`CHANGELOG.md`](CHANGELOG.md).

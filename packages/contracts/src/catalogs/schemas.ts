@@ -24,6 +24,7 @@ export const productSummarySchema = z.object({
   currency: z.enum(['CRC', 'USD']),
   stock: z.number().int().nullable(),
   imageKey: z.string().nullable(),
+  attributes: z.record(z.unknown()).nullable().optional(),
 });
 
 export type ProductSummary = z.infer<typeof productSummarySchema>;

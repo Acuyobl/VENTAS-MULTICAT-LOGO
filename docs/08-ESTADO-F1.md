@@ -371,6 +371,60 @@ importador fuera de este entorno.
 
 
 
+## 3.14 Importador inteligente A+B+C (cualquier archivo se adapta)
+
+| Pieza | Detalle |
+|---|---|
+| Catálogo nuevo | `POST /catalogs` (`catalog:write`) con slug autogenerado; 409 si existe; auditado |
+| Preview/analizador | `POST /catalogs/:id/imports/preview` (multipart) devuelve `columns` con tipo inferido y confianza, `sampleRows`, `proposal` (mapping + `extraFields` + `ignoredColumns` + warnings + explicación + confianza), `preset` y `modeOptions` |
+| Heurística (A) | Sinónimos + similitud Levenshtein/tokens; tipos TEXT/NUMBER/CURRENCY/DATE/BOOLEAN/URL/IMAGE/ENUM; ruido (`Total`, `IVA`, vacías >80 %) se ignora con motivo |
+| Agente IA (B) | Encabezados + tipos + 5 filas → JSON validado con Zod y revalidado; un reintento y fallback heurístico (`agent:null`) si no hay IA. Con `AI_PROVIDER=mock` hay propuesta demostrable |
+| Aprendizaje (C) | Plantilla por firma de encabezados (≥80 %) se reutiliza como preset y se aplica al importar sin mapping; `usageCount` |
+| Campos extra | Las columnas sobrantes se guardan en `Product.attributes` (JSONB) y se exponen en `GET /products` y en el catálogo público |
+
+Verificación ejecutada con un catálogo real de ferretería y columnas raras:
+
+```text
+POST /catalogs → Ferretería El Tornillo (slug ferreter-a-el-tornillo)
+preview CSV "Código, Artículo, Precio final ₡, Cant., Medida, Material, Total"
+  → mapping sku=Código · name=Artículo · price=Precio final ₡ · stock=Cant.
+  → extraFields Medida→medida, Material→material · ignorada Total
+  → agente mock (mocked=true) · confianza 0.96 · Medida inferida TEXT
+import plan → 5 filas: 4 productos + 1 en cuarentena (MISSING_PRICE) · v2 ACTIVE
+attributes exactos → {"medida":"1/4","material":"Acero"}, "1/4 x 2", "16 oz"
+plantilla "Proveedor Tornillo" guardada aun con cuarentena · segundo preview la aplica (preset)
+```
+
+**Fix importante:** el CSV ahora usa un parser propio; SheetJS adivinaba tipos y convertía `1/4` en
+fecha (`1/3/01`). Con el parser propio y la coacción por tipo, los textos se conservan.
+
+## 3.15 Reemplazo o fusión de catálogo
+
+- El wizard de importación ofrece **modo**: `REPLACE` (solo lo del archivo) o `MERGE` (conserva los
+  productos de la versión activa que no vienen en el archivo, con su imagen y atributos), y un
+  check **«Activar esta versión al importar»** para que la tienda muestre el catálogo nuevo de
+  inmediato.
+- `MERGE` reporta `carriedOver`; activar una versión archiva la anterior (histórico intacto).
+- Verificado: v2 ACTIVE con los 4 productos corregidos reemplazando v1; el e2e cubre MERGE con
+  `carriedOver` y REPLACE sin arrastre.
+
+## 3.16 Imágenes de contenido basadas en la foto del producto
+
+- El mock lee la foto del primer producto desde MinIO (`vc-products`) y la embebe en el SVG
+  1080×1080 con overlay para legibilidad, título, precio, CTA y marca; sin foto cae al degradado.
+- La imagen varía por producto y por prompt (variante determinista); regenerar con instrucciones
+  propias produce un SVG distinto.
+- Con `IMAGE_PROVIDER=openai` y foto disponible usa `images/edits` (multipart) para mantener el
+  producto reconocible; sin foto, `images/generations`.
+
+```text
+SVG con foto real: 258 KB y 332 KB (antes 1,8 KB) · contiene data:image/ · dos productos → hash distinto
+regenerar con prompt → hash distinto
+sin imagen de producto → degradado de marca
+```
+
+
+
 ## 4. Decisiones tomadas
 
 1. **Códigos de error promovidos al contrato**: los 5 códigos de F1 se agregaron a
@@ -417,15 +471,12 @@ curl -F "file=@tools/fixtures/catalogo-demo.csv;type=text/csv" `
 ## 6. Pendiente
 
 1. **Google Drive** (F1.1/F1.2): crear cliente OAuth en Google Cloud con scope `drive.readonly` y
-   `access_type=offline`; el pipeline de importación ya está listo para recibir el buffer descargado.
-2. **PWA de tienda** (F1.13): manifest, service worker e IndexedDB del catálogo activo (lectura
-   offline).
-3. **F2 restante**: conciliación programada/cierre de meses, exportación contable formal y reportes
-   por catálogo en PDF. Lo demás (cobros, reembolsos, autoaprobación, recordatorios, reportes,
-   gastos, utilidad y pasarelas) está entregado.
-4. **F3 restante**: campañas de WhatsApp saliente, chat del cliente en el portal, programación y
-   publicación en redes, cuota y costo de IA por organización.
-5. **Cobertura ≥70 % en `catalogs` y `sales`** y E2E importar→activar→cotizar→PDF (DoD de F1).
-6. Alinear el `CHECK` de totales de `docs/03` con la convención de dinero (sigue pendiente de F0).
-7. Backfill opcional de conversaciones WhatsApp creadas antes de la migración de canal (hoy quedan
-   como `WEB`) y límite de intentos en webhooks.
+   `access_type=offline`; el pipeline ya está listo y el importador inteligente se reutiliza.
+2. **PWA de tienda** (F1.13): manifest, service worker e IndexedDB del catálogo activo.
+3. **Importador**: mostrar `attributes` como columnas/chips en la UI de productos, variantes
+   (talla/color) y archivos PDF/OCR. El motor A+B+C ya está (§3.14).
+4. **F2 restante**: conciliación programada/cierre de meses y reportes por catálogo en PDF.
+5. **F3 restante**: campañas de WhatsApp saliente, chat del cliente, publicación real en redes,
+   cuota/costo de IA y credenciales de `OPENAI_API_KEY`/`DEEPSEEK_API_KEY` para IA real.
+6. **Cobertura ≥70 % en `catalogs` y `sales`** y E2E importar→activar→cotizar→PDF (DoD de F1).
+7. Alinear el `CHECK` de totales de `docs/03` con la convención de dinero (sigue pendiente de F0).

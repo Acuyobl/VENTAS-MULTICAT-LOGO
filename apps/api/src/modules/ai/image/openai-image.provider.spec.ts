@@ -47,6 +47,38 @@ describe('OpenAiImageProvider', () => {
     });
   });
 
+  it('con foto del producto usa /images/edits con multipart', async () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: [{ b64_json: png.toString('base64') }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const provider = new OpenAiImageProvider({ apiKey: 'sk-test', model: 'gpt-image-1' });
+
+    const result = await provider.generate({
+      prompt: 'foto de café',
+      post,
+      products,
+      productImage: { buffer: png, contentType: 'image/png' },
+    });
+
+    expect(result.contentType).toBe('image/png');
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://api.openai.com/v1/images/edits');
+    expect((options.headers as Record<string, string>).Authorization).toBe('Bearer sk-test');
+    // En multipart el navegador/fetch pone el Content-Type con boundary.
+    expect((options.headers as Record<string, string>)['Content-Type']).toBeUndefined();
+    expect(options.body).toBeInstanceOf(FormData);
+    const form = options.body as FormData;
+    expect(form.get('model')).toBe('gpt-image-1');
+    expect(form.get('size')).toBe('1024x1024');
+    expect(form.get('response_format')).toBe('b64_json');
+    expect(form.get('image')).toBeInstanceOf(Blob);
+    expect(form.get('prompt')).toContain('Mantené el producto de la foto reconocible');
+  });
   it('un HTTP no-2xx responde AI_PROVIDER_ERROR 502', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('error', { status: 500 })));
     const provider = new OpenAiImageProvider({ apiKey: 'sk-test', model: 'gpt-image-1' });

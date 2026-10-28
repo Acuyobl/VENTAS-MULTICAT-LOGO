@@ -36,6 +36,7 @@ export const versionedProductSummarySchema = z.object({
   /** URL firmada de descarga (MinIO). null si el producto no tiene imagen o el storage no está configurado. */
   imageUrl: z.string().nullable(),
   isActive: z.boolean(),
+  attributes: z.record(z.unknown()).nullable().optional(),
 });
 
 export type VersionedProductSummary = z.infer<typeof versionedProductSummarySchema>;

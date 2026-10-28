@@ -32,6 +32,8 @@ export interface ImportProductRow {
   stock: number | null;
   imageRef: string | null;
   rawData: Record<string, unknown>;
+  /** Campos extra coaccionados (Product.attributes), si el plan los define. */
+  attributes?: Record<string, unknown>;
 }
 
 export interface ValidateRowsResult {

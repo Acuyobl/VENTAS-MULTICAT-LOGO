@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { AiModule } from '../ai/ai.module';
+import { ImportTemplatesRepository } from './import-templates.repository';
+import { AdaptiveImportService } from './adaptive-import.service';
 import { CatalogsRepository } from './catalogs.repository';
 import { CatalogsService } from './catalogs.service';
 import { CatalogsController, PublicCatalogsController } from './catalogs.controller';
@@ -10,6 +13,7 @@ import { ImportsRepository } from './imports.repository';
 import { ImportsService } from './imports.service';
 
 @Module({
+  imports: [AiModule],
   controllers: [
     CatalogsController,
     PublicCatalogsController,
@@ -23,6 +27,8 @@ import { ImportsService } from './imports.service';
     CatalogVersionsService,
     ImportsRepository,
     ImportsService,
+    ImportTemplatesRepository,
+    AdaptiveImportService,
   ],
   exports: [CatalogsRepository, CatalogsService],
 })

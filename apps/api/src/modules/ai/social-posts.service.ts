@@ -14,6 +14,8 @@ import type { Product, SocialPost as SocialPostRow } from '@prisma/client';
 import { AiProviderFactory } from './ai-provider.factory';
 import { ImageProviderFactory } from './image/image-provider.factory';
 import { buildImagePrompt } from './image/image-prompt';
+import { detectImageContentType } from './image/image-data-uri';
+import type { ProductPhoto } from './image/image-provider';
 import { buildSocialPrompt, type SocialPromptProduct } from './prompt-builder';
 import { parseSocialPostText } from './social-post.parser';
 import { SocialPostsRepository } from './social-posts.repository';
@@ -217,7 +219,13 @@ export class SocialPostsService {
   ): Promise<SocialPostRow> {
     const provider = this.imageFactory.createProvider();
     const imagePrompt = buildImagePrompt({ post, products, customPrompt });
-    const generated = await provider.generate({ prompt: imagePrompt, post, products });
+    const productImage = await this.loadProductPhoto(products);
+    const generated = await provider.generate({
+      prompt: imagePrompt,
+      post,
+      products,
+      productImage,
+    });
 
     const key = `${IMAGE_KEY_PREFIX}/${user.organizationId}/${post.id}.${generated.ext}`;
     await this.storage.putPublicObject(key, generated.buffer, generated.contentType);
@@ -247,6 +255,18 @@ export class SocialPostsService {
     });
 
     return updated;
+  }
+
+    /** Lee la foto del primer producto desde el bucket de productos (null si no hay). */
+  private async loadProductPhoto(products: Product[]): Promise<ProductPhoto | null> {
+    const featured = products[0];
+    if (!featured?.imageKey) return null;
+    const buffer = await this.storage.getObjectBuffer(
+      this.storage.productBucketName,
+      featured.imageKey,
+    );
+    if (!buffer || buffer.length === 0) return null;
+    return { buffer, contentType: detectImageContentType(buffer) };
   }
 
   /** DTO con URL firmada de 3600 s (null si MinIO no responde). */

@@ -15,6 +15,9 @@ export function buildImagePrompt(input: {
     featured ? `Producto destacado: ${featured.name} (${price}).` : null,
     `CTA: "${input.post.cta}".`,
     `Estilo: ${input.post.visualSuggestion ?? 'fotografía de producto limpia, luz natural, fondo claro'}.`,
+    featured
+      ? 'Usá la foto del producto como base y mantené el producto reconocible (misma forma, color y empaque).'
+      : 'Sin foto de producto: generá una escena de producto coherente con la descripción.',
     'Marca: VentasCatálogo, Costa Rica. Sin texto ilegible ni marcas de agua.',
     input.customPrompt ? `Instrucciones adicionales: ${input.customPrompt}.` : null,
   ].filter((line): line is string => Boolean(line));

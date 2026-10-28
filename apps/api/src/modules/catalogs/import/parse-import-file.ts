@@ -22,8 +22,8 @@ export class ImportParseError extends Error {
 /**
  * SheetJS interpreta un `Buffer` UTF-8 como binario/ANSI y devuelve mojibake en
  * los acentos (`DescripciÃ³n`). Por eso el CSV se decodifica a texto antes de
- * entregárselo; si la decodificación UTF-8 deja caracteres de reemplazo se cae
- * a Windows-1252, que es lo que exporta Excel en español.
+ * parsearlo; si la decodificación UTF-8 deja caracteres de reemplazo se cae a
+ * Windows-1252, que es lo que exporta Excel en español.
  */
 export function decodeCsvBuffer(buffer: Buffer): string {
   const utf8 = buffer.toString('utf8');
@@ -46,10 +46,66 @@ export function detectDelimiter(text: string): string {
 }
 
 /**
- * Parsea CSV o XLSX con SheetJS (`XLSX.read` + `sheet_to_json`) en una matriz de
- * celdas: la primera fila es la cabecera. Se usa `raw: false` para conservar el
- * **texto original** de las celdas de dinero (`12.800` no se convierte en 12.8),
- * que luego normaliza `toMinorAmount`.
+ * Parser CSV propio que conserva el texto original de las celdas.
+ *
+ * SheetJS adivina tipos y convierte `1/4` en fecha (`1/3/01`), lo que corrompe
+ * medidas/materiales. Para CSV parseamos texto plano: comillas dobles, comas y
+ * saltos de línea entrecomillados y `""` como comilla escapada. Los valores
+ * quedan como string; la coacción de tipos la decide el plan de importación.
+ */
+export function parseCsvText(text: string, delimiter: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = '';
+  let inQuotes = false;
+
+  const pushCell = () => {
+    row.push(cell);
+    cell = '';
+  };
+  const pushRow = () => {
+    pushCell();
+    rows.push(row);
+    row = [];
+  };
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (inQuotes) {
+      if (char === '"') {
+        if (text[index + 1] === '"') {
+          cell += '"';
+          index += 1;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        cell += char;
+      }
+      continue;
+    }
+    if (char === '"' && cell.length === 0) {
+      inQuotes = true;
+    } else if (char === delimiter) {
+      pushCell();
+    } else if (char === '\n') {
+      pushRow();
+    } else if (char === '\r') {
+      if (text[index + 1] === '\n') index += 1;
+      pushRow();
+    } else {
+      cell += char;
+    }
+  }
+  if (cell.length > 0 || row.length > 0) pushRow();
+
+  return rows.filter((cells) => cells.some((value) => value.trim().length > 0));
+}
+
+/**
+ * Parsea CSV o XLSX: la primera fila es la cabecera. CSV se parsea como texto
+ * (sin adivinar tipos); XLSX usa SheetJS con `raw: false` para conservar el texto
+ * de las celdas de dinero.
  */
 export function parseImportFile(
   buffer: Buffer,
@@ -60,34 +116,31 @@ export function parseImportFile(
     throw new ImportParseError('invalid_file', 'El archivo está vacío.');
   }
 
-  let workbook: XLSX.WorkBook;
+  let matrix: unknown[][];
   try {
     if (extension === 'csv') {
       const text = decodeCsvBuffer(buffer);
-      workbook = XLSX.read(text, {
-        type: 'string',
-        FS: delimiter && delimiter.length === 1 ? delimiter : detectDelimiter(text),
-      });
+      const separator = delimiter && delimiter.length === 1 ? delimiter : detectDelimiter(text);
+      matrix = parseCsvText(text, separator);
     } else {
-      workbook = XLSX.read(buffer, { type: 'buffer' });
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = sheetName ? workbook.Sheets[sheetName] : undefined;
+      if (!sheet) throw new ImportParseError('empty_file', 'El archivo no tiene hojas con datos.');
+      matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+        header: 1,
+        defval: '',
+        raw: false,
+        blankrows: false,
+      });
     }
   } catch (error) {
+    if (error instanceof ImportParseError) throw error;
     throw new ImportParseError(
       'invalid_file',
       `No se pudo leer el archivo: ${error instanceof Error ? error.message : 'formato desconocido'}`,
     );
   }
-
-  const sheetName = workbook.SheetNames[0];
-  const sheet = sheetName ? workbook.Sheets[sheetName] : undefined;
-  if (!sheet) throw new ImportParseError('empty_file', 'El archivo no tiene hojas con datos.');
-
-  const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-    header: 1,
-    defval: '',
-    raw: false,
-    blankrows: false,
-  });
 
   const headerRow = matrix[0] ?? [];
   const headers = makeUniqueHeaders(headerRow.map((cell) => String(cell ?? '')));
