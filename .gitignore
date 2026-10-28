@@ -1,0 +1,46 @@
+# Dependencias y builds
+node_modules/
+.next/
+dist/
+build/
+coverage/
+.turbo/
+*.tsbuildinfo
+
+# Entornos y secretos
+.env
+.env.*
+!.env.example
+!.env.seed.example
+!apps/web/.env.example
+*.pem
+*.key
+
+# Logs y temporales
+*.log
+npm-debug.log*
+pnpm-debug.log*
+tmp/
+temp/
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Testing
+test-results/
+playwright-report/
+blob-report/
+
+# Graphify: se versionan graph.json, GRAPH_REPORT.md, graph.html y labels.
+# Solo se ignora la caché de extracción y los temporales de ejecución.
+graphify-out/cache/
+graphify-out/.graphify_chunk_*.json
+graphify-out/.graphify_cached.json
+graphify-out/.graphify_semantic_new.json
+graphify-out/.graphify_partial.txt
+
+# Prisma
+apps/api/prisma/*.db

@@ -1,0 +1,11 @@
+{
+  "name": "@ventascatalogo/config",
+  "version": "0.1.0",
+  "private": true,
+  "files": ["tsconfig", "tailwind"],
+  "exports": {
+    "./tsconfig/api.json": "./tsconfig/api.json",
+    "./tsconfig/web.json": "./tsconfig/web.json",
+    "./tailwind/preset.css": "./tailwind/preset.css"
+  }
+}

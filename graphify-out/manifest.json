@@ -1,0 +1,50 @@
+{
+  "docs/00-BRIEF.md": {
+    "mtime": 1793191079.9818816,
+    "seen": 1793192790.8033876,
+    "ast_hash": "ab033816db5cff477c5faef650f9b28c",
+    "semantic_hash": "ab033816db5cff477c5faef650f9b28c"
+  },
+  "docs/01-CONTEXTO-Y-DECISIONES.md": {
+    "mtime": 1793194514.0744562,
+    "seen": 1793195028.4372008,
+    "ast_hash": "559eba47c998afd2a117551bf95b8c8f",
+    "semantic_hash": "559eba47c998afd2a117551bf95b8c8f"
+  },
+  "docs/02-ANALISIS.md": {
+    "mtime": 1793194517.0469017,
+    "seen": 1793195028.4372008,
+    "ast_hash": "5ea83a0cc53c27bebea6e8a2592342c0",
+    "semantic_hash": "5ea83a0cc53c27bebea6e8a2592342c0"
+  },
+  "docs/03-SPEC.md": {
+    "mtime": 1793192339.2135785,
+    "seen": 1793192790.8033876,
+    "ast_hash": "88e77b65a46cb3f665eee8ef261f1fbe",
+    "semantic_hash": "88e77b65a46cb3f665eee8ef261f1fbe"
+  },
+  "docs/04-GUIA-IMPLEMENTACION.md": {
+    "mtime": 1793192360.6207383,
+    "seen": 1793192790.8033876,
+    "ast_hash": "c468671be7bf880c14fa21df81268a70",
+    "semantic_hash": "c468671be7bf880c14fa21df81268a70"
+  },
+  "docs/05-IDEAS.md": {
+    "mtime": 1793192460.5527735,
+    "seen": 1793192790.8033876,
+    "ast_hash": "7b6f6fb54ed1028c68bccd07ffd2f940",
+    "semantic_hash": "7b6f6fb54ed1028c68bccd07ffd2f940"
+  },
+  "docs/README.md": {
+    "mtime": 1793194522.866406,
+    "seen": 1793195028.4372008,
+    "ast_hash": "bc80d96c48bec4d953091d406104b7f2",
+    "semantic_hash": "bc80d96c48bec4d953091d406104b7f2"
+  },
+  "docs/06-COSTOS-Y-PRECIOS.md": {
+    "mtime": 1793194426.332708,
+    "seen": 1793195028.4372008,
+    "ast_hash": "175f6c6f41796e9a916282621e7e7892",
+    "semantic_hash": "175f6c6f41796e9a916282621e7e7892"
+  }
+}

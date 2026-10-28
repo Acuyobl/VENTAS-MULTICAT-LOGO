@@ -1,0 +1,50 @@
+import { describe, expect, it } from 'vitest';
+import { resolveFace } from './faces';
+
+describe('resolveFace', () => {
+  it('manda la raíz de app.localhost al panel', () => {
+    expect(resolveFace('app.localhost:3000', '/')).toMatchObject({
+      face: 'staff',
+      rewriteTo: '/panel',
+    });
+  });
+
+  it('no reescribe el login del backoffice', () => {
+    expect(resolveFace('app.localhost:3000', '/login')).toMatchObject({
+      face: 'staff',
+      rewriteTo: null,
+      requiresStaff: false,
+    });
+  });
+
+  it('protege /panel en cualquier host', () => {
+    expect(resolveFace('localhost:3000', '/panel')).toMatchObject({
+      requiresStaff: true,
+    });
+    expect(resolveFace('app.localhost:3000', '/panel/usuarios')).toMatchObject({
+      requiresStaff: true,
+    });
+  });
+
+  it('protege /mi-cuenta pero deja entrar a /mi-cuenta/entrar', () => {
+    expect(resolveFace('tienda.localhost:3000', '/mi-cuenta')).toMatchObject({
+      requiresCustomer: true,
+    });
+    expect(resolveFace('tienda.localhost:3000', '/mi-cuenta/entrar')).toMatchObject({
+      requiresCustomer: false,
+    });
+  });
+
+  it('deja público el catálogo compartido', () => {
+    expect(resolveFace('tienda.localhost:3000', '/c/catalogo-demo')).toMatchObject({
+      requiresCustomer: false,
+    });
+  });
+
+  it('nunca intercepta la API', () => {
+    expect(resolveFace('app.localhost:3000', '/api/v1/auth/me')).toMatchObject({
+      face: 'hub',
+      rewriteTo: null,
+    });
+  });
+});

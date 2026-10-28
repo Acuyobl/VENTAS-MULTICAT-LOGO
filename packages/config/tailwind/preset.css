@@ -1,0 +1,16 @@
+:root {
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-body: "DM Sans", "Avenir Next", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
+  --ink: #14201b;
+  --paper: #f6f1e7;
+  --cream: #fbf8f1;
+  --forest: #123d2e;
+  --moss: #2f6b4f;
+  --coral: #e2552f;
+  --ochre: #d8a13a;
+  --line: rgba(20, 32, 27, 0.14);
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 22px;
+}

@@ -1,0 +1,114 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
+import type { Audience } from '@ventascatalogo/contracts';
+
+@Injectable()
+export class CatalogsRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async assertMember(
+    organizationId: string,
+    userId: string,
+    audience: Audience,
+  ): Promise<boolean> {
+    if (audience === 'customer') {
+      const account = await this.prisma.customerAccount.findFirst({
+        where: { organizationId, userId, status: 'ACTIVE' },
+        select: { id: true },
+      });
+      return Boolean(account);
+    }
+    const membership = await this.prisma.membership.findUnique({
+      where: { organizationId_userId: { organizationId, userId } },
+      select: { status: true },
+    });
+    return membership?.status === 'ACTIVE';
+  }
+
+  async findForMember(
+    catalogId: string,
+    userId: string,
+    audience: Audience,
+    organizationId: string,
+  ) {
+    const member = await this.assertMember(organizationId, userId, audience);
+    if (!member) return null;
+
+    return this.prisma.catalog.findFirst({
+      where: { id: catalogId, organizationId, deletedAt: null },
+      include: { activeVersion: true },
+    });
+  }
+
+  async findVersion(catalogId: string, versionId: string) {
+    return this.prisma.catalogVersion.findFirst({
+      where: { id: versionId, catalogId },
+      select: { id: true, status: true },
+    });
+  }
+
+  async listForMember(organizationId: string, userId: string, audience: Audience) {
+    const member = await this.assertMember(organizationId, userId, audience);
+    if (!member) return [];
+
+    const assignments = await this.prisma.roleAssignment.findMany({
+      where: { userId, scopeType: 'CATALOG' },
+      select: { scopeId: true },
+    });
+    const scopedCatalogIds = assignments
+      .map((assignment) => assignment.scopeId)
+      .filter((id): id is string => Boolean(id));
+
+    const catalogs = await this.prisma.catalog.findMany({
+      where: {
+        organizationId,
+        deletedAt: null,
+        ...(audience === 'staff' && scopedCatalogIds.length > 0
+          ? { id: { in: scopedCatalogIds } }
+          : {}),
+      },
+      include: { activeVersion: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const counts = await this.prisma.product.groupBy({
+      by: ['catalogVersionId'],
+      where: {
+        catalogVersionId: {
+          in: catalogs
+            .map((catalog) => catalog.activeVersionId)
+            .filter((id): id is string => Boolean(id)),
+        },
+        deletedAt: null,
+        isActive: true,
+      },
+      _count: { _all: true },
+    });
+    const countByVersion = new Map(counts.map((row) => [row.catalogVersionId, row._count._all]));
+
+    return catalogs.map((catalog) => ({
+      catalog,
+      productCount: catalog.activeVersionId
+        ? (countByVersion.get(catalog.activeVersionId) ?? 0)
+        : 0,
+    }));
+  }
+
+  async findPublicBySlug(slug: string) {
+    return this.prisma.catalog.findFirst({
+      where: { slug, deletedAt: null, activeVersionId: { not: null } },
+      include: {
+        organization: { select: { name: true, slug: true } },
+        activeVersion: {
+          include: {
+            products: {
+              where: { deletedAt: null, isActive: true },
+              orderBy: { name: 'asc' },
+              take: 120,
+            },
+          },
+        },
+      },
+    });
+  }
+}

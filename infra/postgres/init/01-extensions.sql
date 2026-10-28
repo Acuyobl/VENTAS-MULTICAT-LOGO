@@ -1,0 +1,4 @@
+-- Extensiones requeridas por el modelo (búsqueda sin acentos, UUID, trigramas).
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS unaccent;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;

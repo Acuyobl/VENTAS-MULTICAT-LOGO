@@ -1,0 +1,803 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Currency {
+  CRC
+  USD
+}
+
+enum Plan {
+  FREE
+  STARTER
+  PRO
+}
+
+enum TokenAudience {
+  STAFF
+  CUSTOMER
+}
+
+enum AssignmentScope {
+  GLOBAL
+  ORGANIZATION
+  CATALOG
+}
+
+enum CatalogVersionStatus {
+  DRAFT
+  VALIDATED
+  ACTIVE
+  ARCHIVED
+}
+
+enum ImportStatus {
+  PENDING
+  DOWNLOADING
+  PARSING
+  VALIDATING
+  READY
+  FAILED
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CONVERTED
+}
+
+enum OrderStatus {
+  DRAFT
+  PENDING_PAYMENT
+  PARTIALLY_PAID
+  PAID
+  FULFILLED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  STRIPE
+  MERCADOPAGO
+  PAYPAL
+  CASH
+  TRANSFER
+  SINPE
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum SocialPostStatus {
+  DRAFT
+  APPROVED
+  SCHEDULED
+  PUBLISHED
+  REJECTED
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PUBLISHED
+  FAILED
+}
+
+enum IdempotencyStatus {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+model Organization {
+  id                    String       @id @default(uuid(7)) @db.Uuid
+  name                  String
+  slug                  String       @unique
+  plan                  Plan         @default(FREE)
+  defaultCurrency       Currency     @default(CRC)
+  timezone              String       @default("America/Costa_Rica")
+  aiMonthlyQuotaTokens  Int          @default(2000000)
+  googleRefreshTokenEnc String?
+  googleScopes          String[]     @default([])
+  googleConnectedAt     DateTime?    @db.Timestamptz(3)
+  deletedAt             DateTime?    @db.Timestamptz(3)
+  createdAt             DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime     @updatedAt @db.Timestamptz(3)
+  memberships           Membership[]
+  catalogs              Catalog[]
+
+  @@map("organizations")
+}
+
+model User {
+  id                 String               @id @default(uuid(7)) @db.Uuid
+  email              String               @unique
+  phone              String?
+  fullName           String
+  passwordHash       String?
+  status             String               @default("INVITED")
+  locale             String               @default("es-CR")
+  emailVerifiedAt    DateTime?            @db.Timestamptz(3)
+  passwordUpdatedAt  DateTime?            @db.Timestamptz(3)
+  mfaEnabled         Boolean              @default(false)
+  mfaSecretEnc       String?
+  lastLoginAt        DateTime?            @db.Timestamptz(3)
+  failedLoginCount   Int                  @default(0)
+  lockedUntil        DateTime?            @db.Timestamptz(3)
+  deletedAt          DateTime?            @db.Timestamptz(3)
+  createdAt          DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime             @updatedAt @db.Timestamptz(3)
+  memberships        Membership[]
+  roleAssignments    RoleAssignment[]
+  customerAccounts   CustomerAccount[]
+  authSessions       AuthSession[]
+  verificationTokens VerificationToken[]
+  consents           Consent[]
+
+  @@index([status, createdAt])
+  @@map("users")
+}
+
+model Membership {
+  id             String           @id @default(uuid(7)) @db.Uuid
+  organizationId String           @db.Uuid
+  userId         String           @db.Uuid
+  status         String           @default("INVITED")
+  joinedAt       DateTime?        @db.Timestamptz(3)
+  createdAt      DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @db.Timestamptz(3)
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+  user           User             @relation(fields: [userId], references: [id])
+  assignments    RoleAssignment[]
+
+  @@unique([organizationId, userId])
+  @@index([userId, status])
+  @@map("memberships")
+}
+
+model AuthSession {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  userId         String        @db.Uuid
+  organizationId String        @db.Uuid
+  audience       TokenAudience
+  tokenHash      String        @unique
+  familyId       String        @db.Uuid
+  deviceName     String?
+  ip             String?
+  userAgent      String?
+  expiresAt      DateTime      @db.Timestamptz(3)
+  revokedAt      DateTime?     @db.Timestamptz(3)
+  lastUsedAt     DateTime?     @db.Timestamptz(3)
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+  user           User          @relation(fields: [userId], references: [id])
+
+  @@index([userId, audience, expiresAt])
+  @@index([organizationId, audience])
+  @@index([familyId])
+  @@map("auth_sessions")
+}
+
+model Role {
+  id             String           @id @default(uuid(7)) @db.Uuid
+  organizationId String?          @db.Uuid
+  key            String
+  name           String
+  description    String?
+  isSystem       Boolean          @default(false)
+  createdAt      DateTime         @default(now()) @db.Timestamptz(3)
+  permissions    Permission[]
+  assignments    RoleAssignment[]
+  invitations    UserInvitation[]
+
+  @@unique([organizationId, key])
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  key         String   @unique
+  description String
+  scope       String
+  roles       Role[]
+
+  @@map("permissions")
+}
+
+model RoleAssignment {
+  id           String          @id @default(uuid(7)) @db.Uuid
+  userId       String          @db.Uuid
+  membershipId String?         @db.Uuid
+  roleId       String          @db.Uuid
+  scopeType    AssignmentScope @default(ORGANIZATION)
+  scopeId      String?         @db.Uuid
+  createdAt    DateTime        @default(now()) @db.Timestamptz(3)
+  user         User            @relation(fields: [userId], references: [id])
+  membership   Membership?     @relation(fields: [membershipId], references: [id])
+  role         Role            @relation(fields: [roleId], references: [id])
+
+  @@unique([userId, roleId, scopeType, scopeId])
+  @@index([scopeType, scopeId])
+  @@map("role_assignments")
+}
+
+model CustomerAccount {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  userId         String   @db.Uuid
+  organizationId String   @db.Uuid
+  customerId     String   @unique @db.Uuid
+  status         String   @default("INVITED")
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  user           User     @relation(fields: [userId], references: [id])
+  customer       Customer @relation(fields: [customerId], references: [id])
+
+  @@unique([userId, organizationId])
+  @@index([organizationId, status])
+  @@map("customer_accounts")
+}
+
+model VerificationToken {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String?   @db.Uuid
+  email     String
+  type      String
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(3)
+  usedAt    DateTime? @db.Timestamptz(3)
+  metadata  Json?
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  user      User?     @relation(fields: [userId], references: [id])
+
+  @@index([email, type, expiresAt])
+  @@map("verification_tokens")
+}
+
+model Consent {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  userId     String   @db.Uuid
+  type       String
+  version    String
+  acceptedAt DateTime @default(now()) @db.Timestamptz(3)
+  ip         String?
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, type, version])
+  @@map("consents")
+}
+
+model UserInvitation {
+  id              String          @id @default(uuid(7)) @db.Uuid
+  organizationId  String          @db.Uuid
+  email           String
+  roleId          String          @db.Uuid
+  scopeType       AssignmentScope @default(ORGANIZATION)
+  scopeId         String?         @db.Uuid
+  tokenHash       String          @unique
+  invitedByUserId String          @db.Uuid
+  expiresAt       DateTime        @db.Timestamptz(3)
+  acceptedAt      DateTime?       @db.Timestamptz(3)
+  createdAt       DateTime        @default(now()) @db.Timestamptz(3)
+  role            Role            @relation(fields: [roleId], references: [id])
+
+  @@index([organizationId, email])
+  @@map("user_invitations")
+}
+
+model Catalog {
+  id              String           @id @default(uuid(7)) @db.Uuid
+  organizationId  String           @db.Uuid
+  name            String
+  slug            String
+  description     String?
+  driveFolderId   String?
+  activeVersionId String?          @unique @db.Uuid
+  settings        Json?
+  deletedAt       DateTime?        @db.Timestamptz(3)
+  createdAt       DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @db.Timestamptz(3)
+  organization    Organization     @relation(fields: [organizationId], references: [id])
+  activeVersion   CatalogVersion?  @relation("CatalogActiveVersion", fields: [activeVersionId], references: [id])
+  versions        CatalogVersion[] @relation("CatalogVersions")
+  products        Product[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId, createdAt])
+  @@map("catalogs")
+}
+
+model CatalogVersion {
+  id              String               @id @default(uuid(7)) @db.Uuid
+  catalogId       String               @db.Uuid
+  versionNumber   Int
+  status          CatalogVersionStatus @default(DRAFT)
+  currency        Currency             @default(CRC)
+  taxRateBp       Int                  @default(1300)
+  taxIncluded     Boolean              @default(true)
+  productCount    Int                  @default(0)
+  sourceFileId    String?
+  sourceChecksum  String?
+  importedAt      DateTime?            @db.Timestamptz(3)
+  validatedAt     DateTime?            @db.Timestamptz(3)
+  activatedAt     DateTime?            @db.Timestamptz(3)
+  archivedAt      DateTime?            @db.Timestamptz(3)
+  createdByUserId String               @db.Uuid
+  createdAt       DateTime             @default(now()) @db.Timestamptz(3)
+  catalog         Catalog              @relation("CatalogVersions", fields: [catalogId], references: [id])
+  activeFor       Catalog?             @relation("CatalogActiveVersion")
+  products        Product[]
+  importJobs      ImportJob[]
+  quotes          Quote[]
+  orders          Order[]
+  payments        Payment[]
+  expenses        Expense[]
+  socialPosts     SocialPost[]
+
+  @@unique([catalogId, versionNumber])
+  @@unique([catalogId, sourceChecksum])
+  @@index([catalogId, status])
+  @@map("catalog_versions")
+}
+
+model Product {
+  id               String         @id @default(uuid(7)) @db.Uuid
+  catalogId        String         @db.Uuid
+  catalogVersionId String         @db.Uuid
+  sku              String
+  name             String
+  description      String?
+  category         String?
+  brand            String?
+  priceMinor       BigInt
+  costMinor        BigInt?
+  currency         Currency       @default(CRC)
+  stock            Int?
+  allowBackorder   Boolean        @default(false)
+  attributes       Json?
+  imageKey         String?
+  isActive         Boolean        @default(true)
+  deletedAt        DateTime?      @db.Timestamptz(3)
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @db.Timestamptz(3)
+  catalog          Catalog        @relation(fields: [catalogId], references: [id])
+  catalogVersion   CatalogVersion @relation(fields: [catalogVersionId], references: [id])
+  quoteItems       QuoteItem[]
+  orderItems       OrderItem[]
+
+  @@unique([catalogVersionId, sku])
+  @@index([catalogId, catalogVersionId, category])
+  @@index([catalogVersionId, name])
+  @@map("products")
+}
+
+model ImportJob {
+  id               String           @id @default(uuid(7)) @db.Uuid
+  catalogId        String           @db.Uuid
+  catalogVersionId String?          @db.Uuid
+  status           ImportStatus     @default(PENDING)
+  sourceType       String
+  driveFileId      String?
+  fileName         String?
+  fileChecksum     String?
+  columnMapping    Json?
+  totalRows        Int              @default(0)
+  importedRows     Int              @default(0)
+  quarantineRows   Int              @default(0)
+  errorMessage     String?
+  createdByUserId  String           @db.Uuid
+  startedAt        DateTime?        @db.Timestamptz(3)
+  finishedAt       DateTime?        @db.Timestamptz(3)
+  createdAt        DateTime         @default(now()) @db.Timestamptz(3)
+  catalogVersion   CatalogVersion?  @relation(fields: [catalogVersionId], references: [id])
+  issues           ImportRowIssue[]
+
+  @@unique([catalogId, fileChecksum])
+  @@index([catalogId, status, createdAt])
+  @@map("import_jobs")
+}
+
+model ImportRowIssue {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  importJobId String    @db.Uuid
+  rowNumber   Int
+  severity    String
+  code        String
+  message     String
+  rawData     Json
+  importJob   ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+
+  @@index([importJobId, severity])
+  @@map("import_row_issues")
+}
+
+model Customer {
+  id             String           @id @default(uuid(7)) @db.Uuid
+  organizationId String           @db.Uuid
+  name           String
+  taxId          String?
+  email          String?
+  phone          String?
+  address        String?
+  notes          String?
+  deletedAt      DateTime?        @db.Timestamptz(3)
+  createdAt      DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @db.Timestamptz(3)
+  quotes         Quote[]
+  orders         Order[]
+  account        CustomerAccount?
+  addresses      Address[]
+
+  @@index([organizationId, phone])
+  @@index([organizationId, name])
+  @@map("customers")
+}
+
+model Address {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String   @db.Uuid
+  customerId     String   @db.Uuid
+  label          String
+  line1          String
+  line2          String?
+  city           String
+  province       String
+  postalCode     String?
+  country        String   @default("CR")
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  customer       Customer @relation(fields: [customerId], references: [id])
+
+  @@index([customerId])
+  @@map("addresses")
+}
+
+model Quote {
+  id               String         @id @default(uuid(7)) @db.Uuid
+  organizationId   String         @db.Uuid
+  catalogId        String         @db.Uuid
+  catalogVersionId String         @db.Uuid
+  customerId       String         @db.Uuid
+  sellerUserId     String?        @db.Uuid
+  number           String
+  status           QuoteStatus    @default(DRAFT)
+  currency         Currency       @default(CRC)
+  subtotalMinor    BigInt         @default(0)
+  discountMinor    BigInt         @default(0)
+  taxMinor         BigInt         @default(0)
+  totalMinor       BigInt         @default(0)
+  taxRateBp        Int            @default(1300)
+  taxIncluded      Boolean        @default(true)
+  validUntil       DateTime       @db.Timestamptz(3)
+  notes            String?
+  publicToken      String         @unique
+  pdfKey           String?
+  deletedAt        DateTime?      @db.Timestamptz(3)
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @db.Timestamptz(3)
+  catalogVersion   CatalogVersion @relation(fields: [catalogVersionId], references: [id])
+  customer         Customer       @relation(fields: [customerId], references: [id])
+  items            QuoteItem[]
+  order            Order?
+
+  @@unique([organizationId, number])
+  @@index([catalogId, status, createdAt])
+  @@index([customerId])
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  quoteId        String   @db.Uuid
+  productId      String   @db.Uuid
+  skuSnapshot    String
+  nameSnapshot   String
+  unitPriceMinor BigInt
+  quantity       Int
+  discountMinor  BigInt   @default(0)
+  lineTotalMinor BigInt
+  quote          Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product        Product  @relation(fields: [productId], references: [id])
+
+  @@index([quoteId])
+  @@map("quote_items")
+}
+
+model Order {
+  id               String         @id @default(uuid(7)) @db.Uuid
+  organizationId   String         @db.Uuid
+  catalogId        String         @db.Uuid
+  catalogVersionId String         @db.Uuid
+  customerId       String         @db.Uuid
+  sellerUserId     String?        @db.Uuid
+  quoteId          String?        @unique @db.Uuid
+  number           String
+  status           OrderStatus    @default(DRAFT)
+  currency         Currency       @default(CRC)
+  subtotalMinor    BigInt         @default(0)
+  discountMinor    BigInt         @default(0)
+  taxMinor         BigInt         @default(0)
+  totalMinor       BigInt         @default(0)
+  paidMinor        BigInt         @default(0)
+  taxRateBp        Int            @default(1300)
+  taxIncluded      Boolean        @default(true)
+  paymentUrl       String?
+  notes            String?
+  deletedAt        DateTime?      @db.Timestamptz(3)
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @db.Timestamptz(3)
+  catalogVersion   CatalogVersion @relation(fields: [catalogVersionId], references: [id])
+  customer         Customer       @relation(fields: [customerId], references: [id])
+  quote            Quote?         @relation(fields: [quoteId], references: [id])
+  items            OrderItem[]
+  payments         Payment[]
+
+  @@unique([organizationId, number])
+  @@index([catalogId, status, createdAt])
+  @@index([customerId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id             String  @id @default(uuid(7)) @db.Uuid
+  orderId        String  @db.Uuid
+  productId      String  @db.Uuid
+  skuSnapshot    String
+  nameSnapshot   String
+  unitPriceMinor BigInt
+  quantity       Int
+  discountMinor  BigInt  @default(0)
+  lineTotalMinor BigInt
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product        Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model Payment {
+  id                String              @id @default(uuid(7)) @db.Uuid
+  organizationId    String              @db.Uuid
+  catalogId         String              @db.Uuid
+  catalogVersionId  String              @db.Uuid
+  orderId           String              @db.Uuid
+  provider          PaymentProvider
+  providerPaymentId String?
+  status            PaymentStatus       @default(PENDING)
+  amountMinor       BigInt
+  currency          Currency
+  feeMinor          BigInt              @default(0)
+  method            String?
+  paidAt            DateTime?           @db.Timestamptz(3)
+  rawPayload        Json?
+  createdAt         DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime            @updatedAt @db.Timestamptz(3)
+  catalogVersion    CatalogVersion      @relation(fields: [catalogVersionId], references: [id])
+  order             Order               @relation(fields: [orderId], references: [id])
+  webhookEvent      PaymentWebhookEvent?
+
+  @@index([orderId, status])
+  @@index([catalogId, createdAt])
+  @@map("payments")
+}
+
+model PaymentWebhookEvent {
+  id              String          @id @default(uuid(7)) @db.Uuid
+  provider        PaymentProvider
+  externalEventId String
+  eventType       String
+  signatureValid  Boolean
+  payload         Json
+  paymentId       String?         @unique @db.Uuid
+  error           String?
+  processedAt     DateTime?       @db.Timestamptz(3)
+  receivedAt      DateTime        @default(now()) @db.Timestamptz(3)
+  payment         Payment?        @relation(fields: [paymentId], references: [id])
+
+  @@unique([provider, externalEventId])
+  @@index([provider, processedAt])
+  @@map("payment_webhook_events")
+}
+
+model Expense {
+  id               String          @id @default(uuid(7)) @db.Uuid
+  organizationId   String          @db.Uuid
+  catalogId        String          @db.Uuid
+  catalogVersionId String?         @db.Uuid
+  category         String
+  description      String
+  amountMinor      BigInt
+  currency         Currency
+  taxMinor         BigInt          @default(0)
+  incurredAt       DateTime        @db.Timestamptz(3)
+  paymentMethod    String?
+  receiptKey       String?
+  status           String          @default("CONFIRMED")
+  createdByUserId  String          @db.Uuid
+  deletedAt        DateTime?       @db.Timestamptz(3)
+  createdAt        DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime        @updatedAt @db.Timestamptz(3)
+  catalogVersion   CatalogVersion? @relation(fields: [catalogVersionId], references: [id])
+
+  @@index([organizationId, incurredAt])
+  @@index([catalogId, incurredAt])
+  @@map("expenses")
+}
+
+model SocialPost {
+  id                String           @id @default(uuid(7)) @db.Uuid
+  organizationId    String           @db.Uuid
+  catalogId         String           @db.Uuid
+  catalogVersionId  String           @db.Uuid
+  platform          String
+  tone              String
+  goal              String
+  title             String
+  body              String
+  hashtags          String[]         @default([])
+  cta               String
+  visualSuggestion  String?
+  productIds        String[]         @default([]) @db.Uuid
+  status            SocialPostStatus @default(DRAFT)
+  promptTemplateKey String
+  promptVersion     Int
+  aiProvider        String
+  aiModel           String
+  tokensIn          Int              @default(0)
+  tokensOut         Int              @default(0)
+  costMicroUsd      Int              @default(0)
+  scheduledFor      DateTime?        @db.Timestamptz(3)
+  publishedAt       DateTime?        @db.Timestamptz(3)
+  approvedByUserId  String?          @db.Uuid
+  deletedAt         DateTime?        @db.Timestamptz(3)
+  createdAt         DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime         @updatedAt @db.Timestamptz(3)
+  catalogVersion    CatalogVersion   @relation(fields: [catalogVersionId], references: [id])
+
+  @@index([catalogId, status, createdAt])
+  @@index([status, scheduledFor])
+  @@map("social_posts")
+}
+
+model AiUsageLedger {
+  id                String   @id @default(uuid(7)) @db.Uuid
+  organizationId    String   @db.Uuid
+  catalogId         String?  @db.Uuid
+  feature           String
+  provider          String
+  model             String
+  promptTemplateKey String
+  promptVersion     Int
+  tokensIn          Int
+  tokensOut         Int
+  costMicroUsd      Int
+  latencyMs         Int
+  cacheHit          Boolean  @default(false)
+  requestHash       String
+  userId            String?  @db.Uuid
+  socialPostId      String?  @db.Uuid
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([organizationId, createdAt])
+  @@index([catalogId, createdAt])
+  @@index([requestHash])
+  @@map("ai_usage_ledger")
+}
+
+model WhatsAppMessage {
+  id             String    @id @default(uuid(7)) @db.Uuid
+  organizationId String    @db.Uuid
+  catalogId      String?   @db.Uuid
+  customerId     String?   @db.Uuid
+  orderId        String?   @db.Uuid
+  direction      String
+  waMessageId    String?   @unique
+  phoneE164      String
+  templateName   String?
+  body           String?
+  status         String    @default("QUEUED")
+  errorCode      String?
+  sentAt         DateTime? @db.Timestamptz(3)
+  deliveredAt    DateTime? @db.Timestamptz(3)
+  readAt         DateTime? @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([organizationId, createdAt])
+  @@index([phoneE164, createdAt])
+  @@map("whatsapp_messages")
+}
+
+model ChatConversation {
+  id               String        @id @default(uuid(7)) @db.Uuid
+  organizationId   String        @db.Uuid
+  catalogId        String        @db.Uuid
+  customerId       String?       @db.Uuid
+  orderId          String?       @db.Uuid
+  assignedToUserId String?       @db.Uuid
+  status           String        @default("OPEN")
+  subject          String?
+  lastMessageAt    DateTime?     @db.Timestamptz(3)
+  createdAt        DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
+  messages         ChatMessage[]
+
+  @@index([catalogId, status, lastMessageAt])
+  @@map("chat_conversations")
+}
+
+model ChatMessage {
+  id             String           @id @default(uuid(7)) @db.Uuid
+  conversationId String           @db.Uuid
+  senderUserId   String?          @db.Uuid
+  senderType     String
+  body           String
+  attachmentKey  String?
+  readAt         DateTime?        @db.Timestamptz(3)
+  createdAt      DateTime         @default(now()) @db.Timestamptz(3)
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("chat_messages")
+}
+
+model AuditLog {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String?  @db.Uuid
+  actorUserId    String?  @db.Uuid
+  action         String
+  entityType     String
+  entityId       String   @db.Uuid
+  before         Json?
+  after          Json?
+  ip             String?
+  userAgent      String?
+  traceId        String
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([organizationId, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@map("audit_log")
+}
+
+model OutboxEvent {
+  id            String       @id @default(uuid(7)) @db.Uuid
+  aggregateType String
+  aggregateId   String       @db.Uuid
+  eventType     String
+  payload       Json
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  availableAt   DateTime     @default(now()) @db.Timestamptz(3)
+  publishedAt   DateTime?    @db.Timestamptz(3)
+  lastError     String?
+  createdAt     DateTime     @default(now()) @db.Timestamptz(3)
+
+  @@index([status, availableAt])
+  @@map("outbox_events")
+}
+
+model IdempotencyKey {
+  id             String            @id @default(uuid(7)) @db.Uuid
+  organizationId String            @db.Uuid
+  key            String
+  scope          String
+  requestHash    String
+  status         IdempotencyStatus @default(IN_PROGRESS)
+  responseStatus Int?
+  responseBody   Json?
+  expiresAt      DateTime          @db.Timestamptz(3)
+  createdAt      DateTime          @default(now()) @db.Timestamptz(3)
+
+  @@unique([organizationId, key, scope])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
