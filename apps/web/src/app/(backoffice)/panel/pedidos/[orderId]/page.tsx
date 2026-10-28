@@ -149,6 +149,7 @@ export default async function BackofficeOrderPage({ params }: OrderDetailPagePro
           refunds={refunds?.items ?? []}
           canRequest={canRequest}
           canApprove={canApprove}
+          currentUserId={session.id}
         />
       </div>
     </div>

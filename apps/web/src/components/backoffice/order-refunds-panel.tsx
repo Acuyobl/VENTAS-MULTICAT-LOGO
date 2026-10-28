@@ -12,6 +12,7 @@ interface OrderRefundsPanelProps {
   refunds: RefundSummary[];
   canRequest: boolean;
   canApprove: boolean;
+  currentUserId: string;
 }
 
 const REFUND_BADGE: Record<RefundSummary['status'], string> = {
@@ -41,6 +42,7 @@ export function OrderRefundsPanel({
   refunds,
   canRequest,
   canApprove,
+  currentUserId,
 }: OrderRefundsPanelProps) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
@@ -72,13 +74,42 @@ export function OrderRefundsPanel({
     dialog.current?.close();
   }
 
+  function describeError(payload: {
+    code?: string;
+    message?: string;
+    details?: { availableMinor?: string; reason?: string } | null;
+  } | null): string {
+    switch (payload?.code) {
+      case 'REFUND_SEGREGATION_REQUIRED':
+        return 'Vos solicitaste este reembolso y no podés aprobarlo: debe aprobarlo otra persona con permiso de aprobación (por ejemplo aprobador.demo@ventascatalogo.local).';
+      case 'REFUND_EXCEEDS_PAID':
+        return `El monto supera lo disponible${payload.details?.availableMinor ? ` (${formatMoney(payload.details.availableMinor, currency)})` : ''}.`;
+      case 'PAYMENT_NOT_REFUNDABLE':
+        return 'Ese pago ya no admite reembolsos (ya fue reembolsado o no está confirmado).';
+      case 'FORBIDDEN':
+        return 'Tu rol no puede hacer esta acción. La segregación exige que una persona solicite y otra apruebe.';
+      case 'VALIDATION_FAILED':
+        return payload.details?.reason === 'refund_already_decided'
+          ? 'Ese reembolso ya fue decidido.'
+          : 'Los datos del reembolso no son válidos.';
+      default:
+        return payload?.message && payload.message !== 'Error'
+          ? payload.message
+          : 'No pudimos completar la acción.';
+    }
+  }
+
   async function api<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await fetch(`/api/v1${path}`, {
       ...init,
       headers: { 'content-type': 'application/json', accept: 'application/json' },
     });
-    const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-    if (!response.ok) throw new Error(payload?.message ?? `Error HTTP ${response.status}`);
+    const payload = (await response.json().catch(() => null)) as {
+      code?: string;
+      message?: string;
+      details?: { availableMinor?: string; reason?: string } | null;
+    } | null;
+    if (!response.ok) throw new Error(describeError(payload));
     return payload as T;
   }
 
@@ -101,7 +132,11 @@ export function OrderRefundsPanel({
         }),
       });
       closeDialog();
-      setNotice(`Reembolso solicitado sobre ${orderNumber}.`);
+      setNotice(
+        canApprove
+          ? `Reembolso solicitado sobre ${orderNumber}. Aprobalo desde otra cuenta con permiso de aprobación (no la tuya).`
+          : `Reembolso solicitado sobre ${orderNumber}. Pedile la aprobación a un usuario con permiso de aprobación.`,
+      );
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'No pudimos solicitar el reembolso.');
@@ -239,7 +274,11 @@ export function OrderRefundsPanel({
                       </span>
                     </td>
                     <td>
-                      {canApprove && refund.status === 'REQUESTED' ? (
+                      {refund.status === 'REQUESTED' && refund.requestedByUserId === currentUserId ? (
+                        <span className="mono faint" style={{ fontSize: '0.72rem' }}>
+                          Solicitado por vos · falta que otra persona lo apruebe
+                        </span>
+                      ) : canApprove && refund.status === 'REQUESTED' ? (
                         <span className="inline" style={{ gap: '0.35rem' }}>
                           <button
                             type="button"
@@ -284,6 +323,11 @@ export function OrderRefundsPanel({
             <h3>Solicitar reembolso</h3>
             <p className="mono faint" style={{ fontSize: '0.72rem' }}>
               Pedido {orderNumber} · disponible {selected ? formatMoney(availableFor(selected), currency) : ''}
+            </p>
+            <p className="mono faint" style={{ fontSize: '0.7rem' }}>
+              {canApprove
+                ? 'Tu rol puede aprobar, pero no tus propias solicitudes: la aprobación debe hacerla otra persona.'
+                : 'Después de solicitarlo, otra persona con permiso de aprobación debe aprobarlo.'}
             </p>
           </div>
 
