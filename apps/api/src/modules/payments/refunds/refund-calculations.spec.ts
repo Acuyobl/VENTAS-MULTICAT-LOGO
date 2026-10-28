@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { nextOrderRefundStatus, nextPaymentRefundStatus, refundableMinor } from './refund-calculations';
+import {
+  nextOrderRefundStatus,
+  nextPaymentRefundStatus,
+  refundableMinor,
+} from './refund-calculations';
 
 describe('refund-calculations', () => {
   it('el disponible es el monto del pago menos los reembolsos procesados', () => {

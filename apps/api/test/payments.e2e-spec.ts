@@ -175,12 +175,14 @@ describe('Cobros F2: link de pago, sandbox, webhook y pagos manuales (e2e)', () 
       amountMinor: '22600',
       currency: 'CRC',
     });
-    expect(link.body.url).toMatch(/^http:\/\/localhost:3000\/pago\//);
+    // El host lo define WEB_PUBLIC_URL por entorno; el contrato es `/pago/{token}`.
+    const linkUrl = new URL(link.body.url as string);
+    expect(linkUrl.pathname).toMatch(/^\/pago\/[A-Za-z0-9_-]{20,}$/);
     const minutes = (new Date(link.body.expiresAt).getTime() - Date.now()) / 60_000;
     expect(minutes).toBeGreaterThan(58);
     expect(minutes).toBeLessThan(61);
 
-    const token = (link.body.url as string).split('/').pop() as string;
+    const token = linkUrl.pathname.split('/').pop() as string;
     const publicLink = await request(server)
       .get(`${api}/payments/public/link/${token}`)
       .expect(200);

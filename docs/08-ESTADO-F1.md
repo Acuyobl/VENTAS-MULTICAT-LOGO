@@ -182,8 +182,33 @@ UI: /panel/pedidos muestra Link de pago / Registrar pago / Saldo · /pago/<token
 ```
 
 **Pendiente de F2:** configuración de pasarelas por organización (UI de `PaymentGatewayConfig`),
-reembolsos, recordatorios de cobro, conciliación programada, gastos, reportes y exportación
-(F2.5–F2.11). Para Stripe real hacen falta `STRIPE_SECRET_KEY` y `STRIPE_WEBHOOK_SECRET`.
+reembolsos (ver §3.5), recordatorios de cobro, conciliación programada, gastos, reportes y
+exportación (F2.5–F2.11). Para Stripe real hacen falta `STRIPE_SECRET_KEY` y
+`STRIPE_WEBHOOK_SECRET`.
+
+## 3.5 Reembolsos con segregación de funciones (F2.6)
+
+| Pieza | Detalle |
+|---|---|
+| Solicitud | `POST /payments/:id/refunds` (`payment:refund_request`) → `Refund` `REQUESTED`; disponible = pago − reembolsos `PROCESSED`; exceso → 422 `REFUND_EXCEEDS_PAID` |
+| Aprobación | `POST /refunds/:id/approve` (`payment:refund_approve`) → `PROCESSED`, actualiza `Payment.status` (`PARTIALLY_REFUNDED`/`REFUNDED`), `Order.refundedMinor` y estado (`REFUNDED` solo con devolución total) |
+| Rechazo | `POST /refunds/:id/reject` → `REJECTED` sin tocar saldos |
+| Segregación | Quien solicita **no puede** aprobar → 409 `REFUND_SEGREGATION_REQUIRED`; aprobar dos veces → 409 sin duplicar montos |
+| Consulta | `GET /orders/:id/refunds` (`refundedMinor`, `balanceMinor`) y `GET /payments/:id/refunds` |
+| UI | `/panel/pedidos/[orderId]`: pagos con monto disponible, reembolsos con estado y botones Aprobar/Rechazar (según permisos), y solicitud en diálogo |
+| Seed | `finanzas.demo@ventascatalogo.local` (solicita) y `aprobador.demo@ventascatalogo.local` (aprueba), ambos `Demo1234!` |
+
+Verificación ejecutada:
+
+```text
+finanzas.demo solicita ₡5.200 sobre PED-2026-000003 → REQUESTED
+finanzas.demo intenta aprobar → 403 FORBIDDEN
+aprobador.demo aprueba → Payment PARTIALLY_REFUNDED · pedido PAID · refunded 5.200 · saldo 20.000
+reembolso del resto (₡20.000) → Payment REFUNDED · pedido REFUNDED · refunded 25.200
+admin solicita y aprueba su propio reembolso → 409 REFUND_SEGREGATION_REQUIRED
+reembolso sobre pago ya reembolsado → 409 PAYMENT_NOT_REFUNDABLE
+UI /panel/pedidos/<id> → 200 con "Pagos", "Reembolsos", "Reembolsado" y segregación
+```
 
 
 
@@ -236,9 +261,9 @@ curl -F "file=@tools/fixtures/catalogo-demo.csv;type=text/csv" `
    `access_type=offline`; el pipeline de importación ya está listo para recibir el buffer descargado.
 2. **PWA de tienda** (F1.13): manifest, service worker e IndexedDB del catálogo activo (lectura
    offline).
-3. **F2 restante**: UI de configuración de pasarelas por organización, reembolsos, recordatorios de
-   cobro, conciliación bancaria, gastos, panel financiero, reportes y exportación (F2.5–F2.11).
-   Stripe real requiere credenciales.
+3. **F2 restante**: UI de configuración de pasarelas por organización, recordatorios de cobro,
+   conciliación bancaria, gastos, panel financiero, reportes y exportación (F2.5–F2.11).
+   Reembolsos ya entregados (§3.5). Stripe real requiere credenciales.
 4. **Cobertura ≥70 % en `catalogs` y `sales`** y E2E importar→activar→cotizar→PDF (DoD de F1).
 5. Alinear el `CHECK` de totales de `docs/03` con la convención de dinero (sigue pendiente de F0).
 6. Endurecer el reclamo: notificación al cliente y límite de intentos por token.

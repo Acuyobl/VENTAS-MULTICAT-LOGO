@@ -18,12 +18,12 @@ administradores y colaboradores, y tienda/portal para los clientes.
 > Estado actual: **F0 cerrado con CI verde, F1 completo salvo Drive/PWA y primer incremento de F2** —
 > monorepo, auth de dos audiencias, RBAC, web biparte, versionado de catálogo, importación CSV/XLSX con
 > cuarentena, productos por versión, imágenes, clientes, cotizaciones con PDF, pedidos, carrito,
-> checkout de invitado con token público, portal de pedidos y **cobros: link de pago, webhook
-> idempotente y pagos manuales (SINPE/transferencia/efectivo)**, con más de 200 pruebas automáticas.
-> Pendiente: Drive, PWA, configuración de pasarelas por organización, reportes financieros (F2.5–F2.11),
-> bootstrap cronometrado y demo/tag `v0.1.0`. Detalle en
+> checkout de invitado con token público, portal de pedidos, **cobros: link de pago, webhook
+> idempotente, pagos manuales y reembolsos con segregación de funciones**, con más de 250 pruebas
+> automáticas. Pendiente: Drive, PWA, configuración de pasarelas por organización, recordatorios y
+> reportes financieros (F2.5–F2.11). Detalle en
 > [`docs/07-ESTADO-IMPLEMENTACION.md`](docs/07-ESTADO-IMPLEMENTACION.md) y
-> [`docs/08-ESTADO-F1.md`](docs/08-ESTADO-F1.md).
+> [`docs/08-ESTADO-F1.md`](docs/08-ESTADO-F1.md); hitos en [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Qué hay en esta carpeta
 

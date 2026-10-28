@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { Payment, Order, Refund } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { nextOrderRefundStatus, nextPaymentRefundStatus, refundableMinor } from './refund-calculations';
+import {
+  nextOrderRefundStatus,
+  nextPaymentRefundStatus,
+  refundableMinor,
+} from './refund-calculations';
 import { AppException } from '../../../common/errors/app-exception';
 
 export type PaymentWithOrder = Payment & { order: Order };
@@ -152,6 +156,10 @@ export class RefundsRepository {
       throw new AppException('VALIDATION_FAILED', 409, { reason: 'refund_already_decided' });
     }
     return this.prisma.refund.findUniqueOrThrow({ where: { id: refundId } });
+  }
+
+  sumProcessedForPayment(paymentId: string): Promise<bigint> {
+    return this.sumProcessed(this.prisma, paymentId);
   }
 
   async sumProcessed(

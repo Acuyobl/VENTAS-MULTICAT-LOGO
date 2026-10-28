@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type {
   CustomerSummary,
@@ -685,6 +686,12 @@ export function SalesBoard({ mode, catalogs, initialQuotes, initialOrders }: Sal
                       </td>
                       <td>
                         <span className="inline" style={{ gap: '0.35rem', flexWrap: 'wrap' }}>
+                          <Link
+                            className="btn btn--small btn--ghost"
+                            href={`/panel/pedidos/${order.id}`}
+                          >
+                            Ver
+                          </Link>
                           {(order.status === 'PENDING_PAYMENT' ||
                             order.status === 'PARTIALLY_PAID') &&
                           BigInt(order.totalMinor) > BigInt(order.paidMinor) ? (

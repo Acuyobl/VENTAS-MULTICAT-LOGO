@@ -3,6 +3,25 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
+## [0.1.1] — 2026-10-28
+
+### Añadido
+- **Reembolsos (F2.6)** con segregación de funciones: solicitud (`payment:refund_request`),
+  aprobación/rechazo (`payment:refund_approve`), reembolso parcial o total, actualización
+  transaccional de `Payment.status`, `Order.refundedMinor` y estado del pedido, y bloqueo de
+  autoaprobación (`REFUND_SEGREGATION_REQUIRED`).
+- Detalle de pedido en el backoffice (`/panel/pedidos/[orderId]`) con productos, saldos, pagos con
+  monto disponible y reembolsos con acciones según permisos.
+- Seed con `finanzas.demo@` (solicita) y `aprobador.demo@` (aprueba) para demostrar la segregación.
+
+### Corregido
+- Las rutas de la cara B (`/carrito`, `/checkout`, `/pedido`, `/pago`) respondían 404 cuando se
+  abrían desde el host del backoffice; ahora se sirven en cualquier host.
+- `.env` regenerado limpio (UTF-8 sin BOM) y un único proceso de API en el puerto 3001.
+
+### Pruebas
+- API: **166 unit** (25 archivos) y **75 e2e** (12 archivos). Web: 19 pruebas.
+
 ## [0.1.0] — 2026-10-28
 
 Primer hito demostrable: **dos caras completas** (catálogo → venta → cobro → tienda → portal) con
