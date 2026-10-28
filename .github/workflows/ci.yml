@@ -51,5 +51,21 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      - name: Coverage (API y web)
+        run: |
+          pnpm --filter @ventascatalogo/api test:coverage
+          pnpm --filter @ventascatalogo/web test:coverage
+
+      - name: Publicar reporte de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            apps/api/coverage/
+            apps/web/coverage/
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Build
         run: pnpm build
