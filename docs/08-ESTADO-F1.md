@@ -483,6 +483,31 @@ PATCH producto ACTIVE                 → precio 250→275, stock 120→130, GET
 
 
 
+## 3.19 Codificación: reparación y prevención (U+FFFD)
+
+Aparecieron textos como «Mar�a WhatsApp» en la UI. La causa no era la app ni la fuente: **datos de
+prueba enviados desde consolas con codificación rota** (PowerShell 5.1) se guardaron con el carácter
+de reemplazo U+FFFD. Se corrigió en tres frentes:
+
+| Frente | Qué se hizo |
+|---|---|
+| Reparación | `apps/api/scripts/scan-encoding.mjs` recorre todas las columnas de texto vía `information_schema`, reporta filas con `position(chr(65533))` y repara con un mapa conocido (`--fix`). **14 registros corregidos** (catálogo, chat, cliente, gastos, notas, reembolsos, prompt de IA) |
+| Guardia de entrada | `EncodingGuardInterceptor` global: si un string del body JSON/multipart contiene U+FFFD responde **422 `VALIDATION_FAILED`** con `details.reason='invalid_encoding'` y `details.path`; los archivos se ignoran y los webhooks se validan por firma |
+| Importador tolerante | `decodeCsvBuffer`: decodifica UTF-8 estricto y si falla usa **Windows-1252** (Excel en español); si el UTF-8 es válido pero trae U+FFFD literal, la fila va a **cuarentena `INVALID_TEXT_ENCODING`** y no se guarda |
+
+Verificación ejecutada:
+
+```text
+escaneo de BD → 14 hallazgos → reparados → re-escaneo: «Sin caracteres U+FFFD en la base de datos»
+UI /panel/chat y /panel/catalogos → 200 sin � · «María WhatsApp» · «Ferretería El Tornillo»
+POST /catalogs con name="Ferreter\uFFFDa" → 422 invalid_encoding · path="name"
+body válido → 201
+CSV guardado en Windows-1252 con «Café»/«Piña» → importados 2/2 · nombres correctos
+CSV UTF-8 con U+FFFD literal → 0 importados · 1 en cuarentena INVALID_TEXT_ENCODING
+```
+
+
+
 ## 4. Decisiones tomadas
 
 1. **Códigos de error promovidos al contrato**: los 5 códigos de F1 se agregaron a

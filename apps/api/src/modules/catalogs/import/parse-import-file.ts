@@ -19,16 +19,63 @@ export class ImportParseError extends Error {
   }
 }
 
+/** Bytes 0x80–0x9F de Windows-1252 (Latin-1 los deja como controles). */
+const CP1252_HIGH: Record<number, string> = {
+  0x80: '€',
+  0x82: '‚',
+  0x83: 'ƒ',
+  0x84: '„',
+  0x85: '…',
+  0x86: '†',
+  0x87: '‡',
+  0x88: 'ˆ',
+  0x89: '‰',
+  0x8a: 'Š',
+  0x8b: '‹',
+  0x8c: 'Œ',
+  0x8e: 'Ž',
+  0x91: '‘',
+  0x92: '’',
+  0x93: '“',
+  0x94: '”',
+  0x95: '•',
+  0x96: '–',
+  0x97: '—',
+  0x98: '˜',
+  0x99: '™',
+  0x9a: 'š',
+  0x9b: '›',
+  0x9c: 'œ',
+  0x9e: 'ž',
+  0x9f: 'Ÿ',
+};
+
+/** Decodifica bytes como Windows-1252 (Excel en español exporta así). */
+export function decodeWindows1252(buffer: Buffer): string {
+  let out = '';
+  for (const byte of buffer) {
+    if (byte >= 0x80 && byte <= 0x9f) {
+      out += CP1252_HIGH[byte] ?? String.fromCharCode(byte);
+    } else {
+      out += String.fromCharCode(byte);
+    }
+  }
+  return out;
+}
+
 /**
- * SheetJS interpreta un `Buffer` UTF-8 como binario/ANSI y devuelve mojibake en
- * los acentos (`DescripciÃ³n`). Por eso el CSV se decodifica a texto antes de
- * parsearlo; si la decodificación UTF-8 deja caracteres de reemplazo se cae a
- * Windows-1252, que es lo que exporta Excel en español.
+ * Decodifica el CSV a texto. Si el archivo **no es UTF-8 válido** (Excel en
+ * español suele exportar Windows-1252), se reintenta como Windows-1252/Latin-1.
+ * Si es UTF-8 válido pero trae el carácter de reemplazo U+FFFD literal, se
+ * conserva: el importador lo mandará a cuarentena en vez de guardarlo.
  */
 export function decodeCsvBuffer(buffer: Buffer): string {
-  const utf8 = buffer.toString('utf8');
-  if (utf8.includes('\uFFFD')) return buffer.toString('latin1');
-  return utf8.charCodeAt(0) === 0xfeff ? utf8.slice(1) : utf8;
+  try {
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+    return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  } catch {
+    return decodeWindows1252(buffer);
+  }
 }
 
 /** Detecta el separador contando ocurrencias en la primera línea. */

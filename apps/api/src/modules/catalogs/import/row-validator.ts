@@ -1,8 +1,14 @@
 import { toMinorAmount, type Currency } from '@ventascatalogo/contracts';
+import { containsReplacementChar } from '../../../common/utils/text-encoding';
 import type { ResolvedMapping } from './normalize-header';
 
 export type ImportErrorCode =
-  'DUPLICATE_SKU' | 'MISSING_PRICE' | 'INVALID_PRICE' | 'MISSING_NAME' | 'MISSING_SKU';
+  | 'DUPLICATE_SKU'
+  | 'MISSING_PRICE'
+  | 'INVALID_PRICE'
+  | 'MISSING_NAME'
+  | 'MISSING_SKU'
+  | 'INVALID_TEXT_ENCODING';
 
 /** Advertencias (no bloquean la fila) que produce la resolución de imágenes. */
 export type ImportWarningCode = 'IMAGE_DOWNLOAD_FAILED' | 'IMAGE_UNRESOLVED';
@@ -47,6 +53,8 @@ export interface ValidateRowsResult {
 export interface ValidateRowsOptions {
   mapping: ResolvedMapping;
   currency: Currency;
+  /** Columnas de campos extra: también se revisan por U+FFFD antes de guardar. */
+  extraFieldColumns?: readonly string[];
 }
 
 const MAX_STOCK = 1_000_000_000;
@@ -79,6 +87,18 @@ export function validateImportRows(
       issues.push({ rowNumber, severity: 'error', code, message, rawData });
       rowHasError = true;
     };
+
+    // Nunca guardar el carácter de reemplazo U+FFFD en un campo mapeado.
+    const mappedValues = [
+      ...Object.values(mapping).filter((column): column is string => Boolean(column)),
+      ...(options.extraFieldColumns ?? []),
+    ];
+    if (mappedValues.some((column) => containsReplacementChar(row[column]))) {
+      addIssue(
+        'INVALID_TEXT_ENCODING',
+        'La fila contiene el carácter de reemplazo U+FFFD (texto con codificación rota); corregí el archivo (UTF-8 o Windows-1252) y reintentá.',
+      );
+    }
 
     if (!sku) {
       addIssue('MISSING_SKU', 'La fila no tiene SKU.');

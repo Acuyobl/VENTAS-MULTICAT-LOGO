@@ -140,3 +140,25 @@ describe('parseImportFile con delimitador explícito', () => {
     });
   });
 });
+
+describe('decodeCsvBuffer · Windows-1252 y U+FFFD', () => {
+  it('decodifica café exportado como Latin-1/Windows-1252', () => {
+    const csv = 'SKU,Nombre\nA-1,café';
+    const latin1 = Buffer.from(csv, 'latin1');
+    expect(decodeCsvBuffer(latin1)).toBe(csv);
+  });
+
+  it('mapea bytes 0x80-0x9F de Windows-1252 (€, comillas tipográficas)', () => {
+    const cafe = Buffer.from([
+      0x53, 0x4b, 0x55, 0x2c, 0x41, 0x2d, 0x31, 0x2c, 0x63, 0x61, 0x66, 0xe9,
+    ]);
+    expect(decodeCsvBuffer(cafe)).toBe('SKU,A-1,café');
+    expect(decodeCsvBuffer(Buffer.from([0x80]))).toBe('€');
+    expect(decodeCsvBuffer(Buffer.from([0x92]))).toBe('’');
+  });
+
+  it('si el UTF-8 es válido pero trae U+FFFD literal, NO lo repara: queda para cuarentena', () => {
+    const csv = Buffer.from('SKU,Nombre\nA-1,Ferreter\uFFFDa', 'utf8');
+    expect(decodeCsvBuffer(csv)).toContain('\uFFFD');
+  });
+});

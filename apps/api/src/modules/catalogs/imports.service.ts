@@ -239,7 +239,11 @@ export class ImportsService {
       });
     }
 
-    const validation = validateImportRows(parsed.rows, { mapping, currency: options.currency });
+    const validation = validateImportRows(parsed.rows, {
+      mapping,
+      currency: options.currency,
+      extraFieldColumns: extraFields.map((field) => field.column),
+    });
     if (validation.totalRows === 0) {
       throw apiException(
         'EMPTY_IMPORT',

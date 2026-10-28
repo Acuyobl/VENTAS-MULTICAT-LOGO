@@ -160,3 +160,45 @@ describe('validateImportRows', () => {
     expect(result.issues[0]?.rawData).toMatchObject({ SKU: 'SKU-1', Precio: 'no-es-precio' });
   });
 });
+
+describe('validateImportRows · INVALID_TEXT_ENCODING', () => {
+  const mapping = {
+    sku: 'SKU',
+    name: 'Nombre',
+    description: undefined,
+    category: undefined,
+    brand: undefined,
+    price: 'Precio',
+    cost: undefined,
+    stock: undefined,
+    image: undefined,
+  } as const;
+
+  it('manda a cuarentena la fila con U+FFFD y no crea producto', () => {
+    const result = validateImportRows(
+      [
+        { SKU: 'A-1', Nombre: 'Ferreter\uFFFDa', Precio: '1000' },
+        { SKU: 'A-2', Nombre: 'Café', Precio: '2000' },
+      ],
+      { mapping, currency: 'CRC' },
+    );
+    expect(result.totalRows).toBe(2);
+    expect(result.products).toHaveLength(1);
+    expect(result.products[0]?.name).toBe('Café');
+    expect(result.quarantineRows).toBe(1);
+    expect(result.issues[0]).toMatchObject({
+      severity: 'error',
+      code: 'INVALID_TEXT_ENCODING',
+      rowNumber: 2,
+    });
+  });
+
+  it('también revisa columnas de campos extra', () => {
+    const result = validateImportRows(
+      [{ SKU: 'A-1', Nombre: 'Tornillo', Precio: '1000', Medida: '1\uFFFD4' }],
+      { mapping, currency: 'CRC', extraFieldColumns: ['Medida'] },
+    );
+    expect(result.products).toHaveLength(0);
+    expect(result.issues[0]?.code).toBe('INVALID_TEXT_ENCODING');
+  });
+});

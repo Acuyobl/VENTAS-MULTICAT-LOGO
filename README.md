@@ -23,7 +23,8 @@ administradores y colaboradores, y tienda/portal para los clientes.
 > exportación CSV y pasarelas por organización**, más **importador inteligente con IA (analiza
 > cualquier archivo, propone el mapeo, guarda campos extra y permite reemplazar o fusionar el
 > catálogo)**, **IA de contenido con imágenes basadas en la foto real del producto y 3 diseños
-> configurables en Ajustes**, **WhatsApp entrante/saliente y chat**, con más de 400 pruebas
+> configurables en Ajustes**, **WhatsApp entrante/saliente y chat**, **importación tolerante a
+> codificaciones (UTF-8/Windows-1252) con guardia contra texto corrupto**, con más de 420 pruebas
 > automáticas. Pendiente: Drive, PWA, variantes, PDF/OCR, conciliación programada, campañas de
 > WhatsApp, chat del cliente, publicación real en redes y credenciales de proveedores de IA/imagen.
 > Detalle en

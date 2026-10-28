@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
@@ -25,6 +25,7 @@ import { OutboxModule } from './modules/outbox/outbox.module';
 import { validateEnv } from './config/env.schema';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { EncodingGuardInterceptor } from './common/interceptors/encoding-guard.interceptor';
 import { AudienceGuard } from './common/guards/audience.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 
@@ -94,6 +95,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: AudienceGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
+    { provide: APP_INTERCEPTOR, useClass: EncodingGuardInterceptor },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
   ],
 })

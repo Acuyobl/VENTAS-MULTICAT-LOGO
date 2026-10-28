@@ -3,7 +3,21 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
-## [0.1.8] — 2026-10-28
+## [0.1.9] — 2026-10-28
+
+### Corregido
+- **Textos con `�` (U+FFFD)** en catálogo, chat, clientes, gastos, notas, reembolsos y prompts:
+  14 registros reparados con `apps/api/scripts/scan-encoding.mjs`; la base quedó sin caracteres de
+  reemplazo.
+- **Guardia global de entrada**: los bodies JSON/multipart con U+FFFD se rechazan con 422
+  `VALIDATION_FAILED` (`reason=invalid_encoding` + campo), salvo archivos y webhooks firmados.
+- **Importador tolerante**: CSV en Windows-1252/Latin-1 (Excel en español) se decodifica bien
+  (`Café`, `Piña`); un U+FFFD literal va a cuarentena `INVALID_TEXT_ENCODING` sin guardarse.
+
+### Pruebas
+- API: **288 unit** (50 archivos) y **128 e2e** (21 archivos). Web: 19 pruebas. CI con cobertura.
+
+
 
 ### Añadido
 - **Galería de productos** en `/panel/productos`: tarjetas con la foto grande del producto, filtros

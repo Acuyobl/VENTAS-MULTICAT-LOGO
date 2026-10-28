@@ -7,10 +7,10 @@ producto (subida a MinIO, URLs firmadas e importación con imágenes), ventas
 (clientes, cotizaciones con PDF y conversión a pedido), la cara B (checkout
 invitado con token público, reclamo de cuenta y portal de pedidos).
 
-- **Unit:** 279 tests en 49 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
+- **Unit:** 288 tests en 50 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
   infraestructura: los servicios externos (ioredis, MinIO) se sustituyen por
   dobles.
-- **E2E:** 124 tests en 20 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
+- **E2E:** 128 tests en 21 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
   una instancia real de Nest (`Test.createTestingModule({ imports: [AppModule] })`)
   en el mismo proceso. No abren puerto fijo ni dependen del `pnpm dev` de la API.
 
@@ -107,6 +107,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `src/modules/ai/image/image-designs.spec.ts`                         | catálogo de 3 diseños con previews `data:image/svg+xml;base64`, `data-design` correcto, `data-photo="false"`, determinista y liviano (<200 KB)                                                                                                                                                                                            | Diseños de imagen       |
 | `src/modules/products/product-permissions.spec.ts`                   | A-R6: `costMinor` oculto para vendedor/social_manager/agente_chat y visible para admin/catálogo/finanzas                                                                                                                                                                                                                                  | Detalle de producto     |
 | `src/modules/products/product-update.spec.ts`                        | diff before/after del audit (solo campos enviados que cambian, BigInt como string, null para limpiar) y regla de versión editable (solo ACTIVE + activa)                                                                                                                                                                                  | Detalle de producto     |
+| `src/common/utils/text-encoding.spec.ts`                             | detección de U+FFFD, path del primer string corrupto (`customer.fullName`, `items[1].name`) y 422 `VALIDATION_FAILED` `reason=invalid_encoding`                                                                                                                                                                                           | Encoding                |
 
 ### E2E
 
@@ -132,6 +133,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `test/ai-images-photo.e2e-spec.ts`            | producto con foto real en `vc-products` → `POST /ai/social-posts` genera SVG con `data:image/png;base64,<foto>` descargable 200 `image/svg+xml`; dos productos con fotos distintas → imágenes distintas; regenerar con prompt custom cambia la imagen; producto sin foto → degradado `data-photo=false`; 403 sin `social:generate` y 404 cross-org; limpia objetos en `afterAll`                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Imágenes con foto               |
 | `test/ai-image-designs.e2e-spec.ts`           | `GET /ai/image-designs` → 3 diseños con preview `data:image/svg+xml`; `PATCH /organizations/settings {imageDesign:'PROMO'}` → 200 y auditado (y sigue aceptando solo `allowSelfApproval`); crear publicación usa PROMO y el SVG descargado trae `data-design="PROMO"` + foto; regenerar con `design:'EDITORIAL'` → otro hash con `data-design="EDITORIAL"`; 403 sin permisos                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Diseños de imagen               |
 | `test/product-detail.e2e-spec.ts`             | `GET /products/:id` con `imageUrl` descargable (`image/png`), `attributes` y `catalogName/versionNumber/versionStatus` (también en versión archivada); vendedor sin `costMinor` (A-R6); `PATCH` de nombre/precio/stock verificado por GET, audit `product.updated` before/after y sin tocar SKU/versión/imagen; cuerpo vacío 422; versión archivada 409 `CATALOG_ARCHIVED`; 404 cross-org/inexistente y 403 sin `product:write`                                                                                                                                                                                                                                                                                                                                                                                                                              | Detalle de producto             |
+| `test/encoding.e2e-spec.ts`                   | guardia global: `POST /catalogs` y `POST /customers` con `\uFFFD` → 422 `VALIDATION_FAILED` `reason=invalid_encoding` con `path`; body válido sigue creando; CSV Latin-1/Windows-1252 con `café` se importa con el texto correcto; CSV UTF-8 con `\uFFFD` → cuarentena `INVALID_TEXT_ENCODING` y nada se guarda en la base                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Encoding                        |
 
 Criterio §4.1.1 (`lint` + `typecheck` + `test` en verde) se comprueba con
 `pnpm lint`, `pnpm typecheck` y los dos comandos de test de este README. El
@@ -245,6 +247,25 @@ unitarios de `HealthService`.
   `AUTH_WRONG_AUDIENCE`.
 - El checkout reutiliza el patrón de snapshots de ventas y la secuencia
   `PED-YYYY-NNNNNN`; los warnings de imágenes no aplican aquí.
+
+## Hallazgos de encoding (U+FFFD)
+
+- `src/common/utils/text-encoding.ts` expone `containsReplacementChar`,
+  `findInvalidEncodingPath` y `assertValidEncoding`; el interceptor global
+  `EncodingGuardInterceptor` (registrado como `APP_INTERCEPTOR`) recorre el body
+  JSON/multipart (ignora archivos porque son Buffer) y responde 422
+  `VALIDATION_FAILED` con `details.reason='invalid_encoding'` y `details.path`.
+  Excluye rutas `/webhooks/` (su cuerpo se valida por firma).
+- CSV: `decodeCsvBuffer` decodifica con `TextDecoder('utf-8', { fatal: true })`;
+  si el archivo no es UTF-8 válido cae a Windows-1252 (tabla 0x80–0x9F para € y
+  comillas tipográficas) para que Excel en español importe `café` bien. Si el
+  UTF-8 es válido pero trae U+FFFD literal, se conserva para que la fila se
+  rechace en lugar de guardar basura.
+- `validateImportRows` revisa las columnas mapeadas y las de `extraFields`; si
+  alguna contiene U+FFFD la fila va a cuarentena con `INVALID_TEXT_ENCODING` y no
+  se persiste ningún producto.
+- No hay migración; los datos ya reparados con `scripts/scan-encoding.mjs` no se
+  vuelven a tocar. No se modificaron `apps/web` ni `packages/contracts`.
 
 ## Hallazgos de detalle y edición de producto (F1)
 
