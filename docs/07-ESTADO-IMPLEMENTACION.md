@@ -72,6 +72,7 @@ Host app.localhost /panel sin sesión → 307 a /login?next=/panel
 Host tienda.localhost /mi-cuenta    → 307 a /mi-cuenta/entrar
 pnpm test                          → 6/6 tareas OK: 36 unit API + 16 e2e API + 6 contracts + 2 ai + 6 web
 docker compose stop redis          → /health/ready 503 {redis:down, queues:down}; al reiniciar → 200
+git commit 9ad0a77                 → 193 archivos, 36.853 líneas (primer commit de F0)
 ```
 
 ## 4. Defectos encontrados y corregidos en esta fase
