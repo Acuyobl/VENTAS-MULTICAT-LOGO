@@ -12,6 +12,11 @@ enum Currency {
   USD
 }
 
+enum CustomerType {
+  PERSON
+  COMPANY
+}
+
 enum Plan {
   FREE
   STARTER
@@ -423,6 +428,7 @@ model ImportRowIssue {
 model Customer {
   id             String           @id @default(uuid(7)) @db.Uuid
   organizationId String           @db.Uuid
+  type           CustomerType     @default(PERSON)
   name           String
   taxId          String?
   email          String?
@@ -532,6 +538,10 @@ model Order {
   taxIncluded      Boolean        @default(true)
   paymentUrl       String?
   notes            String?
+  publicToken      String?        @unique
+  publicTokenExpiresAt DateTime?  @db.Timestamptz(3)
+  claimedAt        DateTime?      @db.Timestamptz(3)
+  cancelReason     String?
   deletedAt        DateTime?      @db.Timestamptz(3)
   createdAt        DateTime       @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime       @updatedAt @db.Timestamptz(3)

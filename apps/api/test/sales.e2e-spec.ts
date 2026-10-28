@@ -554,7 +554,13 @@ describe('Ventas F1: clientes, cotizaciones con PDF y conversión a pedido (e2e)
       .send({ reason: 'Prueba de cancelación' })
       .expect(200);
     expect(cancelled.body.status).toBe('CANCELLED');
-    expect(cancelled.body.notes).toContain('Prueba de cancelación');
+
+    // El motivo vive en su columna (`cancelReason`), ya no se concatena en notes.
+    const cancelledRow = await prisma.order.findUniqueOrThrow({
+      where: { id: converted.body.id },
+    });
+    expect(cancelledRow.cancelReason).toBe('Prueba de cancelación');
+    expect(cancelledRow.notes).toBeNull();
 
     const audit = await prisma.auditLog.findFirst({
       where: { action: 'order.cancelled', entityId: converted.body.id },

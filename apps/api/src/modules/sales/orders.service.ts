@@ -64,10 +64,7 @@ export class OrdersService {
       });
     }
 
-    const notes = order.notes
-      ? `${order.notes}\nCancelado: ${input.reason}`
-      : `Cancelado: ${input.reason}`;
-    const updated = await this.repo.updateStatus(order.id, 'CANCELLED', notes);
+    const updated = await this.repo.cancel(order.id, input.reason);
 
     await this.audit.write({
       organizationId: user.organizationId,

@@ -27,7 +27,8 @@ Bitácora del primer incremento de F1 (`docs/04-GUIA-IMPLEMENTACION.md` §4.2). 
 | F1.4 Drive (descarga/snapshot remoto) | ⏸️ | El pipeline ya acepta un buffer; falta el origen Drive |
 | F1.7/F1.8 Cotizaciones, pedidos y PDF | ✅ | Clientes, cotizaciones con snapshot y PDF, conversión a pedido, entrega y cancelación |
 | F1.4 Drive (descarga/snapshot remoto) | ⏸️ | El pipeline ya acepta un buffer; falta el origen Drive |
-| F1.10–F1.13 Tienda, carrito, portal, PWA | ⏳ | Siguiente incremento |
+| F1.10–F1.12 Tienda, carrito, checkout invitado, reclamo y portal | ✅ | Carrito persistente, checkout público con token, confirmación y `/mi-cuenta/pedidos` |
+| F1.13 PWA de tienda (offline de lectura) | ⏳ | Manifest, service worker e IndexedDB del catálogo activo |
 
 ## 2. API nueva (staff, `catalog:read` / `catalog:write`)
 
@@ -125,9 +126,37 @@ Cantidad 999 con stock 12 → 409 PRODUCT_OUT_OF_STOCK available=12
 UI /panel/cotizaciones y /panel/pedidos → 200 con datos reales y acciones
 ```
 
-**Deuda registrada:** `Customer.type` se persiste dentro de `customer.notes` (no hay columna y no se
-permitieron migraciones en este incremento) y el motivo de cancelación se concatena en
-`order.notes`; ambos deben migrarse a columnas propias. `accept` reutiliza `quote:send`.
+**Deuda resuelta (migración `20261028171500_storefront_orders_and_debts`):** `Customer.type` y
+`Order.cancelReason` ya son columnas reales (el seed quedó PERSON/PERSON/COMPANY y cancelar escribe
+la razón en su columna). Se añadieron `Order.publicToken` (único), `publicTokenExpiresAt` y
+`claimedAt`.
+
+## 3.3 Cara B: carrito, checkout de invitado y portal (F1.10–F1.12)
+
+| Pieza | Detalle |
+|---|---|
+| Carrito | Cliente en `localStorage` (`vc.cart.v1`), 999 unidades máx., nunca mezcla catálogos; botón **Agregar** en cada tarjeta del catálogo público y badge en el header |
+| Checkout | `POST /storefront/checkout` (`@Public`, 10/min) con catálogo por slug, ítems y datos del invitado → crea/reutiliza `Customer` y un `Order` `PENDING_PAYMENT` con snapshots de precio y totales del servidor |
+| Token | 32 bytes base64url devuelto en claro solo en la respuesta; en BD se guarda `sha256(token)`, expira a 30 días |
+| Confirmación | `/pedido/[token]` (pública) muestra número, ítems, totales y permite **vincular el pedido a la cuenta** si hay sesión de cliente con el mismo email |
+| Portal | `/mi-cuenta/pedidos` y `/mi-cuenta/pedidos/[id]`, con `GET /me/orders` filtrado por `customerId` en el repositorio (staff recibe 403 de audiencia, pedido ajeno 404) |
+
+Verificación ejecutada:
+
+```text
+POST /storefront/checkout (2 × ₡12.600) → 201 PED-2026-000003 · total 25.200 · token 43 chars · expira +30 días
+GET  /storefront/orders/:token          → pedido con ítems, subtotal 22.300 e IVA 2.900
+POST /storefront/orders/:token/claim    → claimed=true (sesión cliente@ventascatalogo.local)
+GET  /me/orders                         → PED-2026-000003 PENDING_PAYMENT (+ histórico del cliente)
+Staff en /me/orders                     → 403 AUTH_WRONG_AUDIENCE
+/c/catalogo-demo                        → HTML con botón "Agregar"
+/carrito, /checkout                     → 200 (estado vacío renderizado por el cliente tras hidratar)
+/pedido/<token>                         → 200 "Pedido confirmado" + número + totales
+/mi-cuenta/pedidos (sesión cliente)     → 200 con el número del pedido
+```
+
+**Límite actual:** el checkout deja el pedido en `PENDING_PAYMENT`; el link de pago y los webhooks
+llegan en F2. El reclamo exige que el email del pedido coincida con el de la cuenta.
 
 
 
@@ -178,10 +207,10 @@ curl -F "file=@tools/fixtures/catalogo-demo.csv;type=text/csv" `
 
 1. **Google Drive** (F1.1/F1.2): crear cliente OAuth en Google Cloud con scope `drive.readonly` y
    `access_type=offline`; el pipeline de importación ya está listo para recibir el buffer descargado.
-2. **Deuda de ventas a migrar**: columna propia para `Customer.type` y `Order.cancelReason`
-   (hoy en `notes`), y permiso dedicado para `accept`.
-3. **Tienda y portal** (F1.10–F1.12): carrito, checkout de invitado, reclamo de cuenta y
-   `/mi-cuenta` con filtro `self` en repositorio.
-4. **PWA de tienda** (F1.13): manifest, service worker e IndexedDB del catálogo activo.
-5. **Cobertura ≥70 % en `catalogs` y `sales`** y E2E importar→activar→cotizar→PDF (DoD de F1).
-6. Alinear el `CHECK` de totales de `docs/03` con la convención de dinero (sigue pendiente de F0).
+2. **PWA de tienda** (F1.13): manifest, service worker e IndexedDB del catálogo activo (lectura
+   offline).
+3. **Link de pago del pedido público**: hoy el checkout deja `PENDING_PAYMENT`; la pasarela y los
+   webhooks son F2.
+4. **Cobertura ≥70 % en `catalogs` y `sales`** y E2E importar→activar→cotizar→PDF (DoD de F1).
+5. Alinear el `CHECK` de totales de `docs/03` con la convención de dinero (sigue pendiente de F0).
+6. Endurecer el reclamo: notificación al cliente y límite de intentos por token.

@@ -52,10 +52,19 @@ export class OrdersRepository {
     return this.prisma.payment.count({ where: { orderId } });
   }
 
-  updateStatus(orderId: string, status: OrderStatus, notes?: string | null) {
+  updateStatus(orderId: string, status: OrderStatus) {
     return this.prisma.order.update({
       where: { id: orderId },
-      data: { status, ...(notes !== undefined ? { notes } : {}) },
+      data: { status },
+      include: { customer: true, items: true },
+    });
+  }
+
+  /** Cancela guardando el motivo en su columna (ya no se concatena en `notes`). */
+  cancel(orderId: string, reason: string) {
+    return this.prisma.order.update({
+      where: { id: orderId },
+      data: { status: 'CANCELLED', cancelReason: reason },
       include: { customer: true, items: true },
     });
   }

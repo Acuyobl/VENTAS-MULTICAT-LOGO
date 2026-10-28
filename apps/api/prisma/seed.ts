@@ -253,11 +253,11 @@ async function ensureCustomer(organizationId: string, email: string, name: strin
 
 /**
  * Cliente de ventas para la demo/backoffice. Idempotente por
- * `organización + email`; si ya existe se completan teléfono y cédula.
+ * `organización + email`; si ya existe se completan tipo, teléfono y cédula.
  */
 async function ensureSalesCustomer(
   organizationId: string,
-  input: { name: string; email: string; phone: string; taxId: string },
+  input: { name: string; email: string; phone: string; taxId: string; type: 'PERSON' | 'COMPANY' },
 ) {
   const existing = await prisma.customer.findFirst({
     where: { organizationId, email: input.email },
@@ -265,7 +265,7 @@ async function ensureSalesCustomer(
   if (existing) {
     return prisma.customer.update({
       where: { id: existing.id },
-      data: { name: input.name, phone: input.phone, taxId: input.taxId },
+      data: { name: input.name, phone: input.phone, taxId: input.taxId, type: input.type },
     });
   }
   return prisma.customer.create({
@@ -275,6 +275,7 @@ async function ensureSalesCustomer(
       email: input.email,
       phone: input.phone,
       taxId: input.taxId,
+      type: input.type,
     },
   });
 }
@@ -452,18 +453,21 @@ async function main(): Promise<void> {
     email: customer.email,
     phone: '+506 8888-0000',
     taxId: '1-0000-0000',
+    type: 'PERSON',
   });
   await ensureSalesCustomer(orgA.id, {
     name: 'María Solís Vega',
     email: 'maria.solis@ventascatalogo.local',
     phone: '+506 8888-1111',
     taxId: '1-1111-1111',
+    type: 'PERSON',
   });
   await ensureSalesCustomer(orgA.id, {
     name: 'Empresa Demo S.A.',
     email: 'compras@ventascatalogo.local',
     phone: '+506 2222-3333',
     taxId: '3-101-999999',
+    type: 'COMPANY',
   });
 
   const dualMembership = await ensureMembership(orgA.id, dual.id);

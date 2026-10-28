@@ -3,13 +3,14 @@
 Batería unitaria y E2E de la API de VentasCatálogo. Cubre los criterios de
 verificación de F0 (`docs/04-GUIA-IMPLEMENTACION.md` §4.1), el incremento F1 de
 versionado, importación CSV/XLSX y productos por versión, las imágenes de
-producto (subida a MinIO, URLs firmadas e importación con imágenes) y ventas
-(clientes, cotizaciones con PDF y conversión a pedido).
+producto (subida a MinIO, URLs firmadas e importación con imágenes), ventas
+(clientes, cotizaciones con PDF y conversión a pedido) y la cara B (checkout
+invitado con token público, reclamo de cuenta y portal de pedidos).
 
-- **Unit:** 124 tests en 16 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
+- **Unit:** 133 tests en 18 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
   infraestructura: los servicios externos (ioredis, MinIO) se sustituyen por
   dobles.
-- **E2E:** 49 tests en 9 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
+- **E2E:** 58 tests en 10 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
   una instancia real de Nest (`Test.createTestingModule({ imports: [AppModule] })`)
   en el mismo proceso. No abren puerto fijo ni dependen del `pnpm dev` de la API.
 
@@ -73,6 +74,8 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `src/modules/sales/numbering.spec.ts`                   | formato `COT-YYYY-NNNNNN`/`PED-YYYY-NNNNNN`, sin truncar secuencias, rechazo de año/secuencia inválidos, parseo, año comercial en zona Costa Rica y claves de advisory lock                                                                                                                                                               | Ventas F1 (numeración)  |
 | `src/modules/sales/quote-calculator.spec.ts`            | totales con `calculateTotals` (₡11.300×2 → 20.000/2.600/22.600), descuento por línea antes del IVA, IVA agregado, `PRODUCT_OUT_OF_STOCK` con `available`, `PRODUCT_INACTIVE`, `PRODUCT_NOT_IN_ACTIVE_VERSION`, backorder y descuento mayor que la línea                                                                                   | Ventas F1 (totales)     |
 | `src/modules/sales/quote-pdf.spec.ts`                   | PDF A4 real (`%PDF-`), texto WinAnsi con acentos (María Solís, Cotización, Café), número, totales, "Documento no fiscal", paginación con 45 ítems, USD y `pdfSafeText` para caracteres fuera de cp1252                                                                                                                                    | Ventas F1 (PDF)         |
+| `src/modules/storefront/token.spec.ts`                  | `sha256` del token (64 hex, determinístico, recorta espacios), tokens aleatorios de ≥40 caracteres, expiración a 30 días y detección de vencimiento (null = no vencido)                                                                                                                                                                   | Cara B (token)          |
+| `src/modules/storefront/guest-customer.spec.ts`         | normalización de email (minúsculas/trim) y teléfono (colapsa espacios), precedencia email→teléfono, `null` si no hay contacto                                                                                                                                                                                                             | Cara B (invitado)       |
 
 ### E2E
 
@@ -87,6 +90,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `test/dev-auth-helpers.e2e-spec.ts`    | con `DEV_AUTH_HELPERS=true`: login del admin sembrado → `mfa_enrollment_required` → `/auth/mfa/enroll` → `POST /auth/dev/totp` devuelve un TOTP de 6 dígitos válido (`authenticator.check`) y `expiresInSeconds` 1-30 → `/auth/mfa/verify` emite sesión staff; segundo login `mfa_required` resuelto solo con el helper; `mfaToken` inválido → 401; con el flag apagado (app nueva tras reiniciar el registro de módulos) → `404 NOT_FOUND` y el login sigue funcionando                                                                                                                                                                                                                                                                                                                                                                                     | Tarea 10 (dev MFA)              |
 | `test/product-images.e2e-spec.ts`      | `POST /products/:id/image` con PNG real → 201, `imageKey` + `imageUrl` firmada que descarga 200; `GET /products` y `GET /catalogs/public/:slug` con `imageUrl`; reemplazo borra el objeto anterior; `DELETE` limpia `imageKey` y la URL vieja deja de servir; vendedor sin `product:write` → 403; producto de otra org → 404; 400 por vacío/GIF/PDF/>5 MB; importación con URL servida por un server HTTP efímero (`imageKey` subida a MinIO) y URL rota (warning `IMAGE_DOWNLOAD_FAILED`, producto igual creado) y valor relativo (warning `IMAGE_UNRESOLVED`)                                                                                                                                                                                                                                                                                              | Imágenes de producto            |
 | `test/sales.e2e-spec.ts`               | crea clientes PERSON/COMPANY y los busca (`q` por nombre/email); cotización con snapshot de `₡11.300`×2 → subtotal `20000`, IVA `2600`, total `22600`, número `COT-<año>-000001`; listar/obtener; `send` genera PDF real (`%PDF-`, acentos, número, "Documento no fiscal") y `/pdf` devuelve URL firmada; `accept` SENT→ACCEPTED y vencida → `QUOTE_EXPIRED`; `convert` → pedido `PENDING_PAYMENT` `PED-<año>-000001` con los mismos totales, segunda conversión → 409 `QUOTE_ALREADY_CONVERTED` con `details.orderId`; stock insuficiente → `PRODUCT_OUT_OF_STOCK` + `available`; producto de versión archivada → `PRODUCT_NOT_IN_ACTIVE_VERSION`; catálogo con versión ARCHIVED → `CATALOG_ARCHIVED`; 403 `FORBIDDEN`/`AUTH_WRONG_AUDIENCE`; 404 multi-org; cancelar pedido con pago → `ORDER_HAS_PAYMENTS`; `fulfill` y transición inválida; audit/outbox | Ventas F1                       |
+| `test/storefront.e2e-spec.ts`          | checkout público (`POST /storefront/checkout`) 2×₡11.300 → 201 con número `PED-<año>-000001`, total `22600`, token de ≥40 caracteres y expiración ~30 días; en DB solo se guarda el SHA-256; `GET /storefront/orders/:token` devuelve ítems/totales; token inválido → 404; expirado → 409 `VALIDATION_FAILED` con `reason=order_token_expired`; stock → 409 `PRODUCT_OUT_OF_STOCK` + `available`; claim con el email correcto reasigna al Customer de la cuenta, marca `claimedAt` y aparece en `/me/orders`; otro cliente no lo ve (404); email distinto → 404; sin email de contacto → 409 `claim_email_missing`; staff en `/me/*` → 403 `AUTH_WRONG_AUDIENCE`; cancelar guarda `cancelReason` sin tocar `notes`; `Customer.type` persistido (COMPANY/PERSON)                                                                                              | Cara B                          |
 
 Criterio §4.1.1 (`lint` + `typecheck` + `test` en verde) se comprueba con
 `pnpm lint`, `pnpm typecheck` y los dos comandos de test de este README. El
@@ -151,13 +155,12 @@ unitarios de `HealthService`.
   objetos huérfanos de ese catálogo. Es best-effort: si MinIO no está arriba, el
   seed termina igual con un aviso.
 
-## Añadir un test
-
 ## Hallazgos de ventas (clientes, cotizaciones y pedidos)
 
-- `Customer` no tiene columna `type` y la tarea prohíbe migraciones: el `type`
-  del contrato (`PERSON`/`COMPANY`) se guarda en `customer.notes` como sobre JSON
-  y se decodifica al leer. Cuando exista la columna se elimina esa capa.
+- `Customer.type` (`PERSON`/`COMPANY`) es una columna real desde la migración
+  `storefront_orders_and_debts`; antes se guardaba en `customer.notes` como sobre
+  JSON. El motivo de cancelación de un pedido también vive en
+  `orders.cancelReason` (no se concatena en `notes`).
 - Numeración: `COT-YYYY-NNNNNN` para cotizaciones y `PED-YYYY-NNNNNN` para
   pedidos, secuencial por organización y **año comercial de Costa Rica**, con
   `pg_advisory_xact_lock` dentro de la transacción (el lock se usa con
@@ -173,9 +176,34 @@ unitarios de `HealthService`.
   cualquier carácter fuera de cp1252 se normalizan antes de dibujar para que el
   documento nunca falle. Se guarda en `vc-docs` como `quotes/{orgId}/{quoteId}.pdf`
   y se sirve con URL firmada de 300 s.
-- El seed crea clientes demo (`cliente@`, `maria.solis@`, `compras@`) y asigna
-  los permisos de ventas a `org_admin`, `catalog_admin`, `vendedor`, `finanzas` y
-  `superadmin`.
+- El seed crea clientes demo (`cliente@`, `maria.solis@`, `compras@`, este último
+  `COMPANY`) y asigna los permisos de ventas a `org_admin`, `catalog_admin`,
+  `vendedor`, `finanzas` y `superadmin`.
+
+## Hallazgos de la cara B (checkout invitado y portal)
+
+- Migración `20261028171500_storefront_orders_and_debts`: agrega el enum
+  `CustomerType`, `customers.type` y las columnas `orders.publicToken` (único),
+  `publicTokenExpiresAt`, `claimedAt` y `cancelReason`. Resuelve la deuda de
+  ventas: el motivo de cancelación ya no se concatena en `notes` y
+  `Customer.type` es una columna real. Como el shell no es interactivo,
+  `prisma migrate dev` no puede correr; la migración se generó con
+  `prisma migrate diff` y se aplicó con `prisma migrate deploy`.
+- El token del pedido es aleatorio (32 bytes base64url) y **solo se devuelve en
+  claro en el checkout**; la base guarda `sha256(token)` en `publicToken`. La
+  búsqueda pública siempre hashea el token recibido. Expira a los 30 días: pasado
+  ese plazo responde 409 `VALIDATION_FAILED` con `details.reason =
+'order_token_expired'` (token inexistente → 404).
+- Reclamo: solo el email de la sesión customer que coincide con el email del
+  cliente invitado puede reasignar el pedido a su `Customer` y marcar
+  `claimedAt`; email distinto o pedido ya reclamado por otro → 404 (no se revela
+  existencia). Sin email de contacto → 409 `claim_email_missing`.
+- `/me/orders` y `/me/orders/:id` filtran por `customerId` **en la firma del
+  repositorio** (resuelto desde el `CustomerAccount` de la sesión, nunca por
+  query param). Un token `aud=staff` contra `/me/*` → 403
+  `AUTH_WRONG_AUDIENCE`.
+- El checkout reutiliza el patrón de snapshots de ventas y la secuencia
+  `PED-YYYY-NNNNNN`; los warnings de imágenes no aplican aquí.
 
 ## Añadir un test
 

@@ -10,6 +10,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
         </Link>
         <nav className="store__nav">
           <Link href="/tienda">Tienda</Link>
+          <Link href="/mi-cuenta/pedidos">Mis pedidos</Link>
           <Link href="/mi-cuenta">Mi cuenta</Link>
         </nav>
       </header>

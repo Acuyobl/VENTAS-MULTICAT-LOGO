@@ -48,15 +48,16 @@ export class CustomersRepository {
     });
   }
 
-  create(organizationId: string, input: CustomerCreateInput, notes: string | null) {
+  create(organizationId: string, input: CustomerCreateInput) {
     return this.prisma.customer.create({
       data: {
         organizationId,
+        type: input.type,
         name: input.fullName,
         taxId: input.idNumber ?? null,
         email: input.email ?? null,
         phone: input.phone ?? null,
-        notes,
+        notes: input.notes ?? null,
       },
     });
   }

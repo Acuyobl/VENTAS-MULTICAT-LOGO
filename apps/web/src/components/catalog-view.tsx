@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import { formatMoney, taxLabel } from '@/lib/format';
 import type { PublicCatalog } from '@/lib/types';
+import { AddToCartButton } from '@/components/store/add-to-cart-button';
 
 interface CatalogViewProps {
   catalog: PublicCatalog;
@@ -133,6 +134,20 @@ export function CatalogView({ catalog, category, basePath }: CatalogViewProps) {
                         ? `${product.stock} en stock`
                         : 'Agotado'}
                   </span>
+                </div>
+                <div className="product-card__actions">
+                  <AddToCartButton
+                    product={{
+                      id: product.id,
+                      sku: product.sku,
+                      name: product.name,
+                      priceMinor: product.priceMinor,
+                      currency: product.currency,
+                      imageUrl: product.imageUrl ?? null,
+                    }}
+                    catalog={{ slug: catalog.slug, name: catalog.name }}
+                    disabled={product.stock !== null && product.stock <= 0}
+                  />
                 </div>
                 <span className="product-card__sku">{product.sku}</span>
               </article>
