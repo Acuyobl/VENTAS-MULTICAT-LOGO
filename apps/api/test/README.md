@@ -4,13 +4,13 @@ Batería unitaria y E2E de la API de VentasCatálogo. Cubre los criterios de
 verificación de F0 (`docs/04-GUIA-IMPLEMENTACION.md` §4.1), el incremento F1 de
 versionado, importación CSV/XLSX y productos por versión, las imágenes de
 producto (subida a MinIO, URLs firmadas e importación con imágenes), ventas
-(clientes, cotizaciones con PDF y conversión a pedido) y la cara B (checkout
+(clientes, cotizaciones con PDF y conversión a pedido), la cara B (checkout
 invitado con token público, reclamo de cuenta y portal de pedidos).
 
-- **Unit:** 133 tests en 18 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
+- **Unit:** 163 tests en 24 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
   infraestructura: los servicios externos (ioredis, MinIO) se sustituyen por
   dobles.
-- **E2E:** 58 tests en 10 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
+- **E2E:** 67 tests en 11 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
   una instancia real de Nest (`Test.createTestingModule({ imports: [AppModule] })`)
   en el mismo proceso. No abren puerto fijo ni dependen del `pnpm dev` de la API.
 
@@ -76,6 +76,12 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `src/modules/sales/quote-pdf.spec.ts`                   | PDF A4 real (`%PDF-`), texto WinAnsi con acentos (María Solís, Cotización, Café), número, totales, "Documento no fiscal", paginación con 45 ítems, USD y `pdfSafeText` para caracteres fuera de cp1252                                                                                                                                    | Ventas F1 (PDF)         |
 | `src/modules/storefront/token.spec.ts`                  | `sha256` del token (64 hex, determinístico, recorta espacios), tokens aleatorios de ≥40 caracteres, expiración a 30 días y detección de vencimiento (null = no vencido)                                                                                                                                                                   | Cara B (token)          |
 | `src/modules/storefront/guest-customer.spec.ts`         | normalización de email (minúsculas/trim) y teléfono (colapsa espacios), precedencia email→teléfono, `null` si no hay contacto                                                                                                                                                                                                             | Cara B (invitado)       |
+| `src/modules/payments/payment-calculations.spec.ts`     | saldo (nunca negativo) y estado `PENDING_PAYMENT`/`PARTIALLY_PAID`/`PAID`, sobrepago 422 con `balanceMinor`, expiración del link                                                                                                                                                                                                          | Cobros F2               |
+| `src/modules/payments/stripe-signature.spec.ts`         | firma HMAC-SHA256 válida, payload alterado/secreto distinto, tolerancia de 300 s, headers malformados y varias `v1`                                                                                                                                                                                                                       | Cobros F2               |
+| `src/modules/payments/stripe-events.spec.ts`            | normalización de `checkout.session.completed` y `payment_intent.succeeded` (orderId, monto, moneda) y eventos ignorados                                                                                                                                                                                                                   | Cobros F2               |
+| `src/modules/payments/payments.repository.spec.ts`      | idempotencia del webhook: `P2002` → `null`, primer evento se crea, otros errores se propagan                                                                                                                                                                                                                                              | Cobros F2               |
+| `src/modules/payments/gateways/stripe.gateway.spec.ts`  | Checkout Session con `fetch` mockeado (URL/Auth/body), `INTEGRATION_NOT_CONFIGURED` sin key, 502 si Stripe falla y verificación de firma                                                                                                                                                                                                  | Cobros F2               |
+| `src/modules/payments/gateways/sandbox.gateway.spec.ts` | link interno `/pago/{token}`, flag apagado → `INTEGRATION_NOT_CONFIGURED`, sin webhooks                                                                                                                                                                                                                                                   | Cobros F2               |
 
 ### E2E
 
@@ -91,6 +97,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `test/product-images.e2e-spec.ts`      | `POST /products/:id/image` con PNG real → 201, `imageKey` + `imageUrl` firmada que descarga 200; `GET /products` y `GET /catalogs/public/:slug` con `imageUrl`; reemplazo borra el objeto anterior; `DELETE` limpia `imageKey` y la URL vieja deja de servir; vendedor sin `product:write` → 403; producto de otra org → 404; 400 por vacío/GIF/PDF/>5 MB; importación con URL servida por un server HTTP efímero (`imageKey` subida a MinIO) y URL rota (warning `IMAGE_DOWNLOAD_FAILED`, producto igual creado) y valor relativo (warning `IMAGE_UNRESOLVED`)                                                                                                                                                                                                                                                                                              | Imágenes de producto            |
 | `test/sales.e2e-spec.ts`               | crea clientes PERSON/COMPANY y los busca (`q` por nombre/email); cotización con snapshot de `₡11.300`×2 → subtotal `20000`, IVA `2600`, total `22600`, número `COT-<año>-000001`; listar/obtener; `send` genera PDF real (`%PDF-`, acentos, número, "Documento no fiscal") y `/pdf` devuelve URL firmada; `accept` SENT→ACCEPTED y vencida → `QUOTE_EXPIRED`; `convert` → pedido `PENDING_PAYMENT` `PED-<año>-000001` con los mismos totales, segunda conversión → 409 `QUOTE_ALREADY_CONVERTED` con `details.orderId`; stock insuficiente → `PRODUCT_OUT_OF_STOCK` + `available`; producto de versión archivada → `PRODUCT_NOT_IN_ACTIVE_VERSION`; catálogo con versión ARCHIVED → `CATALOG_ARCHIVED`; 403 `FORBIDDEN`/`AUTH_WRONG_AUDIENCE`; 404 multi-org; cancelar pedido con pago → `ORDER_HAS_PAYMENTS`; `fulfill` y transición inválida; audit/outbox | Ventas F1                       |
 | `test/storefront.e2e-spec.ts`          | checkout público (`POST /storefront/checkout`) 2×₡11.300 → 201 con número `PED-<año>-000001`, total `22600`, token de ≥40 caracteres y expiración ~30 días; en DB solo se guarda el SHA-256; `GET /storefront/orders/:token` devuelve ítems/totales; token inválido → 404; expirado → 409 `VALIDATION_FAILED` con `reason=order_token_expired`; stock → 409 `PRODUCT_OUT_OF_STOCK` + `available`; claim con el email correcto reasigna al Customer de la cuenta, marca `claimedAt` y aparece en `/me/orders`; otro cliente no lo ve (404); email distinto → 404; sin email de contacto → 409 `claim_email_missing`; staff en `/me/*` → 403 `AUTH_WRONG_AUDIENCE`; cancelar guarda `cancelReason` sin tocar `notes`; `Customer.type` persistido (COMPANY/PERSON)                                                                                              | Cara B                          |
+| `test/payments.e2e-spec.ts`            | link sandbox para pedido → `ACTIVE` con monto = saldo y URL `/pago/{token}`; `GET /payments/public/link/:token` devuelve link + pedido; confirmación sandbox cobra (`PAID`, `paidMinor=total`, un solo `Payment`, link `USED`) y la segunda es `alreadyProcessed`; link expirado → 409 `payment_link_expired`; pago manual parcial → `PARTIALLY_PAID` + `balanceMinor`, sobrepago → 422 y completar saldo → `PAID`; webhook Stripe firmado registra el pago una sola vez (`idempotent` en el reintento) y firma inválida → 400 `PAYMENT_SIGNATURE_INVALID`; pedido pagado no se cancela (`ORDER_HAS_PAYMENTS`) ni regenera link; cross-org 404; sandbox apagado → 404                                                                                                                                                                                        | Cobros F2                       |
 
 Criterio §4.1.1 (`lint` + `typecheck` + `test` en verde) se comprueba con
 `pnpm lint`, `pnpm typecheck` y los dos comandos de test de este README. El
@@ -204,6 +211,36 @@ unitarios de `HealthService`.
   `AUTH_WRONG_AUDIENCE`.
 - El checkout reutiliza el patrón de snapshots de ventas y la secuencia
   `PED-YYYY-NNNNNN`; los warnings de imágenes no aplican aquí.
+
+## Añadir un test
+
+## Hallazgos de cobros (F2)
+
+- Migración `20261028173500_payments_links_and_gateways`: enum `SANDBOX` en
+  `PaymentProvider`, `payments.reference`, tablas `payment_links` (token único) y
+  `payment_gateway_configs` (única por org+provider). Aplicada con
+  `prisma migrate diff` + `prisma migrate deploy` + `prisma generate` (el shell no
+  es interactivo).
+- `POST /orders/:id/payment-link` crea el link con token aleatorio (24 bytes
+  base64url), monto por defecto = `totalMinor - paidMinor` y expiración de 60 min
+  por defecto (`PAYMENTS_LINK_TTL_MINUTES`). Rechaza pedidos no cobrables
+  (`ORDER_INVALID_TRANSITION`) y montos > saldo / ≤ 0 (422 `VALIDATION_FAILED`).
+- Sandbox: el link apunta a `${WEB_PUBLIC_URL}/pago/{token}` y se cobra con
+  `POST /payments/sandbox/:token/confirm`. Es idempotente por transición del link
+  a `USED`: la segunda confirmación devuelve `alreadyProcessed=true` sin duplicar
+  el `Payment`. Con `PAYMENTS_SANDBOX_ENABLED=false` el endpoint responde 404 y la
+  pasarela se comporta como no configurada; `validateEnv` aborta si el flag está
+  encendido con `NODE_ENV=production`.
+- Stripe: `createLink` usa Checkout Sessions por `fetch` (sin SDK) con
+  `STRIPE_SECRET_KEY`; sin key → 409 `INTEGRATION_NOT_CONFIGURED`. El webhook
+  `POST /payments/webhooks/:provider` verifica `stripe-signature` (HMAC-SHA256,
+  tolerancia 300 s) con `STRIPE_WEBHOOK_SECRET` y es idempotente por
+  `(provider, externalEventId)` en `payment_webhook_events` (el reintento responde
+  200 `idempotent: true`).
+- Pagos manuales (CASH/TRANSFER/SINPE): crean `Payment` `SUCCEEDED` y recalculan
+  `Order.paidMinor`/estado (`PARTIALLY_PAID`/`PAID`) en una transacción; sobrepago
+  → 422. Un pedido con pagos no se cancela (`ORDER_HAS_PAYMENTS`, que gana sobre la
+  transición de estado).
 
 ## Añadir un test
 

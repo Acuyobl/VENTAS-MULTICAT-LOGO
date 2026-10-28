@@ -11,6 +11,7 @@ import type {
 } from '@ventascatalogo/contracts';
 import type { CatalogSummary } from '@/lib/types';
 import { formatMoney } from '@/lib/format';
+import { RegisterPaymentDialog } from './register-payment-dialog';
 
 type Tab = 'quotes' | 'orders';
 
@@ -235,6 +236,47 @@ export function SalesBoard({ mode, catalogs, initialQuotes, initialOrders }: Sal
       setNotice(`Pedido ${order.number} creado desde ${quote.number}.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'No pudimos convertir la cotización.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function refreshOrders() {
+    try {
+      const page = await api<OrderListResponse>('/orders?limit=20');
+      setOrders(page.items);
+    } catch {
+      // silencioso: los datos en pantalla siguen siendo válidos
+    }
+  }
+
+  async function createPaymentLink(order: OrderSummary) {
+    setBusy(`link-${order.id}`);
+    setError(null);
+    try {
+      const link = await api<{
+        url: string;
+        amountMinor: string;
+        provider: string;
+        expiresAt: string;
+      }>(`/orders/${order.id}/payment-link`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      setNotice(
+        `Link de pago ${link.provider} por ${formatMoney(link.amountMinor, order.currency)} · vence ${link.expiresAt.slice(0, 16).replace('T', ' ')}.`,
+      );
+      try {
+        await navigator.clipboard.writeText(link.url);
+        setNotice(
+          (previous) => `${previous ?? ''} Copiado al portapapeles.`.trim(),
+        );
+      } catch {
+        // sin permiso de portapapeles: el usuario puede abrir el link igual
+      }
+      window.open(link.url, '_blank', 'noopener');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'No pudimos crear el link de pago.');
     } finally {
       setBusy(null);
     }
@@ -617,6 +659,7 @@ export function SalesBoard({ mode, catalogs, initialQuotes, initialOrders }: Sal
                     <th>Estado</th>
                     <th>Total</th>
                     <th>Pagado</th>
+                    <th>Saldo</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -634,8 +677,40 @@ export function SalesBoard({ mode, catalogs, initialQuotes, initialOrders }: Sal
                       </td>
                       <td className="table__num">{formatMoney(order.totalMinor, order.currency)}</td>
                       <td className="table__num">{formatMoney(order.paidMinor, order.currency)}</td>
+                      <td className="table__num">
+                        {formatMoney(
+                          BigInt(order.totalMinor) - BigInt(order.paidMinor),
+                          order.currency,
+                        )}
+                      </td>
                       <td>
-                        <span className="inline" style={{ gap: '0.35rem' }}>
+                        <span className="inline" style={{ gap: '0.35rem', flexWrap: 'wrap' }}>
+                          {(order.status === 'PENDING_PAYMENT' ||
+                            order.status === 'PARTIALLY_PAID') &&
+                          BigInt(order.totalMinor) > BigInt(order.paidMinor) ? (
+                            <>
+                              <button
+                                type="button"
+                                className="btn btn--small btn--secondary"
+                                disabled={busy !== null}
+                                onClick={() => void createPaymentLink(order)}
+                              >
+                                {busy === `link-${order.id}` ? 'Generando…' : 'Link de pago'}
+                              </button>
+                              <RegisterPaymentDialog
+                                orderId={order.id}
+                                orderNumber={order.number}
+                                currency={order.currency}
+                                balanceMinor={(
+                                  BigInt(order.totalMinor) - BigInt(order.paidMinor)
+                                ).toString()}
+                                onRegistered={() => {
+                                  void refreshOrders();
+                                  setNotice(`Pago registrado en ${order.number}.`);
+                                }}
+                              />
+                            </>
+                          ) : null}
                           {order.status === 'PENDING_PAYMENT' ||
                           order.status === 'PARTIALLY_PAID' ||
                           order.status === 'PAID' ? (

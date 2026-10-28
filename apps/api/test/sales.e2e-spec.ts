@@ -535,12 +535,13 @@ describe('Ventas F1: clientes, cotizaciones con PDF y conversión a pedido (e2e)
     const fulfilled = await staffAgent.post(`${api}/orders/${orderId}/fulfill`).expect(200);
     expect(fulfilled.body.status).toBe('FULFILLED');
 
+    // Un pedido con pagos nunca se cancela, aunque además esté en un estado
+    // terminal: ORDER_HAS_PAYMENTS gana sobre la transición inválida.
     const invalid = await staffAgent
       .post(`${api}/orders/${orderId}/cancel`)
       .send({ reason: 'Ya cumplido' })
       .expect(409);
-    expect(invalid.body.code).toBe('ORDER_INVALID_TRANSITION');
-    expect(invalid.body.details).toMatchObject({ from: 'FULFILLED', to: 'CANCELLED' });
+    expect(invalid.body.code).toBe('ORDER_HAS_PAYMENTS');
   });
 
   it('un pedido sin pagos se puede cancelar y queda auditado; sin permiso responde 403', async () => {
@@ -566,6 +567,14 @@ describe('Ventas F1: clientes, cotizaciones con PDF y conversión a pedido (e2e)
       where: { action: 'order.cancelled', entityId: converted.body.id },
     });
     expect(audit).not.toBeNull();
+
+    // Cancelar de nuevo es una transición inválida (no hay pagos registrados).
+    const invalidTransition = await staffAgent
+      .post(`${api}/orders/${converted.body.id}/cancel`)
+      .send({ reason: 'Ya estaba cancelado' })
+      .expect(409);
+    expect(invalidTransition.body.code).toBe('ORDER_INVALID_TRANSITION');
+    expect(invalidTransition.body.details).toMatchObject({ from: 'CANCELLED', to: 'CANCELLED' });
 
     // finanzas no tiene order:cancel ni order:create
     const forbiddenCancel = await financeAgent

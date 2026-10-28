@@ -1712,6 +1712,26 @@ svg {
   }
 }
 
+/* Diálogo de pago manual */
+.pay-dialog {
+  width: min(26rem, calc(100% - 2rem));
+  padding: 1.4rem;
+  border: 1px solid var(--line-strong);
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.pay-dialog::backdrop {
+  background: rgba(20, 32, 27, 0.45);
+}
+
+.pay-dialog h3 {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 520;
+  margin-block: 0.2rem 0.4rem;
+}
+
 .product-card__index {
   font-family: var(--font-mono);
   font-size: 0.58rem;

@@ -13,6 +13,7 @@ import { ProductsModule } from './modules/products/products.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { SalesModule } from './modules/sales/sales.module';
 import { StorefrontModule } from './modules/storefront/storefront.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { HealthModule } from './modules/health/health.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
@@ -74,6 +75,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     CustomersModule,
     SalesModule,
     StorefrontModule,
+    PaymentsModule,
     HealthModule,
     OutboxModule,
   ],

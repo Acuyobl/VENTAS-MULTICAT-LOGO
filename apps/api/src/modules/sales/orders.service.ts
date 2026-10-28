@@ -49,18 +49,21 @@ export class OrdersService {
     const order = await this.repo.find(user.organizationId, orderId);
     if (!order) throw new AppException('NOT_FOUND', 404, { resource: 'order' });
 
-    if (!CANCELLABLE_STATUSES.includes(order.status)) {
-      throw new AppException('ORDER_INVALID_TRANSITION', 409, {
-        from: order.status,
-        to: 'CANCELLED',
-        allowed: CANCELLABLE_STATUSES,
-      });
-    }
+    // Un pedido con pagos registrados nunca se cancela: el código de negocio manda
+    // sobre la transición de estado (409 ORDER_HAS_PAYMENTS).
     const payments = await this.repo.countPayments(order.id);
     if (payments > 0) {
       throw new AppException('ORDER_HAS_PAYMENTS', 409, {
         orderId: order.id,
         payments,
+      });
+    }
+
+    if (!CANCELLABLE_STATUSES.includes(order.status)) {
+      throw new AppException('ORDER_INVALID_TRANSITION', 409, {
+        from: order.status,
+        to: 'CANCELLED',
+        allowed: CANCELLABLE_STATUSES,
       });
     }
 

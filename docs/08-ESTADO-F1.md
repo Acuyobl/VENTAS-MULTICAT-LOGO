@@ -158,6 +158,33 @@ Staff en /me/orders                     → 403 AUTH_WRONG_AUDIENCE
 **Límite actual:** el checkout deja el pedido en `PENDING_PAYMENT`; el link de pago y los webhooks
 llegan en F2. El reclamo exige que el email del pedido coincida con el de la cuenta.
 
+## 3.4 Cobros (F2.1–F2.4, primer incremento de F2)
+
+| Pieza | Detalle |
+|---|---|
+| Link de pago | `POST /orders/:id/payment-link` (staff, `payment:write`) → token aleatorio, monto = saldo, TTL 60 min, URL `${WEB_PUBLIC_URL}/pago/{token}` |
+| Página de pago | `/pago/[token]` pública: resumen del pedido, monto y botón de confirmación (sandbox). Link expirado → 409 `payment_link_expired`; usado → estado `USED` |
+| Confirmación sandbox | `POST /payments/sandbox/:token/confirm` (`@Public`, solo dev) → `Payment` `SANDBOX`, pedido `PAID`, link `USED`; segunda llamada devuelve `alreadyProcessed=true` sin duplicar |
+| Stripe | Checkout Session vía API (sin SDK); webhook con firma HMAC-SHA256 (`stripe-signature`, tolerancia 300 s), idempotente por `(provider, externalEventId)`; firma inválida → 400 `PAYMENT_SIGNATURE_INVALID` |
+| Pagos manuales | `POST /orders/:id/payments/manual` (CASH/TRANSFER/SINPE) → recálculo transaccional: `PARTIALLY_PAID` o `PAID`; sobrepago → 422 con `balanceMinor`; audit `payment.manual_registered` |
+| Integridad | Un pedido con pagos no se puede cancelar (`409 ORDER_HAS_PAYMENTS`); `GET /orders/:id/payments` expone pagos y saldo |
+| Seguridad | `PAYMENTS_SANDBOX_ENABLED` es `false` por defecto y la API **aborta** si está activo con `NODE_ENV=production` |
+
+Verificación ejecutada:
+
+```text
+Link sandbox PED-2026-000003 (₡25.200) → GET /payments/public/link → confirmar
+  → payment SUCCEEDED · pedido PAID · pagado 25.200/25.200 · segunda confirmación alreadyProcessed=true
+PED-2026-000004: pago manual parcial 6.300 → PARTIALLY_PAID · sobrepago 422 (balance 6.300)
+  → pago final 6.300 por TRANSFER → PAID · 2 pagos registrados
+Webhook Stripe con firma inválida → 400 · orden con pagos no cancelable → 409
+UI: /panel/pedidos muestra Link de pago / Registrar pago / Saldo · /pago/<token> muestra el monto y "Pagar (sandbox)"
+```
+
+**Pendiente de F2:** configuración de pasarelas por organización (UI de `PaymentGatewayConfig`),
+reembolsos, recordatorios de cobro, conciliación programada, gastos, reportes y exportación
+(F2.5–F2.11). Para Stripe real hacen falta `STRIPE_SECRET_KEY` y `STRIPE_WEBHOOK_SECRET`.
+
 
 
 ## 4. Decisiones tomadas
@@ -203,14 +230,16 @@ curl -F "file=@tools/fixtures/catalogo-demo.csv;type=text/csv" `
 # 3. En el navegador: http://app.localhost:3000/panel/catalogos → "Versiones e importar"
 ```
 
-## 6. Pendiente para cerrar F1
+## 6. Pendiente
 
 1. **Google Drive** (F1.1/F1.2): crear cliente OAuth en Google Cloud con scope `drive.readonly` y
    `access_type=offline`; el pipeline de importación ya está listo para recibir el buffer descargado.
 2. **PWA de tienda** (F1.13): manifest, service worker e IndexedDB del catálogo activo (lectura
    offline).
-3. **Link de pago del pedido público**: hoy el checkout deja `PENDING_PAYMENT`; la pasarela y los
-   webhooks son F2.
+3. **F2 restante**: UI de configuración de pasarelas por organización, reembolsos, recordatorios de
+   cobro, conciliación bancaria, gastos, panel financiero, reportes y exportación (F2.5–F2.11).
+   Stripe real requiere credenciales.
 4. **Cobertura ≥70 % en `catalogs` y `sales`** y E2E importar→activar→cotizar→PDF (DoD de F1).
 5. Alinear el `CHECK` de totales de `docs/03` con la convención de dinero (sigue pendiente de F0).
 6. Endurecer el reclamo: notificación al cliente y límite de intentos por token.
+7. Cerrar F0: bootstrap cronometrado, demo y tag `v0.1.0`.

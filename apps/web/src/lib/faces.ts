@@ -24,7 +24,17 @@ export function resolveFace(host: string, pathname: string): FaceResolution {
   const isCustomerArea = pathname === '/mi-cuenta' || pathname.startsWith('/mi-cuenta/');
   const isCustomerLogin = pathname.startsWith('/mi-cuenta/entrar');
   const isAuthArea = pathname.startsWith('/login') || pathname.startsWith('/invitacion');
-  const isPublicCatalog = pathname === '/c' || pathname.startsWith('/c/');
+  const isPublicCatalog =
+    pathname === '/c' ||
+    pathname.startsWith('/c/') ||
+    pathname === '/pago' ||
+    pathname.startsWith('/pago/') ||
+    pathname === '/carrito' ||
+    pathname.startsWith('/carrito/') ||
+    pathname === '/checkout' ||
+    pathname.startsWith('/checkout/') ||
+    pathname === '/pedido' ||
+    pathname.startsWith('/pedido/');
   const isStoreArea =
     pathname === '/tienda' || pathname.startsWith('/tienda/') || isPublicCatalog;
   const isApi = pathname.startsWith('/api/');

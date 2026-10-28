@@ -7,3 +7,4 @@ export * from './catalogs/versions';
 export * from './products/queries';
 export * from './sales/schemas';
 export * from './storefront/schemas';
+export * from './payments/schemas';

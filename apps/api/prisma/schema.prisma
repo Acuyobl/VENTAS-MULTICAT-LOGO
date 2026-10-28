@@ -76,6 +76,13 @@ enum PaymentProvider {
   CASH
   TRANSFER
   SINPE
+  SANDBOX
+}
+
+enum PaymentLinkStatus {
+  ACTIVE
+  USED
+  EXPIRED
 }
 
 enum PaymentStatus {
@@ -550,6 +557,7 @@ model Order {
   quote            Quote?         @relation(fields: [quoteId], references: [id])
   items            OrderItem[]
   payments         Payment[]
+  paymentLinks     PaymentLink[]
 
   @@unique([organizationId, number])
   @@index([catalogId, status, createdAt])
@@ -587,6 +595,7 @@ model Payment {
   currency          Currency
   feeMinor          BigInt              @default(0)
   method            String?
+  reference         String?
   paidAt            DateTime?           @db.Timestamptz(3)
   rawPayload        Json?
   createdAt         DateTime            @default(now()) @db.Timestamptz(3)
@@ -616,6 +625,46 @@ model PaymentWebhookEvent {
   @@unique([provider, externalEventId])
   @@index([provider, processedAt])
   @@map("payment_webhook_events")
+}
+
+model PaymentLink {
+  id              String            @id @default(uuid(7)) @db.Uuid
+  organizationId  String            @db.Uuid
+  catalogId       String            @db.Uuid
+  orderId         String            @db.Uuid
+  provider        PaymentProvider
+  token           String            @unique
+  url             String
+  amountMinor     BigInt
+  currency        Currency
+  status          PaymentLinkStatus @default(ACTIVE)
+  externalId      String?
+  expiresAt       DateTime          @db.Timestamptz(3)
+  createdByUserId String            @db.Uuid
+  usedAt          DateTime?         @db.Timestamptz(3)
+  createdAt       DateTime          @default(now()) @db.Timestamptz(3)
+  order           Order             @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@index([organizationId, status, createdAt])
+  @@map("payment_links")
+}
+
+model PaymentGatewayConfig {
+  id               String          @id @default(uuid(7)) @db.Uuid
+  organizationId   String          @db.Uuid
+  provider         PaymentProvider
+  mode             String
+  enabled          Boolean         @default(false)
+  publicKey        String?
+  secretEnc        String?
+  webhookSecretEnc String?
+  maskedKey        String?
+  createdAt        DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime        @updatedAt @db.Timestamptz(3)
+
+  @@unique([organizationId, provider])
+  @@map("payment_gateway_configs")
 }
 
 model Expense {

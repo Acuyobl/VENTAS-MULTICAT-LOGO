@@ -45,3 +45,37 @@ describe('validateEnv · DEV_AUTH_HELPERS', () => {
     );
   });
 });
+
+describe('validateEnv · cobros', () => {
+  it('por defecto la pasarela sandbox está apagada y el proveedor es sandbox', () => {
+    const env = validateEnv(baseEnv());
+    expect(env.PAYMENTS_SANDBOX_ENABLED).toBe(false);
+    expect(env.PAYMENTS_DEFAULT_PROVIDER).toBe('sandbox');
+    expect(env.PAYMENTS_LINK_TTL_MINUTES).toBe(60);
+  });
+
+  it('acepta la pasarela sandbox en desarrollo', () => {
+    const env = validateEnv(
+      baseEnv({ PAYMENTS_SANDBOX_ENABLED: 'true', PAYMENTS_DEFAULT_PROVIDER: 'stripe' }),
+    );
+    expect(env.PAYMENTS_SANDBOX_ENABLED).toBe(true);
+    expect(env.PAYMENTS_DEFAULT_PROVIDER).toBe('stripe');
+  });
+
+  it('aborta si NODE_ENV=production y PAYMENTS_SANDBOX_ENABLED=true', () => {
+    expect(() =>
+      validateEnv(baseEnv({ NODE_ENV: 'production', PAYMENTS_SANDBOX_ENABLED: 'true' })),
+    ).toThrow(/PAYMENTS_SANDBOX_ENABLED=true no está permitido con NODE_ENV=production/);
+  });
+
+  it('permite producción con la pasarela sandbox apagada', () => {
+    const env = validateEnv(baseEnv({ NODE_ENV: 'production', PAYMENTS_SANDBOX_ENABLED: 'false' }));
+    expect(env.PAYMENTS_SANDBOX_ENABLED).toBe(false);
+  });
+
+  it('rechaza un proveedor de pago desconocido', () => {
+    expect(() => validateEnv(baseEnv({ PAYMENTS_DEFAULT_PROVIDER: 'paypal' }))).toThrow(
+      /Configuración de entorno inválida/,
+    );
+  });
+});

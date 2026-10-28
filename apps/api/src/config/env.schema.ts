@@ -74,6 +74,13 @@ export const envSchema = z
     AI_USD_PER_1K_INPUT: z.coerce.number().nonnegative().default(0.00027),
     AI_USD_PER_1K_OUTPUT: z.coerce.number().nonnegative().default(0.0011),
     AI_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(86_400),
+    PAYMENTS_DEFAULT_PROVIDER: z.enum(['sandbox', 'stripe']).default('sandbox'),
+    /**
+     * Pasarela sandbox para desarrollo/demos. Prohibida en producción:
+     * `validateEnv` aborta el arranque si se combina con `NODE_ENV=production`.
+     */
+    PAYMENTS_SANDBOX_ENABLED: boolFromString.default(false),
+    PAYMENTS_LINK_TTL_MINUTES: z.coerce.number().int().positive().default(60),
     SEED_STAFF_EMAIL: z.string().optional(),
     SEED_STAFF_PASSWORD: z.string().optional(),
     SEED_CUSTOMER_EMAIL: z.string().optional(),
@@ -97,6 +104,12 @@ export function validateEnv(config: Record<string, unknown>): Env {
   if (result.data.NODE_ENV === 'production' && result.data.DEV_AUTH_HELPERS) {
     throw new Error(
       'DEV_AUTH_HELPERS=true no está permitido con NODE_ENV=production: expone POST /auth/dev/totp y permitiría obtener códigos TOTP. Apagá el flag.',
+    );
+  }
+
+  if (result.data.NODE_ENV === 'production' && result.data.PAYMENTS_SANDBOX_ENABLED) {
+    throw new Error(
+      'PAYMENTS_SANDBOX_ENABLED=true no está permitido con NODE_ENV=production: la pasarela sandbox confirma pagos sin cobrar. Apagá el flag.',
     );
   }
 

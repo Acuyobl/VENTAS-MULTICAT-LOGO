@@ -72,6 +72,21 @@ describe('resolveFace', () => {
     });
   });
 
+  it('sirve carrito, checkout y pedido en cualquier host (cara B)', () => {
+    for (const path of ['/carrito', '/checkout', '/pedido/abc123']) {
+      expect(resolveFace('app.localhost:3010', path)).toMatchObject({
+        face: 'store',
+        rewriteTo: null,
+        requiresStaff: false,
+        requiresCustomer: false,
+      });
+      expect(resolveFace('tienda.localhost:3010', path)).toMatchObject({
+        rewriteTo: null,
+        requiresStaff: false,
+      });
+    }
+  });
+
   it('nunca intercepta la API', () => {
     expect(resolveFace('app.localhost:3000', '/api/v1/auth/me')).toMatchObject({
       face: 'hub',
