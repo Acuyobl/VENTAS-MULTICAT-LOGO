@@ -9,12 +9,13 @@ const items = [
   { href: '/panel/productos', label: 'Productos', index: '03' },
   { href: '/panel/cotizaciones', label: 'Cotizaciones', index: '04' },
   { href: '/panel/pedidos', label: 'Pedidos', index: '05' },
-  { href: '/panel/finanzas', label: 'Finanzas', index: '06' },
-  { href: '/panel/contenido', label: 'Contenido', index: '07' },
-  { href: '/panel/chat', label: 'Chat', index: '08' },
-  { href: '/panel/usuarios', label: 'Equipo', index: '09' },
-  { href: '/panel/sesiones', label: 'Sesiones', index: '10' },
-  { href: '/panel/ajustes', label: 'Ajustes', index: '11' },
+  { href: '/panel/gastos', label: 'Gastos', index: '06' },
+  { href: '/panel/finanzas', label: 'Finanzas', index: '07' },
+  { href: '/panel/contenido', label: 'Contenido', index: '08' },
+  { href: '/panel/chat', label: 'Chat', index: '09' },
+  { href: '/panel/usuarios', label: 'Equipo', index: '10' },
+  { href: '/panel/sesiones', label: 'Sesiones', index: '11' },
+  { href: '/panel/ajustes', label: 'Ajustes', index: '12' },
 ];
 
 export function BackofficeNav() {

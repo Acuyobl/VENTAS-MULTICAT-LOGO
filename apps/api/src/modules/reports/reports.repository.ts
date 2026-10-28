@@ -103,6 +103,18 @@ export class ReportsRepository {
     });
   }
 
+  expensesInRange(organizationId: string, range: { start: Date; end: Date }, catalogId?: string) {
+    return this.prisma.expense.findMany({
+      where: {
+        organizationId,
+        deletedAt: null,
+        incurredAt: { gte: range.start, lte: range.end },
+        ...(catalogId ? { catalogId } : {}),
+      },
+      select: { category: true, amountMinor: true, taxMinor: true },
+    });
+  }
+
   async processedRefundsByPayment(
     organizationId: string,
     paymentIds: string[],

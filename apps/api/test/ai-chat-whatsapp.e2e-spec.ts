@@ -344,22 +344,18 @@ describe('IA de contenido, WhatsApp entrante y chat (e2e)', () => {
     );
     expect(readSummary.unreadCount).toBe(0);
 
+    // La conversación es de canal WHATSAPP: sin credenciales no se guarda el
+    // mensaje y responde 409 (el canal WEB se prueba en finance-gateways-chat).
     const reply = await vendedorAgent
       .post(`${api}/chat/conversations/${conversation.id}/messages`)
       .send({ body: '¡Hola! Sí tenemos miel, ¿te comparto el catálogo?' })
-      .expect(201);
-    expect(reply.body).toMatchObject({ senderType: 'STAFF', readAt: null });
+      .expect(409);
+    expect(reply.body.code).toBe('INTEGRATION_NOT_CONFIGURED');
 
     const afterReply = await vendedorAgent
       .get(`${api}/chat/conversations/${conversation.id}/messages`)
       .expect(200);
-    expect(afterReply.body.items).toHaveLength(2);
-    expect(afterReply.body.items[1].body).toContain('miel');
-
-    const audit = await prisma.auditLog.findFirst({
-      where: { action: 'chat.message_sent', entityId: reply.body.id },
-    });
-    expect(audit).not.toBeNull();
+    expect(afterReply.body.items).toHaveLength(1);
   });
 
   it('chat de otra organización responde 404', async () => {

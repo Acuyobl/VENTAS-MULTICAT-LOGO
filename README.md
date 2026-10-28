@@ -15,14 +15,14 @@ lleva finanzas, atiende por WhatsApp y chat, y genera contenido para redes socia
 Cada catálogo es una unidad de negocio aislada. El producto tiene **dos caras**: backoffice para
 administradores y colaboradores, y tienda/portal para los clientes.
 
-> Estado actual: **F0 cerrado, F1 completo salvo Drive/PWA, F2 avanzado y primer incremento de F3** —
-> monorepo, auth de dos audiencias, RBAC, web biparte, versionado de catálogo, importación CSV/XLSX con
-> cuarentena, productos por versión, imágenes, clientes, cotizaciones con PDF, pedidos, carrito,
-> checkout de invitado, portal, **cobros (link de pago, Stripe/sandbox, webhook, pagos manuales y
-> reembolsos con segregación configurable), recordatorios de cobro, reportes financieros y
-> conciliación**, y **F3: generación de contenido con IA, WhatsApp entrante y chat del backoffice**,
-> con más de 300 pruebas automáticas. Pendiente: Drive, PWA, configuración de pasarelas por
-> organización, gastos/cierre contable, WhatsApp saliente y chat del cliente. Detalle en
+> Estado actual: **F0 cerrado, F1 completo salvo Drive/PWA, F2 cerrado en lo funcional y F3 con
+> contenido, WhatsApp y chat** — monorepo, auth de dos audiencias, RBAC, web biparte, versionado de
+> catálogo, importación CSV/XLSX, imágenes, cotizaciones con PDF, pedidos, tienda con carrito,
+> checkout de invitado, portal, **cobros (link de pago, Stripe/sandbox, webhook, pagos manuales),
+> reembolsos con segregación configurable, recordatorios, reportes, conciliación, gastos, utilidad,
+> exportación CSV y pasarelas por organización**, más **IA de contenido, WhatsApp entrante/saliente y
+> chat**, con más de 320 pruebas automáticas. Pendiente: Drive, PWA, conciliación programada,
+> campañas de WhatsApp, chat del cliente y programación en redes. Detalle en
 > [`docs/07-ESTADO-IMPLEMENTACION.md`](docs/07-ESTADO-IMPLEMENTACION.md),
 > [`docs/08-ESTADO-F1.md`](docs/08-ESTADO-F1.md) e hitos en
 > [`CHANGELOG.md`](CHANGELOG.md).

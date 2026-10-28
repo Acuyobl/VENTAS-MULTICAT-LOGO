@@ -11,6 +11,8 @@ const conversation: ConversationWithMeta = {
   orderId: null,
   assignedToUserId: null,
   status: 'OPEN',
+  channel: 'WEB',
+  externalId: null,
   subject: 'Consulta de demo',
   lastMessageAt: new Date('2026-10-28T18:00:00.000Z'),
   createdAt: new Date('2026-10-28T17:00:00.000Z'),
@@ -28,6 +30,8 @@ describe('chat mappers', () => {
   it('resume conversación con preview recortado y no leídos', () => {
     const summary = toConversationSummary(conversation, new Map([[conversation.id, 2]]));
     expect(summary.customerName).toBe('Cliente Demo');
+    expect(summary.channel).toBe('WEB');
+    expect(summary).toMatchObject({ channel: 'WEB' });
     expect(summary.unreadCount).toBe(2);
     expect(summary.lastMessagePreview?.length).toBe(120);
     expect(summary.lastMessageAt).toBe('2026-10-28T18:00:00.000Z');

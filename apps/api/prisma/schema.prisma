@@ -847,6 +847,8 @@ model ChatConversation {
   orderId          String?       @db.Uuid
   assignedToUserId String?       @db.Uuid
   status           String        @default("OPEN")
+  channel          String        @default("WEB")
+  externalId       String?
   subject          String?
   lastMessageAt    DateTime?     @db.Timestamptz(3)
   createdAt        DateTime      @default(now()) @db.Timestamptz(3)

@@ -348,6 +348,80 @@ async function ensureDemoConversation(input: {
   return conversation;
 }
 
+/** Mediodía del día actual en Costa Rica (UTC-6), para fechas demo del mes. */
+function currentCostaRicaNoon(): Date {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Costa_Rica',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const pick = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+  return new Date(`${pick('year')}-${pick('month')}-${pick('day')}T12:00:00-06:00`);
+}
+
+/** 3 gastos demo del mes actual; idempotente por descripción "Demo seed ...". */
+async function ensureDemoExpenses(input: {
+  organizationId: string;
+  catalogId: string;
+  createdByUserId: string;
+}) {
+  const specs = [
+    {
+      category: 'MARKETING',
+      description: 'Demo seed · campaña de redes',
+      amountMinor: 20_000n,
+    },
+    {
+      category: 'TRANSPORTE',
+      description: 'Demo seed · entregas del mes',
+      amountMinor: 8_500n,
+    },
+    {
+      category: 'INSUMOS',
+      description: 'Demo seed · empaques y etiquetas',
+      amountMinor: 12_000n,
+    },
+  ] as const;
+  const incurredAt = currentCostaRicaNoon();
+
+  for (const spec of specs) {
+    const existing = await prisma.expense.findFirst({
+      where: {
+        organizationId: input.organizationId,
+        catalogId: input.catalogId,
+        description: spec.description,
+      },
+    });
+    if (existing) {
+      await prisma.expense.update({
+        where: { id: existing.id },
+        data: {
+          category: spec.category,
+          amountMinor: spec.amountMinor,
+          currency: 'CRC',
+          incurredAt,
+          deletedAt: null,
+        },
+      });
+    } else {
+      await prisma.expense.create({
+        data: {
+          organizationId: input.organizationId,
+          catalogId: input.catalogId,
+          category: spec.category,
+          description: spec.description,
+          amountMinor: spec.amountMinor,
+          currency: 'CRC',
+          taxMinor: 0n,
+          incurredAt,
+          createdByUserId: input.createdByUserId,
+        },
+      });
+    }
+  }
+}
+
 async function ensureCustomerAccount(userId: string, organizationId: string, customerId: string) {
   const existing = await prisma.customerAccount.findFirst({
     where: { userId, organizationId },
@@ -671,6 +745,24 @@ async function main(): Promise<void> {
     organizationId: orgA.id,
     catalogId: catalog.id,
     customerId: customerAsCustomer.id,
+  });
+
+  // Gastos y pasarela demo para que /panel/gastos, /panel/finanzas y
+  // /panel/ajustes tengan contenido desde el primer arranque (idempotente).
+  await ensureDemoExpenses({
+    organizationId: orgA.id,
+    catalogId: catalog.id,
+    createdByUserId: staff.id,
+  });
+  await prisma.paymentGatewayConfig.upsert({
+    where: { organizationId_provider: { organizationId: orgA.id, provider: 'SANDBOX' } },
+    create: {
+      organizationId: orgA.id,
+      provider: 'SANDBOX',
+      mode: 'TEST',
+      enabled: true,
+    },
+    update: { mode: 'TEST', enabled: true },
   });
 
   const catalogForImages = await prisma.catalog.findUniqueOrThrow({

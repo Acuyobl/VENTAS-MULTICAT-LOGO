@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { FinanceReport, ReconciliationReport } from '@ventascatalogo/contracts';
+import type { FinanceReport, ProfitReport, ReconciliationReport } from '@ventascatalogo/contracts';
 import { formatMoney } from '@/lib/format';
 
 function isoDate(date: Date): string {
@@ -29,6 +29,7 @@ export function FinanceReportView() {
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
   const [finance, setFinance] = useState<FinanceReport | null>(null);
+  const [profit, setProfit] = useState<ProfitReport | null>(null);
   const [reconciliation, setReconciliation] = useState<ReconciliationReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,11 +39,12 @@ export function FinanceReportView() {
     setError(null);
     try {
       const query = `from=${rangeFrom}&to=${rangeTo}`;
-      const [financeResponse, reconciliationResponse] = await Promise.all([
+      const [financeResponse, reconciliationResponse, profitResponse] = await Promise.all([
         fetch(`/api/v1/reports/finance?${query}`, { headers: { accept: 'application/json' } }),
         fetch(`/api/v1/reports/reconciliation?${query}`, { headers: { accept: 'application/json' } }),
+        fetch(`/api/v1/reports/profit?${query}`, { headers: { accept: 'application/json' } }),
       ]);
-      if (!financeResponse.ok || !reconciliationResponse.ok) {
+      if (!financeResponse.ok || !reconciliationResponse.ok || !profitResponse.ok) {
         const payload = (await financeResponse.json().catch(() => null)) as
           | { message?: string }
           | null;
@@ -50,6 +52,7 @@ export function FinanceReportView() {
       }
       setFinance((await financeResponse.json()) as FinanceReport);
       setReconciliation((await reconciliationResponse.json()) as ReconciliationReport);
+      setProfit((await profitResponse.json()) as ProfitReport);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Error inesperado.');
     } finally {
@@ -114,9 +117,78 @@ export function FinanceReportView() {
         >
           Exportar conciliación CSV
         </button>
+        <a
+          className="btn btn--small btn--ghost"
+          href={`/api/v1/reports/finance/export.csv?from=${from}&to=${to}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Exportar desde el servidor
+        </a>
       </form>
 
       {error ? <div className="alert">{error}</div> : null}
+
+      {profit ? (
+        <section className="panel">
+          <div className="panel__head">
+            <h2>Utilidad del rango</h2>
+            <span className="mono faint">{profit.marginBp / 100} % de margen</span>
+          </div>
+          <div className="metrics">
+            <article className="metric">
+              <span className="metric__label">Ingresos netos</span>
+              <strong className="metric__value">
+                {formatMoney(profit.income.netMinor, currency)}
+              </strong>
+              <span className="metric__hint">
+                reembolsos {formatMoney(profit.income.refundedMinor, currency)}
+              </span>
+            </article>
+            <article className="metric">
+              <span className="metric__label">Gastos</span>
+              <strong className="metric__value">
+                {formatMoney(profit.expenses.totalMinor, currency)}
+              </strong>
+              <span className="metric__hint">{profit.expenses.count} registros</span>
+            </article>
+            <article className="metric">
+              <span className="metric__label">Utilidad</span>
+              <strong className="metric__value">
+                {formatMoney(profit.profitMinor, currency)}
+              </strong>
+              <span className="metric__hint">ingresos − reembolsos − gastos</span>
+            </article>
+            <article className="metric">
+              <span className="metric__label">Margen</span>
+              <strong className="metric__value">{(profit.marginBp / 100).toFixed(1)} %</strong>
+              <span className="metric__hint">sobre ingresos netos</span>
+            </article>
+          </div>
+          {profit.expenses.byCategory.length > 0 ? (
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Categoría de gasto</th>
+                    <th>Registros</th>
+                    <th>Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {profit.expenses.byCategory.map((row) => (
+                    <tr key={row.category}>
+                      <td>{row.category}</td>
+                      <td className="table__num">{row.count}</td>
+                      <td className="table__num">{formatMoney(row.amountMinor, currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {finance ? (
         <>

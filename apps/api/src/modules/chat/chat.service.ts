@@ -9,6 +9,7 @@ import type { ChatMessage } from '@prisma/client';
 import { ChatRepository, type ConversationWithMeta } from './chat.repository';
 import { AppException } from '../../common/errors/app-exception';
 import { AuditService } from '../audit/audit.service';
+import { WhatsappService } from '../whatsapp/whatsapp.service';
 import type { AuditMeta } from '../../common/audit/audit.types';
 
 @Injectable()
@@ -16,6 +17,7 @@ export class ChatService {
   constructor(
     private readonly repo: ChatRepository,
     private readonly audit: AuditService,
+    private readonly whatsapp: WhatsappService,
   ) {}
 
   async listConversations(
@@ -56,6 +58,35 @@ export class ChatService {
     if (!conversation) {
       throw new AppException('NOT_FOUND', 404, { resource: 'conversation' });
     }
+
+    const channel = conversation.channel === 'WHATSAPP' ? 'WHATSAPP' : 'WEB';
+    let waMessageId: string | null = null;
+    if (channel === 'WHATSAPP') {
+      const phone =
+        conversation.externalId ?? (await this.repo.findCustomerPhone(conversation.customerId));
+      if (!phone) {
+        throw new AppException('VALIDATION_FAILED', 422, {
+          reason: 'customer_phone_missing',
+          conversationId: conversation.id,
+        });
+      }
+      if (!this.whatsapp.isConfigured()) {
+        // Sin credenciales no se guarda el mensaje: el staff puede reintentar.
+        throw new AppException('INTEGRATION_NOT_CONFIGURED', 409, {
+          provider: 'WHATSAPP',
+          reason: 'whatsapp_not_configured',
+        });
+      }
+      const sent = await this.whatsapp.sendText(phone, body);
+      if (!sent.ok) {
+        throw new AppException('INTERNAL_ERROR', 502, {
+          reason: 'whatsapp_send_failed',
+          error: sent.error,
+        });
+      }
+      waMessageId = sent.messageId;
+    }
+
     const message = await this.repo.createStaffMessage({
       conversationId: conversation.id,
       senderUserId: user.id,
@@ -65,10 +96,15 @@ export class ChatService {
     await this.audit.write({
       organizationId: user.organizationId,
       actorUserId: user.id,
-      action: 'chat.message_sent',
+      action: channel === 'WHATSAPP' ? 'chat.message_sent_channel' : 'chat.message_sent',
       entityType: 'chat_message',
       entityId: message.id,
-      after: { conversationId: conversation.id, body },
+      after: {
+        conversationId: conversation.id,
+        body,
+        channel,
+        ...(waMessageId ? { waMessageId } : {}),
+      },
       ip: meta.ip,
       userAgent: meta.userAgent,
       traceId: meta.traceId,
@@ -91,6 +127,7 @@ export function toConversationSummary(
     customerName: conversation.customerName,
     subject: conversation.subject,
     status: conversation.status as ConversationListResponse['items'][number]['status'],
+    channel: conversation.channel === 'WHATSAPP' ? 'WHATSAPP' : 'WEB',
     lastMessageAt: conversation.lastMessageAt?.toISOString() ?? null,
     unreadCount: unread.get(conversation.id) ?? 0,
     lastMessagePreview: lastMessage ? lastMessage.body.slice(0, PREVIEW_LENGTH) : null,

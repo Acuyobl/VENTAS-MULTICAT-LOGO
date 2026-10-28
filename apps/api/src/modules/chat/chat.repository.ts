@@ -111,6 +111,13 @@ export class ChatRepository {
     });
   }
 
+  findCustomerPhone(customerId: string | null): Promise<string | null> {
+    if (!customerId) return Promise.resolve(null);
+    return this.prisma.customer
+      .findUnique({ where: { id: customerId }, select: { phone: true } })
+      .then((customer) => customer?.phone ?? null);
+  }
+
   private async customerNames(ids: string[]): Promise<Map<string, string>> {
     if (ids.length === 0) return new Map();
     const customers = await this.prisma.customer.findMany({

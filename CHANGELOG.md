@@ -3,7 +3,25 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
-## [0.1.2] — 2026-10-28
+## [0.1.3] — 2026-10-28
+
+### Añadido
+- **Gastos** con categorías, filtros por rango, totales por categoría y borrado lógico
+  (`/panel/gastos`).
+- **Reporte de utilidad**: ingresos netos − reembolsos − gastos, margen en puntos base y desglose por
+  categoría, dentro de `/panel/finanzas`.
+- **Exportación CSV desde el servidor** del reporte financiero (`text/csv` con adjunto y auditoría).
+- **Pasarelas por organización**: alta/edición con secretos cifrados AES-256-GCM, máscara, habilitar
+  y deshabilitar, y auditoría sin secretos (`/panel/ajustes`).
+- **Canal WhatsApp en el chat**: conversaciones con `channel` y `externalId`; el inbound crea la
+  conversación en WhatsApp y la respuesta del staff sale por la Cloud API (409 claro si no hay
+  credenciales, sin guardar el mensaje).
+- Seed demo: 3 gastos del mes (₡40.500) y pasarela SANDBOX TEST habilitada.
+
+### Pruebas
+- API: **210 unit** (37 archivos) y **94 e2e** (15 archivos). Web: 19 pruebas. CI con cobertura.
+
+
 
 ### Añadido
 - **Autoaprobación configurable** por organización (`allowSelfApproval`) con confirmación explícita,

@@ -1,17 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import type {
+  ExpenseCategory,
   FinanceReport,
+  ProfitReport,
   ReconciliationReport,
   ReportRangeQuery,
 } from '@ventascatalogo/contracts';
 import { ReportsRepository } from './reports.repository';
 import { resolveReportRange } from './report-range';
 import { buildTopProducts, computeOrderTotals, computeReceivables } from './report-calculations';
+import { aggregateExpenses, computeProfit } from '../expenses/expense-calculations';
+import { buildReconciliationCsv } from './reconciliation-csv';
 import { AppException } from '../../common/errors/app-exception';
+import { AuditService } from '../audit/audit.service';
+import type { AuditMeta } from '../../common/audit/audit.types';
+import type { AuthenticatedUser } from '@ventascatalogo/contracts';
 
 @Injectable()
 export class ReportsService {
-  constructor(private readonly repo: ReportsRepository) {}
+  constructor(
+    private readonly repo: ReportsRepository,
+    private readonly audit: AuditService,
+  ) {}
 
   async finance(organizationId: string, query: ReportRangeQuery): Promise<FinanceReport> {
     const organization = await this.requireOrganization(organizationId);
@@ -135,6 +145,80 @@ export class ReportsService {
         netMinor: (registeredMinor - refundedMinor).toString(),
       },
     };
+  }
+
+  async profit(organizationId: string, query: ReportRangeQuery): Promise<ProfitReport> {
+    const organization = await this.requireOrganization(organizationId);
+    const range = resolveReportRange(query);
+
+    const [orderRows, refunds, expenseRows] = await Promise.all([
+      this.repo.salesOrders(organizationId, range, query.catalogId),
+      this.repo.refundsInRange(organizationId, range),
+      this.repo.expensesInRange(organizationId, range, query.catalogId),
+    ]);
+
+    const sales = computeOrderTotals(orderRows);
+    const expenses = aggregateExpenses(expenseRows);
+    const refundedMinor = refunds
+      .filter((refund) => refund.status === 'PROCESSED')
+      .reduce((sum, refund) => sum + refund.amountMinor, 0n);
+    const profit = computeProfit({
+      netMinor: sales.netMinor,
+      refundedMinor,
+      expensesMinor: expenses.amountMinor,
+    });
+
+    return {
+      range: { from: range.from, to: range.to },
+      currency: organization.defaultCurrency,
+      income: {
+        netMinor: sales.netMinor.toString(),
+        grossMinor: sales.grossMinor.toString(),
+        taxMinor: sales.taxMinor.toString(),
+        refundedMinor: refundedMinor.toString(),
+      },
+      expenses: {
+        totalMinor: expenses.amountMinor.toString(),
+        taxMinor: expenses.taxMinor.toString(),
+        count: expenses.count,
+        byCategory: expenses.byCategory.map((entry) => ({
+          category: entry.category as ExpenseCategory,
+          count: entry.count,
+          amountMinor: entry.amountMinor.toString(),
+        })),
+      },
+      profitMinor: profit.profitMinor.toString(),
+      marginBp: profit.marginBp,
+    };
+  }
+
+  async exportFinanceCsv(
+    user: AuthenticatedUser,
+    query: ReportRangeQuery,
+    meta: AuditMeta,
+  ): Promise<{ csv: string; filename: string }> {
+    const reconciliation = await this.reconciliation(user.organizationId, query);
+    const csv = buildReconciliationCsv(reconciliation.rows, reconciliation.totals);
+    const filename = `finanzas-${reconciliation.range.from}-${reconciliation.range.to}.csv`;
+
+    await this.audit.write({
+      organizationId: user.organizationId,
+      actorUserId: user.id,
+      action: 'report.exported',
+      entityType: 'finance_report',
+      entityId: user.organizationId,
+      after: {
+        from: reconciliation.range.from,
+        to: reconciliation.range.to,
+        rows: reconciliation.rows.length,
+        format: 'csv',
+      },
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      traceId: meta.traceId,
+    });
+
+    return { csv, filename };
   }
 
   private async requireOrganization(organizationId: string) {

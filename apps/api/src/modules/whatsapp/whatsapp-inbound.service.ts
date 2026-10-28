@@ -99,6 +99,8 @@ export class WhatsappInboundService {
                 customerId: customer.id,
                 subject: 'WhatsApp',
                 status: 'OPEN',
+                channel: 'WHATSAPP',
+                externalId: message.from,
               },
             }));
 
@@ -112,7 +114,11 @@ export class WhatsappInboundService {
             });
             await tx.chatConversation.update({
               where: { id: conversation.id },
-              data: { lastMessageAt: created.createdAt },
+              data: {
+                lastMessageAt: created.createdAt,
+                channel: 'WHATSAPP',
+                externalId: message.from,
+              },
             });
           });
           processed += 1;

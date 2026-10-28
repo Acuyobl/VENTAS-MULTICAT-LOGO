@@ -7,10 +7,10 @@ producto (subida a MinIO, URLs firmadas e importación con imágenes), ventas
 (clientes, cotizaciones con PDF y conversión a pedido), la cara B (checkout
 invitado con token público, reclamo de cuenta y portal de pedidos).
 
-- **Unit:** 198 tests en 34 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
+- **Unit:** 210 tests en 37 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
   infraestructura: los servicios externos (ioredis, MinIO) se sustituyen por
   dobles.
-- **E2E:** 88 tests en 14 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
+- **E2E:** 94 tests en 15 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
   una instancia real de Nest (`Test.createTestingModule({ imports: [AppModule] })`)
   en el mismo proceso. No abren puerto fijo ni dependen del `pnpm dev` de la API.
 
@@ -92,6 +92,9 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `src/modules/ai/ai-provider.factory.spec.ts`               | `AI_PROVIDER=mock` en dev, deepseek sin key → 409 `INTEGRATION_NOT_CONFIGURED`, deepseek con key, mock prohibido en producción                                                                                                                                                                                                            | IA contenido            |
 | `src/modules/whatsapp/whatsapp-signature.spec.ts`          | `sha256=` correcto, payload alterado/secreto distinto/header ausente y prefijo distinto rechazados                                                                                                                                                                                                                                        | WhatsApp entrante       |
 | `src/modules/chat/chat-mappers.spec.ts`                    | preview recortado a 120, unreadCount, preview null sin mensajes y mapeo de mensaje con fechas ISO                                                                                                                                                                                                                                         | Chat                    |
+| `src/modules/expenses/expense-calculations.spec.ts`        | totales/por categoría (BigInt), profit = neto − reembolsos − gastos, margen en puntos base con redondeo y sin ingresos, máscara de secreto                                                                                                                                                                                                | Gastos/Utilidad         |
+| `src/modules/organizations/gateways.service.spec.ts`       | 422 `gateway_secret_required`, cifrado AES-256-GCM descifrable, `maskedKey` últimos 4, PATCH habilita/deshabilita y auditoría sin secretos                                                                                                                                                                                                | Pasarelas               |
+| `src/modules/reports/reconciliation-csv.spec.ts`           | cabecera, filas y totales con CRLF y escape de comas/comillas/saltos de línea                                                                                                                                                                                                                                                             | Export CSV              |
 
 ### E2E
 
@@ -111,6 +114,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `test/refunds.e2e-spec.ts`                    | pago manual de un pedido → solicitud de reembolso parcial `REQUESTED`; aprobación por **otro** usuario → `PROCESSED`, `Payment.status=PARTIALLY_REFUNDED`, `Order.refundedMinor` y estado del pedido intacto; disponible correcto; `REFUND_EXCEEDS_PAID` (422 con `availableMinor`); el aprobador no puede aprobar su propia solicitud (`REFUND_SEGREGATION_REQUIRED`); reembolso del saldo restante → `REFUNDED`; aprobación duplicada → 409 `refund_already_decided`; rechazo deja `REJECTED` sin tocar saldos; pago `FAILED` no reembolsable; 403 sin `payment:refund_request`/`payment:refund_approve`; cross-org 404                                                                                                                                                                                                                                    | Reembolsos F2                   |
 | `test/settings-reminders-reports.e2e-spec.ts` | `GET/PATCH /organizations/settings` (auditado, 403 finanzas); autoaprobación: flag off → 409 `REFUND_SEGREGATION_REQUIRED`, flag on sin confirmar → 422 `self_approval_confirmation_required`, con `confirmSelfApproval` → aprueba y audita `payment.refund_self_approved`; recordatorio EMAIL enviado de verdad por Mailpit (fila `SENT` + listado + Mailpit) y WhatsApp sin credenciales → 409 / sin teléfono → 422; `/reports/finance` del mes con totales, métodos, `topProducts` y cuentas por cobrar; `/reports/reconciliation` con referencia y neto; rango inválido 422 y 403 vendedor; cross-org 404                                                                                                                                                                                                                                                | Ajustes/Reportes F2             |
 | `test/ai-chat-whatsapp.e2e-spec.ts`           | `POST /ai/social-posts` con `AI_PROVIDER=mock` → 201 DRAFT con title/body/hashtags/cta y tokens > 0 (audit `ai.social_post_generated`), listado, decisión APPROVED auditada y 403 del vendedor; `AI_PROVIDER=deepseek` sin key → 409 `INTEGRATION_NOT_CONFIGURED` en app nueva; webhook WhatsApp GET challenge/403 y POST con firma HMAC (inválida → 401) que crea conversación+mensaje; `/chat/conversations` con unread 1, abrir marca leído, responder STAFF y cross-org 404; conversación demo del seed presente                                                                                                                                                                                                                                                                                                                                         | IA/WhatsApp/Chat F3             |
+| `test/finance-gateways-chat.e2e-spec.ts`      | gastos: crear(3+1)/listar con totales y `byCategory`/filtrar/soft delete, 404 cross-org y 403 vendedor; `/reports/profit` con venta+3 gastos → `profitMinor = neto − reembolsos − gastos` y margen coherente; export CSV `text/csv` + `Content-Disposition` + audit `report.exported`; gateways PUT 422 sin secreto, cifra/máscara, GET sin secretos, PATCH y audit sin secretos; chat `channel` WEB/WHATSAPP, respuesta WEB 201, WHATSAPP sin credenciales 409 sin guardar mensaje, cross-org 404; inbound WA setea `channel=WHATSAPP` y `externalId`                                                                                                                                                                                                                                                                                                       | Cierre F2 + WhatsApp saliente   |
 
 Criterio §4.1.1 (`lint` + `typecheck` + `test` en verde) se comprueba con
 `pnpm lint`, `pnpm typecheck` y los dos comandos de test de este README. El
@@ -224,6 +228,31 @@ unitarios de `HealthService`.
   `AUTH_WRONG_AUDIENCE`.
 - El checkout reutiliza el patrón de snapshots de ventas y la secuencia
   `PED-YYYY-NNNNNN`; los warnings de imágenes no aplican aquí.
+
+## Hallazgos del cierre de F2 (gastos, pasarelas y WhatsApp saliente)
+
+- Migración `20261028200000_chat_channel_and_external_id`: `ChatConversation.channel`
+  (default `WEB`) y `externalId` (wa_id). `Expense` y `PaymentGatewayConfig` ya
+  existían, no necesitaron cambios de esquema.
+- Gastos: soft delete vía `deletedAt`; los totales del listado se calculan sobre
+  todo el rango filtrado (no solo la página). El rango por defecto es el mes actual
+  en America/Costa_Rica reutilizando `resolveReportRange`.
+- Utilidad: `profitMinor = netMinor − refundedMinor − expenses.totalMinor`, con
+  `refundedMinor` = reembolsos `PROCESSED` del rango; `marginBp` se calcula en
+  enteros (half-up) y es 0 si `netMinor = 0`. El CSV de exportación reutiliza las
+  filas de conciliación y agrega filas TOTAL/REEMBOLSADO/NETO.
+- Pasarelas: `PUT` exige `secretKey` nueva o previa cuando `enabled=true` (422
+  `gateway_secret_required`); los secretos se cifran con AES-256-GCM
+  (`encryptSecret`/`ENCRYPTION_KEY`), se expone solo `maskedKey` (últimos 4) y
+  `hasSecret`, y las auditorías `payment.gateway_updated` guardan before/after sin
+  secretos. `PATCH` solo cambia `enabled` (también exige secreto al habilitar).
+- Chat: `conversationSummary.channel` viene de la migración; el inbound WhatsApp
+  actualiza `channel='WHATSAPP'` y `externalId=wa_id`. Un mensaje STAFF en una
+  conversación WHATSAPP sin credenciales responde 409 `INTEGRATION_NOT_CONFIGURED`
+  **sin crear** el mensaje; el canal WEB mantiene `chat.message_sent`. WhatsApp
+  saliente exitoso audita `chat.message_sent_channel`.
+- Seed demo: 3 gastos `Demo seed · …` del mes actual (idempotentes por descripción)
+  y `PaymentGatewayConfig` SANDBOX TEST habilitada sin secretos.
 
 ## Hallazgos de IA, WhatsApp entrante y chat (F3)
 

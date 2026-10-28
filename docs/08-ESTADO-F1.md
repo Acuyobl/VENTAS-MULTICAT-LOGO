@@ -263,6 +263,59 @@ GET /webhooks/whatsapp?hub.challenge=… → challenge-123 · POST inbound → p
 
 
 
+## 3.9 Gastos, utilidad y exportación (F2, cierre del ciclo de dinero)
+
+| Pieza | Detalle |
+|---|---|
+| Gastos | `POST /expenses` (`expense:write`) y `GET /expenses?from&to&catalogId&category` (`finance:read` o `expense:write`) con totales por categoría; `DELETE` con soft delete; audits `expense.created/deleted` |
+| Utilidad | `GET /reports/profit?from&to`: ingresos netos, reembolsos procesados, gastos por categoría, `profitMinor = netMinor − refundedMinor − gastos` y `marginBp` |
+| Exportación | `GET /reports/finance/export.csv` → `text/csv` con `Content-Disposition: attachment` y totales al pie; audit `report.exported` |
+| UI | `/panel/gastos` (registrar, filtrar, totales por categoría, borrar) y sección **Utilidad del rango** en `/panel/finanzas`, más descarga CSV desde el servidor |
+
+Verificación ejecutada:
+
+```text
+seed: 3 gastos del mes · total ₡40.500 (MARKETING 20.000 · INSUMOS 12.000 · TRANSPORTE 8.500)
+POST gasto ₡5.000 → total ₡45.500 · DELETE → vuelve a ₡40.500
+profit: ingresos ₡144.000 − reembolsos ₡26.700 − gastos ₡40.500 = utilidad ₡76.800 · margen 53,33 %
+export.csv → 200 · text/csv · attachment · 8 líneas
+```
+
+## 3.10 Pasarelas por organización (F2.7)
+
+| Pieza | Detalle |
+|---|---|
+| Endpoints | `GET /organizations/payment-gateways`, `PUT /organizations/payment-gateways/:provider` y `PATCH … {enabled}` (`settings:manage`) |
+| Secretos | Cifrados AES-256-GCM; solo se expone `maskedKey` (últimos 4) y `hasSecret`; habilitar sin secreto → 422 `gateway_secret_required` |
+| Auditoría | `payment.gateway_updated` con before/after **sin** secretos |
+| UI | Sección **Pasarelas de pago** en `/panel/ajustes` con modo TEST/LIVE, claves y habilitar/deshabilitar |
+
+Verificación ejecutada:
+
+```text
+GET → SANDBOX:TEST habilitada (seed)
+PUT STRIPE (sk_test_…) → maskedKey ****1234 · hasSecret true · GET no devuelve secretos
+PATCH enabled=true → habilitada · PAYPAL enabled sin secreto → 422 gateway_secret_required
+```
+
+## 3.11 WhatsApp saliente y canal del chat (F3)
+
+| Pieza | Detalle |
+|---|---|
+| Canal | `ChatConversation.channel` (`WEB`/`WHATSAPP`) y `externalId` (wa_id); el inbound de WhatsApp crea la conversación con canal `WHATSAPP` |
+| Respuesta | En una conversación `WHATSAPP` el mensaje del staff se envía por la Cloud API; sin credenciales → 409 `INTEGRATION_NOT_CONFIGURED` **sin persistir** el mensaje (reintentable) |
+| UI | `/panel/chat` muestra el canal por conversación y explica el 409 de WhatsApp |
+
+Verificación ejecutada:
+
+```text
+inbound con teléfono nuevo → conversación "María WhatsApp" · channel WHATSAPP · no leídos 1
+respuesta staff por WhatsApp sin credenciales → 409 INTEGRATION_NOT_CONFIGURED · mensajes siguen en 1
+conversación antigua (creada antes de la migración) queda en WEB: es dato histórico, no un fallo
+```
+
+
+
 ## 4. Decisiones tomadas
 
 1. **Códigos de error promovidos al contrato**: los 5 códigos de F1 se agregaron a
@@ -312,12 +365,12 @@ curl -F "file=@tools/fixtures/catalogo-demo.csv;type=text/csv" `
    `access_type=offline`; el pipeline de importación ya está listo para recibir el buffer descargado.
 2. **PWA de tienda** (F1.13): manifest, service worker e IndexedDB del catálogo activo (lectura
    offline).
-3. **F2 restante**: UI de configuración de pasarelas por organización, conciliación programada,
-   gastos, panel financiero y exportación (F2.5, F2.8–F2.11). Cobros, reembolsos, autoaprobación,
-   recordatorios y reportes ya entregados (§3.4–§3.7). Stripe real requiere credenciales.
-4. **F3 restante**: WhatsApp saliente/campañas, chat del cliente en el portal, programación y
-   publicación en redes, cuota y costo de IA por organización (§3.8).
+3. **F2 restante**: conciliación programada/cierre de meses, exportación contable formal y reportes
+   por catálogo en PDF. Lo demás (cobros, reembolsos, autoaprobación, recordatorios, reportes,
+   gastos, utilidad y pasarelas) está entregado.
+4. **F3 restante**: campañas de WhatsApp saliente, chat del cliente en el portal, programación y
+   publicación en redes, cuota y costo de IA por organización.
 5. **Cobertura ≥70 % en `catalogs` y `sales`** y E2E importar→activar→cotizar→PDF (DoD de F1).
 6. Alinear el `CHECK` de totales de `docs/03` con la convención de dinero (sigue pendiente de F0).
-7. Endurecer el reclamo y el webhook de WhatsApp: límite de intentos, notificación y rotación de
-   tokens.
+7. Backfill opcional de conversaciones WhatsApp creadas antes de la migración de canal (hoy quedan
+   como `WEB`) y límite de intentos en webhooks.

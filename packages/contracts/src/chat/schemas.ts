@@ -5,12 +5,16 @@ export const chatMessageSenderSchema = z.enum(['STAFF', 'CUSTOMER', 'SYSTEM']);
 
 export const conversationStatusSchema = z.enum(['OPEN', 'CLOSED', 'PENDING']);
 
+export const chatChannelSchema = z.enum(['WEB', 'WHATSAPP']);
+export type ChatChannel = z.infer<typeof chatChannelSchema>;
+
 export const conversationSummarySchema = z.object({
   id: z.string().uuid(),
   customerId: z.string().uuid().nullable(),
   customerName: z.string().nullable(),
   subject: z.string().nullable(),
   status: conversationStatusSchema,
+  channel: chatChannelSchema,
   lastMessageAt: z.string().nullable(),
   unreadCount: z.number().int(),
   lastMessagePreview: z.string().nullable(),

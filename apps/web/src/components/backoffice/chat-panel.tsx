@@ -84,8 +84,14 @@ export function ChatPanel({ initialConversations }: ChatPanelProps) {
         body: JSON.stringify({ body: draft.trim() }),
       });
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(payload?.message ?? 'No pudimos enviar el mensaje.');
+        const payload = (await response.json().catch(() => null)) as
+          | { code?: string; message?: string }
+          | null;
+        throw new Error(
+          payload?.code === 'INTEGRATION_NOT_CONFIGURED'
+            ? 'Esta conversación es de WhatsApp y faltan las credenciales de la Cloud API. Configuralas para responder por ese canal.'
+            : (payload?.message ?? 'No pudimos enviar el mensaje.'),
+        );
       }
       const created = (await response.json()) as ChatMessage;
       setMessages((current) => [...current, created]);
@@ -126,7 +132,7 @@ export function ChatPanel({ initialConversations }: ChatPanelProps) {
               {conversation.lastMessagePreview ?? conversation.subject ?? 'Sin mensajes'}
             </span>
             <span className="chat-list__meta">
-              {conversation.status}
+              {conversation.channel === 'WHATSAPP' ? 'WhatsApp' : 'Web'} · {conversation.status}
               {conversation.unreadCount > 0 ? ` · ${conversation.unreadCount} sin leer` : ''}
             </span>
           </button>

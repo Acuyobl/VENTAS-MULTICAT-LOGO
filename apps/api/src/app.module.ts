@@ -16,6 +16,7 @@ import { StorefrontModule } from './modules/storefront/storefront.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { AiModule } from './modules/ai/ai.module';
+import { ExpensesModule } from './modules/expenses/expenses.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { HealthModule } from './modules/health/health.module';
@@ -84,6 +85,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     ReportsModule,
     AiModule,
     ChatModule,
+    ExpensesModule,
     HealthModule,
     OutboxModule,
   ],
