@@ -14,7 +14,13 @@ export const paymentProviderSchema = z.enum([
 
 export type PaymentProvider = z.infer<typeof paymentProviderSchema>;
 
-export const paymentStatusSchema = z.enum(['PENDING', 'SUCCEEDED', 'FAILED', 'REFUNDED']);
+export const paymentStatusSchema = z.enum([
+  'PENDING',
+  'SUCCEEDED',
+  'FAILED',
+  'PARTIALLY_REFUNDED',
+  'REFUNDED',
+]);
 export type PaymentStatus = z.infer<typeof paymentStatusSchema>;
 
 export const paymentLinkStatusSchema = z.enum(['ACTIVE', 'USED', 'EXPIRED']);

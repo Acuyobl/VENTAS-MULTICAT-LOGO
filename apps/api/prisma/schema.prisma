@@ -88,8 +88,15 @@ enum PaymentLinkStatus {
 enum PaymentStatus {
   PENDING
   SUCCEEDED
+  PARTIALLY_REFUNDED
   FAILED
   REFUNDED
+}
+
+enum RefundStatus {
+  REQUESTED
+  PROCESSED
+  REJECTED
 }
 
 enum SocialPostStatus {
@@ -549,6 +556,7 @@ model Order {
   publicTokenExpiresAt DateTime?  @db.Timestamptz(3)
   claimedAt        DateTime?      @db.Timestamptz(3)
   cancelReason     String?
+  refundedMinor    BigInt         @default(0)
   deletedAt        DateTime?      @db.Timestamptz(3)
   createdAt        DateTime       @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime       @updatedAt @db.Timestamptz(3)
@@ -665,6 +673,32 @@ model PaymentGatewayConfig {
 
   @@unique([organizationId, provider])
   @@map("payment_gateway_configs")
+}
+
+model Refund {
+  id               String       @id @default(uuid(7)) @db.Uuid
+  organizationId   String       @db.Uuid
+  catalogId        String       @db.Uuid
+  paymentId        String       @db.Uuid
+  orderId          String       @db.Uuid
+  amountMinor      BigInt
+  currency         Currency
+  reason           String
+  method           String?
+  status           RefundStatus @default(REQUESTED)
+  requestedByUserId String      @db.Uuid
+  approvedByUserId String?      @db.Uuid
+  decidedByUserId  String?      @db.Uuid
+  decisionNote     String?
+  processedAt      DateTime?    @db.Timestamptz(3)
+  externalRefundId String?
+  createdAt        DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime     @updatedAt @db.Timestamptz(3)
+
+  @@index([organizationId, status, createdAt])
+  @@index([paymentId])
+  @@index([orderId])
+  @@map("refunds")
 }
 
 model Expense {

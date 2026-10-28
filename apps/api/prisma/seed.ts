@@ -48,6 +48,8 @@ const PERMISSIONS = [
   ['order:cancel', 'organization', 'Cancelar y cumplir pedidos'],
   ['payment:read', 'organization', 'Ver pagos'],
   ['payment:write', 'organization', 'Registrar y conciliar pagos'],
+  ['payment:refund_request', 'organization', 'Solicitar reembolsos'],
+  ['payment:refund_approve', 'organization', 'Aprobar o rechazar reembolsos'],
   ['expense:write', 'organization', 'Registrar gastos'],
   ['finance:read', 'organization', 'Ver reportes financieros'],
   ['social:generate', 'organization', 'Generar contenido con IA'],
@@ -88,6 +90,8 @@ const ROLES = [
       'order:cancel',
       'payment:read',
       'payment:write',
+      'payment:refund_request',
+      'payment:refund_approve',
       'expense:write',
       'finance:read',
       'social:generate',
@@ -114,6 +118,9 @@ const ROLES = [
       'order:read',
       'order:create',
       'order:cancel',
+      'payment:read',
+      'payment:refund_request',
+      'payment:refund_approve',
     ],
   },
   {
@@ -142,6 +149,7 @@ const ROLES = [
       'order:read',
       'payment:read',
       'payment:write',
+      'payment:refund_request',
       'expense:write',
       'finance:read',
     ],
@@ -442,6 +450,35 @@ async function main(): Promise<void> {
 
   const staffMembership = await ensureMembership(orgA.id, staff.id);
   await ensureAssignment(staff.id, roles.get('org_admin')!.id, orgA.id, staffMembership.id);
+
+  // Usuarios demo para probar reembolsos con segregación de funciones: quien
+  // solicita (finanzas) no puede aprobar; el aprobador es catalog_admin (no
+  // dispara MFA obligatorio en el login de demo).
+  const demoRequester = await ensureUser(
+    'finanzas.demo@ventascatalogo.local',
+    'Finanzas Demo',
+    process.env.SEED_STAFF_PASSWORD ?? 'Demo1234!',
+  );
+  const requesterMembership = await ensureMembership(orgA.id, demoRequester.id);
+  await ensureAssignment(
+    demoRequester.id,
+    roles.get('finanzas')!.id,
+    orgA.id,
+    requesterMembership.id,
+  );
+
+  const demoApprover = await ensureUser(
+    'aprobador.demo@ventascatalogo.local',
+    'Aprobador Demo',
+    process.env.SEED_STAFF_PASSWORD ?? 'Demo1234!',
+  );
+  const approverMembership = await ensureMembership(orgA.id, demoApprover.id);
+  await ensureAssignment(
+    demoApprover.id,
+    roles.get('catalog_admin')!.id,
+    orgA.id,
+    approverMembership.id,
+  );
 
   const customerAsCustomer = await ensureCustomer(orgA.id, customer.email, customer.fullName);
   await ensureCustomerAccount(customer.id, orgA.id, customerAsCustomer.id);

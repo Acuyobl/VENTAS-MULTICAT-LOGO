@@ -95,8 +95,11 @@ CI run 40712350231 (6d44a25)       → success, 89 s + artefacto `coverage` (326
 
 ## 5. Pendiente antes de cerrar F0
 
-1. **Criterio 8**: cronometrar el bootstrap completo de un dev nuevo (< 30 min) y corregir la guía.
-2. **Demo de F0** con las dos caras y tag `v0.1.0`.
+1. ~~**Criterio 8**: cronometrar el bootstrap completo de un dev nuevo (< 30 min) y corregir la
+   guía.~~ ✅ **Medido:** 75,1 s en caliente y 4–6 min en frío, con `node tools/bootstrap-check.mjs`
+   y evidencia en [09-BOOTSTRAP.md](09-BOOTSTRAP.md).
+2. ~~**Demo de F0** con las dos caras y tag `v0.1.0`.~~ ✅ Guion en [10-DEMO.md](10-DEMO.md); tag
+   `v0.1.0` publicado con notas en [`CHANGELOG.md`](../CHANGELOG.md).
 3. **Alinear la convención de dinero** en `docs/03`: §3.4 define descuento antes de impuesto y
    `subtotal = Σ neto`, mientras que el `CHECK` de `quotes`/`orders` usa
    `total = subtotal + IVA − descuento`. La implementación sigue §3.4; el `CHECK` debe ajustarse.

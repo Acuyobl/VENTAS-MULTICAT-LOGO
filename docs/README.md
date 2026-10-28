@@ -28,9 +28,12 @@ en orden, pero cada uno sirve por separado.
 | 05 | [Nuevas ideas](05-IDEAS.md) | 31 ideas priorizadas con scoring I/E, roadmap de 12 meses, 10 descartadas, 3 experimentos y guardrails | 1.165 | 60 min |
 | 06 | [Costos y precios](06-COSTOS-Y-PRECIOS.md) | Cuánto cuesta construirlo (3 escenarios × 3 alcances), año 1, unit economics, escalera de precios, break-even, LTV/CAC y plan de venta masiva | 1.442 | 60 min |
 | 07 | [Estado de implementación](07-ESTADO-IMPLEMENTACION.md) | Bitácora de F0: qué está construido y verificado, desviaciones del entorno, defectos corregidos y pendientes antes de F1 | 140 | 10 min |
-| 08 | [Estado F1](08-ESTADO-F1.md) | Incremento de catálogo: versionado, importación CSV/XLSX con cuarentena, productos por versión y UI del backoffice | 130 | 10 min |
+| 08 | [Estado F1](08-ESTADO-F1.md) | Incremento de catálogo: versionado, importación CSV/XLSX con cuarentena, productos por versión, imágenes, ventas, PDF y cara B | 230 | 15 min |
+| 09 | [Bootstrap medido](09-BOOTSTRAP.md) | Criterio 8 de F0: tiempos reales del bootstrap, camino manual y riesgos del entorno | 60 | 5 min |
+| 10 | [Guion de demo](10-DEMO.md) | Recorrido de 8–10 minutos por las dos caras, con plan B | 80 | 5 min |
 
-Además, `graphify-out/` contiene el grafo de conocimiento del corpus (ver más abajo).
+Además, [`CHANGELOG.md`](../CHANGELOG.md) resume el hito `v0.1.0` y `graphify-out/` contiene el
+grafo de conocimiento del corpus (ver más abajo).
 
 ## Decisiones que condicionan todo (resumen)
 
