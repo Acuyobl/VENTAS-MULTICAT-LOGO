@@ -3,7 +3,20 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
-## [0.1.3] — 2026-10-28
+## [0.1.4] — 2026-10-28
+
+### Añadido
+- **Imágenes generadas con IA** en las publicaciones de contenido: al crear una publicación se
+  genera texto + imagen; `POST /ai/social-posts/:id/image` permite regenerar con prompt propio.
+- Proveedor `mock` (SVG 1080×1080 de marca, sin red ni credenciales) y `openai` (`gpt-image-1`) con
+  `OPENAI_API_KEY`; la imagen se guarda en `vc-public` y se sirve con URL firmada.
+- `/panel/contenido` muestra la imagen en la vista previa, el prompt usado, botón de
+  generar/regenerar y miniaturas en el historial.
+
+### Pruebas
+- API: **229 unit** (41 archivos) y **98 e2e** (16 archivos). Web: 19 pruebas. CI con cobertura.
+
+
 
 ### Añadido
 - **Gastos** con categorías, filtros por rango, totales por categoría y borrado lógico

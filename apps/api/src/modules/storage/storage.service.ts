@@ -144,6 +144,47 @@ export class StorageService implements OnModuleInit {
     }
   }
 
+  /** Sube un objeto al bucket público (`vc-public`) para assets servibles por URL firmada. */
+  async putPublicObject(key: string, buffer: Buffer, contentType: string): Promise<void> {
+    try {
+      await this.client.putObject(this.publicBucket, key, buffer, buffer.length, {
+        'Content-Type': contentType,
+      });
+    } catch (error) {
+      throw this.storageException('put_public_object', key, error);
+    }
+  }
+
+  /** URL firmada de descarga de `vc-public` (TTL 3600 s por defecto). */
+  async presignPublicObject(
+    key: string,
+    ttlSeconds = PUBLIC_PRODUCT_IMAGE_URL_TTL_SECONDS,
+  ): Promise<string> {
+    try {
+      return await this.client.presignedGetObject(this.publicBucket, key, ttlSeconds);
+    } catch (error) {
+      throw this.storageException('presign_public_object', key, error);
+    }
+  }
+
+  /** Igual que `presignPublicObject`, pero `null` si MinIO no responde. */
+  async presignPublicObjectSafe(key: string, ttlSeconds?: number): Promise<string | null> {
+    try {
+      return await this.presignPublicObject(key, ttlSeconds);
+    } catch (error) {
+      this.logger.warn({ err: error, key }, 'storage_presign_public_failed');
+      return null;
+    }
+  }
+
+  /** Borra un objeto de `vc-public` (limpieza best-effort). */
+  async removePublicObject(key: string): Promise<void> {
+    try {
+      await this.client.removeObject(this.publicBucket, key);
+    } catch (error) {
+      throw this.storageException('remove_public_object', key, error);
+    }
+  }
   private storageException(operation: string, key: string, error: unknown): AppException {
     this.logger.error({ err: error, operation, key }, 'storage_operation_failed');
     return new AppException(

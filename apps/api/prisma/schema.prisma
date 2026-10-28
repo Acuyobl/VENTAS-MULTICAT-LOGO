@@ -769,6 +769,10 @@ model SocialPost {
   hashtags          String[]         @default([])
   cta               String
   visualSuggestion  String?
+  imageKey          String?
+  imagePrompt       String?
+  imageProvider     String?
+  imageModel        String?
   productIds        String[]         @default([]) @db.Uuid
   status            SocialPostStatus @default(DRAFT)
   promptTemplateKey String

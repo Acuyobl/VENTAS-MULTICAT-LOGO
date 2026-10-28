@@ -7,10 +7,10 @@ producto (subida a MinIO, URLs firmadas e importación con imágenes), ventas
 (clientes, cotizaciones con PDF y conversión a pedido), la cara B (checkout
 invitado con token público, reclamo de cuenta y portal de pedidos).
 
-- **Unit:** 210 tests en 37 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
+- **Unit:** 229 tests en 41 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
   infraestructura: los servicios externos (ioredis, MinIO) se sustituyen por
   dobles.
-- **E2E:** 94 tests en 15 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
+- **E2E:** 98 tests en 16 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
   una instancia real de Nest (`Test.createTestingModule({ imports: [AppModule] })`)
   en el mismo proceso. No abren puerto fijo ni dependen del `pnpm dev` de la API.
 
@@ -95,6 +95,10 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `src/modules/expenses/expense-calculations.spec.ts`        | totales/por categoría (BigInt), profit = neto − reembolsos − gastos, margen en puntos base con redondeo y sin ingresos, máscara de secreto                                                                                                                                                                                                | Gastos/Utilidad         |
 | `src/modules/organizations/gateways.service.spec.ts`       | 422 `gateway_secret_required`, cifrado AES-256-GCM descifrable, `maskedKey` últimos 4, PATCH habilita/deshabilita y auditoría sin secretos                                                                                                                                                                                                | Pasarelas               |
 | `src/modules/reports/reconciliation-csv.spec.ts`           | cabecera, filas y totales con CRLF y escape de comas/comillas/saltos de línea                                                                                                                                                                                                                                                             | Export CSV              |
+| `src/modules/ai/image/svg-image.spec.ts`                   | SVG 1080×1080 con título/precio/CTA/marca, determinista, escape XML de `<>&"'`, sin producto omite precio y raíz única                                                                                                                                                                                                                    | Imágenes IA             |
+| `src/modules/ai/image/image-prompt.spec.ts`                | prompt con post/producto/precio/CTA/estilo/marca e instrucciones custom                                                                                                                                                                                                                                                                   | Imágenes IA             |
+| `src/modules/ai/image/mock-image.provider.spec.ts`         | SVG determinista en Buffer, `image/svg+xml`, extensión `svg` y contenido del producto                                                                                                                                                                                                                                                     | Imágenes IA             |
+| `src/modules/ai/image/openai-image.provider.spec.ts`       | adapter OpenAI con fetch mockeado (b64 → PNG), 502 en HTTP no-2xx y factory: mock default, 409 sin key, modelo y fail-fast en producción                                                                                                                                                                                                  | Imágenes IA             |
 
 ### E2E
 
@@ -115,6 +119,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `test/settings-reminders-reports.e2e-spec.ts` | `GET/PATCH /organizations/settings` (auditado, 403 finanzas); autoaprobación: flag off → 409 `REFUND_SEGREGATION_REQUIRED`, flag on sin confirmar → 422 `self_approval_confirmation_required`, con `confirmSelfApproval` → aprueba y audita `payment.refund_self_approved`; recordatorio EMAIL enviado de verdad por Mailpit (fila `SENT` + listado + Mailpit) y WhatsApp sin credenciales → 409 / sin teléfono → 422; `/reports/finance` del mes con totales, métodos, `topProducts` y cuentas por cobrar; `/reports/reconciliation` con referencia y neto; rango inválido 422 y 403 vendedor; cross-org 404                                                                                                                                                                                                                                                | Ajustes/Reportes F2             |
 | `test/ai-chat-whatsapp.e2e-spec.ts`           | `POST /ai/social-posts` con `AI_PROVIDER=mock` → 201 DRAFT con title/body/hashtags/cta y tokens > 0 (audit `ai.social_post_generated`), listado, decisión APPROVED auditada y 403 del vendedor; `AI_PROVIDER=deepseek` sin key → 409 `INTEGRATION_NOT_CONFIGURED` en app nueva; webhook WhatsApp GET challenge/403 y POST con firma HMAC (inválida → 401) que crea conversación+mensaje; `/chat/conversations` con unread 1, abrir marca leído, responder STAFF y cross-org 404; conversación demo del seed presente                                                                                                                                                                                                                                                                                                                                         | IA/WhatsApp/Chat F3             |
 | `test/finance-gateways-chat.e2e-spec.ts`      | gastos: crear(3+1)/listar con totales y `byCategory`/filtrar/soft delete, 404 cross-org y 403 vendedor; `/reports/profit` con venta+3 gastos → `profitMinor = neto − reembolsos − gastos` y margen coherente; export CSV `text/csv` + `Content-Disposition` + audit `report.exported`; gateways PUT 422 sin secreto, cifra/máscara, GET sin secretos, PATCH y audit sin secretos; chat `channel` WEB/WHATSAPP, respuesta WEB 201, WHATSAPP sin credenciales 409 sin guardar mensaje, cross-org 404; inbound WA setea `channel=WHATSAPP` y `externalId`                                                                                                                                                                                                                                                                                                       | Cierre F2 + WhatsApp saliente   |
+| `test/ai-images.e2e-spec.ts`                  | `POST /ai/social-posts` con `IMAGE_PROVIDER=mock` → 201 con `imageUrl` firmada e `imageProvider=mock`; la URL descarga 200 `image/svg+xml` con el SVG; `POST /:id/image` con prompt custom cambia `imagePrompt` y sobrescribe la misma key (audit `ai.social_post_image_generated`); listado con `imageUrl`; 403 sin `social:generate`, 404 cross-org y 409 con `IMAGE_PROVIDER=openai` sin key en app nueva                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Imágenes con IA                 |
 
 Criterio §4.1.1 (`lint` + `typecheck` + `test` en verde) se comprueba con
 `pnpm lint`, `pnpm typecheck` y los dos comandos de test de este README. El
@@ -228,6 +233,25 @@ unitarios de `HealthService`.
   `AUTH_WRONG_AUDIENCE`.
 - El checkout reutiliza el patrón de snapshots de ventas y la secuencia
   `PED-YYYY-NNNNNN`; los warnings de imágenes no aplican aquí.
+
+## Hallazgos de imágenes con IA (F3)
+
+- Migración `20261028210000_social_post_images`: `SocialPost.imageKey`,
+  `imagePrompt`, `imageProvider`, `imageModel` (nullable). El contrato
+  `socialPostSchema` ya trae `imageUrl/imagePrompt/imageProvider`.
+- `ImageProvider` (`mock|openai`) se resuelve con `IMAGE_PROVIDER` (default
+  `mock`): el mock dibuja un SVG 1080×1080 determinista con degradado de marca,
+  título, producto/precio, CTA y "VentasCatálogo"; `openai` usa `gpt-image-1` por
+  fetch (timeout 60 s) y sin `OPENAI_API_KEY` → 409 `INTEGRATION_NOT_CONFIGURED`.
+  `validateEnv` aborta si `IMAGE_PROVIDER=mock` con `NODE_ENV=production`.
+- La imagen se genera **best-effort** al crear el post: si el proveedor falla o
+  no está configurado, el post queda con `imageUrl=null` y se loguea el warning.
+  `POST /ai/social-posts/:id/image` regenera (409 si no hay proveedor) y audita
+  `ai.social_post_image_generated` sin secretos.
+- Almacenamiento: se agregaron `putPublicObject`/`presignPublicObject(Safe)`/
+  `removePublicObject` a `StorageService` (bucket `vc-public`), key
+  `ai/posts/{orgId}/{postId}.{ext}` que se sobrescribe al regenerar; la URL
+  firmada se expone con TTL de 3600 s. Los tests borran los objetos en `afterAll`.
 
 ## Hallazgos del cierre de F2 (gastos, pasarelas y WhatsApp saliente)
 

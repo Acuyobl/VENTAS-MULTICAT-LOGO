@@ -43,6 +43,9 @@ export const socialPostSchema = z.object({
   cta: z.string(),
   visualSuggestion: z.string().nullable(),
   status: socialPostStatusSchema,
+  imageUrl: z.string().nullable(),
+  imagePrompt: z.string().nullable(),
+  imageProvider: z.string().nullable(),
   aiProvider: z.string(),
   aiModel: z.string(),
   tokensIn: z.number().int(),
@@ -65,6 +68,14 @@ export const socialPostDecisionSchema = z
   .strict();
 
 export type SocialPostDecisionInput = z.infer<typeof socialPostDecisionSchema>;
+
+export const socialPostImageGenerateSchema = z
+  .object({
+    prompt: z.string().trim().min(3).max(500).optional(),
+  })
+  .strict();
+
+export type SocialPostImageGenerateInput = z.infer<typeof socialPostImageGenerateSchema>;
 
 export const whatsappSendSchema = z
   .object({

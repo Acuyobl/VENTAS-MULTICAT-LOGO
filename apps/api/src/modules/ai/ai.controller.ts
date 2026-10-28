@@ -3,10 +3,12 @@ import { z } from 'zod';
 import {
   socialPostDecisionSchema,
   socialPostGenerateSchema,
+  socialPostImageGenerateSchema,
   type AuthenticatedUser,
   type SocialPost,
   type SocialPostDecisionInput,
   type SocialPostGenerateInput,
+  type SocialPostImageGenerateInput,
   type SocialPostListResponse,
 } from '@ventascatalogo/contracts';
 import { SocialPostsService } from './social-posts.service';
@@ -46,6 +48,17 @@ export class SocialPostsController {
     return this.posts.list(user, query.limit);
   }
 
+  @Post(':id/image')
+  @HttpCode(200)
+  @RequirePermissions('social:generate')
+  regenerateImage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ZodValidationPipe(idSchema)) id: string,
+    @Body(new ZodValidationPipe(socialPostImageGenerateSchema)) body: SocialPostImageGenerateInput,
+    @Req() req: RequestWithTrace,
+  ): Promise<SocialPost> {
+    return this.posts.regenerateImage(user, id, body, salesMetaFrom(req));
+  }
   @Post(':id/decision')
   @HttpCode(200)
   @RequirePermissions('social:approve')

@@ -2470,3 +2470,26 @@ svg {
 .chat-compose .input {
   flex: 1;
 }
+
+/* Imágenes generadas para contenido */
+.post-image {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.post-image--empty {
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--line-strong);
+}
+
+.post-thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  display: block;
+}

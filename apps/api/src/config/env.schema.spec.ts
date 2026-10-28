@@ -35,7 +35,9 @@ describe('validateEnv · DEV_AUTH_HELPERS', () => {
   });
 
   it('permite producción con el flag apagado', () => {
-    const env = validateEnv(baseEnv({ NODE_ENV: 'production', DEV_AUTH_HELPERS: 'false' }));
+    const env = validateEnv(
+      baseEnv({ NODE_ENV: 'production', DEV_AUTH_HELPERS: 'false', IMAGE_PROVIDER: 'openai' }),
+    );
     expect(env.DEV_AUTH_HELPERS).toBe(false);
   });
 
@@ -69,12 +71,43 @@ describe('validateEnv · cobros', () => {
   });
 
   it('permite producción con la pasarela sandbox apagada', () => {
-    const env = validateEnv(baseEnv({ NODE_ENV: 'production', PAYMENTS_SANDBOX_ENABLED: 'false' }));
+    const env = validateEnv(
+      baseEnv({
+        NODE_ENV: 'production',
+        PAYMENTS_SANDBOX_ENABLED: 'false',
+        IMAGE_PROVIDER: 'openai',
+      }),
+    );
     expect(env.PAYMENTS_SANDBOX_ENABLED).toBe(false);
   });
 
   it('rechaza un proveedor de pago desconocido', () => {
     expect(() => validateEnv(baseEnv({ PAYMENTS_DEFAULT_PROVIDER: 'paypal' }))).toThrow(
+      /Configuración de entorno inválida/,
+    );
+  });
+});
+
+describe('validateEnv · imágenes con IA', () => {
+  it('por defecto el proveedor de imágenes es mock en desarrollo', () => {
+    const env = validateEnv(baseEnv());
+    expect(env.IMAGE_PROVIDER).toBe('mock');
+    expect(env.OPENAI_IMAGE_MODEL).toBe('gpt-image-1');
+  });
+
+  it('aborta si NODE_ENV=production e IMAGE_PROVIDER=mock', () => {
+    expect(() => validateEnv(baseEnv({ NODE_ENV: 'production' }))).toThrow(
+      /IMAGE_PROVIDER=mock no está permitido con NODE_ENV=production/,
+    );
+  });
+
+  it('permite producción con IMAGE_PROVIDER=openai', () => {
+    const env = validateEnv(baseEnv({ NODE_ENV: 'production', IMAGE_PROVIDER: 'openai' }));
+    expect(env.IMAGE_PROVIDER).toBe('openai');
+  });
+
+  it('rechaza proveedores de imagen desconocidos', () => {
+    expect(() => validateEnv(baseEnv({ IMAGE_PROVIDER: 'dalle' }))).toThrow(
       /Configuración de entorno inválida/,
     );
   });

@@ -316,6 +316,29 @@ conversación antigua (creada antes de la migración) queda en WEB: es dato hist
 
 
 
+## 3.12 Imágenes generadas con IA para contenido (F3)
+
+| Pieza | Detalle |
+|---|---|
+| Generación automática | `POST /ai/social-posts` crea el texto y **también la imagen** (best-effort: si falla, la publicación queda con `imageUrl=null`) |
+| Regeneración | `POST /ai/social-posts/:id/image` (`social:generate`, `{prompt?}`) vuelve a generar con instrucciones propias y devuelve la publicación actualizada |
+| Proveedores | `IMAGE_PROVIDER=mock` (default): SVG 1080×1080 determinista con degradado de marca, título, producto/precio, CTA y «VentasCatálogo»; `openai` (`gpt-image-1`, `response_format=b64_json`, timeout 60 s) si hay `OPENAI_API_KEY`, si no → 409 `INTEGRATION_NOT_CONFIGURED`. Mock prohibido en producción (fail-fast) |
+| Almacenamiento | Bucket `vc-public`, key `ai/posts/{orgId}/{postId}.{ext}`; se sirve con URL firmada de 3600 s y se sobrescribe al regenerar |
+| UI | `/panel/contenido` muestra la imagen en la vista previa, permite **generar/regenerar con prompt** y muestra miniaturas en el historial |
+
+Verificación ejecutada:
+
+```text
+POST /ai/social-posts (mock) → imagen=true · provider=mock · SVG 1080×1080 válido (1.876 B)
+GET imageUrl → 200 image/svg+xml · contiene la marca y el título
+POST /:id/image con prompt custom → imagePrompt incluye las instrucciones y nueva URL descargable
+GET /ai/social-posts → las publicaciones nuevas traen imageUrl; las 2 antiguas quedan sin imagen
+    (se regeneran desde la UI con «Regenerar imagen»)
+/panel/contenido → 200 · vista previa con imagen y miniatura en el historial
+```
+
+
+
 ## 4. Decisiones tomadas
 
 1. **Códigos de error promovidos al contrato**: los 5 códigos de F1 se agregaron a

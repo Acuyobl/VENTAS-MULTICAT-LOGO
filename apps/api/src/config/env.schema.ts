@@ -78,6 +78,10 @@ export const envSchema = z
     AI_USD_PER_1K_INPUT: z.coerce.number().nonnegative().default(0.00027),
     AI_USD_PER_1K_OUTPUT: z.coerce.number().nonnegative().default(0.0011),
     AI_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(86_400),
+    /** Generación de imágenes de contenido: `mock` (SVG local) u `openai`. */
+    IMAGE_PROVIDER: z.enum(['mock', 'openai']).default('mock'),
+    OPENAI_API_KEY: z.string().optional().default(''),
+    OPENAI_IMAGE_MODEL: z.string().default('gpt-image-1'),
     /** Organización destino del WhatsApp entrante (webhook sin sesión). */
     WHATSAPP_ORG_SLUG: z.string().default('demo'),
     WHATSAPP_ACCESS_TOKEN: z.string().optional().default(''),
@@ -127,6 +131,12 @@ export function validateEnv(config: Record<string, unknown>): Env {
   if (result.data.NODE_ENV === 'production' && result.data.AI_PROVIDER === 'mock') {
     throw new Error(
       'AI_PROVIDER=mock no está permitido con NODE_ENV=production: genera contenido de relleno en vez de llamar al modelo. Configurá deepseek.',
+    );
+  }
+
+  if (result.data.NODE_ENV === 'production' && result.data.IMAGE_PROVIDER === 'mock') {
+    throw new Error(
+      'IMAGE_PROVIDER=mock no está permitido con NODE_ENV=production: genera SVGs de relleno en vez de llamar al modelo de imágenes. Configurá openai.',
     );
   }
 

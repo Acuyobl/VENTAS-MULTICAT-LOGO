@@ -33,6 +33,8 @@ export function ContentStudio({ catalogs, initialPosts }: ContentStudioProps) {
   const [products, setProducts] = useState<ProductListResponse['items']>([]);
   const [productIds, setProductIds] = useState<string[]>([]);
   const [extra, setExtra] = useState('');
+  const [imagePrompt, setImagePrompt] = useState('');
+  const [imageBusy, setImageBusy] = useState(false);
   const [posts, setPosts] = useState<SocialPost[]>(initialPosts);
   const [selected, setSelected] = useState<SocialPost | null>(initialPosts[0] ?? null);
   const [loading, setLoading] = useState(false);
@@ -128,6 +130,40 @@ export function ContentStudio({ catalogs, initialPosts }: ContentStudioProps) {
       setError(caught instanceof Error ? caught.message : 'Error inesperado.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function generateImage() {
+    if (!selected) return;
+    setImageBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await fetch(`/api/v1/ai/social-posts/${selected.id}/image`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(imagePrompt.trim() ? { prompt: imagePrompt.trim() } : {}),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | SocialPost
+        | { code?: string; message?: string }
+        | null;
+      if (!response.ok) {
+        const code = (payload as { code?: string } | null)?.code;
+        throw new Error(
+          code === 'INTEGRATION_NOT_CONFIGURED'
+            ? 'La generación de imágenes no está configurada (IMAGE_PROVIDER/OPENAI_API_KEY).'
+            : ((payload as { message?: string } | null)?.message ?? 'No pudimos generar la imagen.'),
+        );
+      }
+      const updated = payload as SocialPost;
+      setPosts((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      setSelected(updated);
+      setNotice('Imagen generada con IA.');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Error inesperado.');
+    } finally {
+      setImageBusy(false);
     }
   }
 
@@ -260,6 +296,50 @@ export function ContentStudio({ catalogs, initialPosts }: ContentStudioProps) {
                 {selected.title}
               </h3>
             </div>
+
+            {selected.imageUrl ? (
+              <img
+                className="post-image"
+                src={selected.imageUrl}
+                alt={`Imagen generada para: ${selected.title}`}
+              />
+            ) : (
+              <div className="post-image post-image--empty">
+                <span className="mono faint">Sin imagen todavía</span>
+              </div>
+            )}
+
+            <div className="inline" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
+              <label className="field" style={{ flex: 1 }}>
+                <span className="field__label">Prompt de imagen (opcional)</span>
+                <input
+                  className="input"
+                  value={imagePrompt}
+                  onChange={(event) => setImagePrompt(event.target.value)}
+                  placeholder="Fondo de madera, café humeante, luz cálida…"
+                  maxLength={500}
+                />
+              </label>
+              <button
+                type="button"
+                className="btn btn--small btn--secondary"
+                disabled={imageBusy}
+                onClick={() => void generateImage()}
+              >
+                {imageBusy
+                  ? 'Generando…'
+                  : selected.imageUrl
+                    ? 'Regenerar imagen'
+                    : 'Generar imagen'}
+              </button>
+            </div>
+            {selected.imageProvider ? (
+              <p className="mono faint" style={{ fontSize: '0.68rem' }}>
+                Imagen generada con {selected.imageProvider}
+                {selected.imagePrompt ? ` · ${selected.imagePrompt.slice(0, 90)}` : ''}
+              </p>
+            ) : null}
+
             <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.9rem' }}>{selected.body}</p>
             <p className="mono faint" style={{ fontSize: '0.75rem' }}>
               {selected.hashtags.join(' ')}
@@ -317,6 +397,7 @@ export function ContentStudio({ catalogs, initialPosts }: ContentStudioProps) {
               <thead>
                 <tr>
                   <th>Título</th>
+                  <th>Imagen</th>
                   <th>Plataforma</th>
                   <th>Estado</th>
                   <th>Fecha</th>
@@ -327,6 +408,13 @@ export function ContentStudio({ catalogs, initialPosts }: ContentStudioProps) {
                 {posts.map((post) => (
                   <tr key={post.id}>
                     <td>{post.title}</td>
+                    <td>
+                      {post.imageUrl ? (
+                        <img className="post-thumb" src={post.imageUrl} alt="" />
+                      ) : (
+                        <span className="mono faint">—</span>
+                      )}
+                    </td>
                     <td>{post.platform}</td>
                     <td>
                       <span className={post.status === 'APPROVED' ? 'badge badge--ok' : 'badge'}>

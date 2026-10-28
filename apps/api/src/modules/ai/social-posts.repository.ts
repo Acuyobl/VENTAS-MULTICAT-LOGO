@@ -70,6 +70,23 @@ export class SocialPostsRepository {
     });
   }
 
+  updateImage(
+    id: string,
+    data: {
+      imageKey: string;
+      imagePrompt: string;
+      imageProvider: string;
+      imageModel: string;
+    },
+  ): Promise<SocialPost> {
+    return this.prisma.socialPost.update({ where: { id }, data });
+  }
+
+  findProductsByIds(ids: string[]): Promise<Product[]> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return this.prisma.product.findMany({ where: { id: { in: ids } } });
+  }
+
   updateStatus(
     id: string,
     status: 'APPROVED' | 'REJECTED',
