@@ -7,10 +7,10 @@ producto (subida a MinIO, URLs firmadas e importación con imágenes), ventas
 (clientes, cotizaciones con PDF y conversión a pedido), la cara B (checkout
 invitado con token público, reclamo de cuenta y portal de pedidos).
 
-- **Unit:** 273 tests en 47 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
+- **Unit:** 279 tests en 49 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
   infraestructura: los servicios externos (ioredis, MinIO) se sustituyen por
   dobles.
-- **E2E:** 118 tests en 19 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
+- **E2E:** 124 tests en 20 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
   una instancia real de Nest (`Test.createTestingModule({ imports: [AppModule] })`)
   en el mismo proceso. No abren puerto fijo ni dependen del `pnpm dev` de la API.
 
@@ -105,6 +105,8 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `src/modules/catalogs/import/adaptive/attribute-coercion.spec.ts`    | coacción NUMBER/CURRENCY (CRC/USD)/BOOLEAN/DATE/TEXT, celdas vacías fuera y MERGE por SKU + errores bloqueantes                                                                                                                                                                                                                           | Importador adaptativo   |
 | `src/modules/ai/image/image-data-uri.spec.ts`                        | detección MIME por magic bytes (PNG/JPEG/WEBP/SVG), data URI base64 y variant FNV-1a determinista                                                                                                                                                                                                                                         | Imágenes con foto       |
 | `src/modules/ai/image/image-designs.spec.ts`                         | catálogo de 3 diseños con previews `data:image/svg+xml;base64`, `data-design` correcto, `data-photo="false"`, determinista y liviano (<200 KB)                                                                                                                                                                                            | Diseños de imagen       |
+| `src/modules/products/product-permissions.spec.ts`                   | A-R6: `costMinor` oculto para vendedor/social_manager/agente_chat y visible para admin/catálogo/finanzas                                                                                                                                                                                                                                  | Detalle de producto     |
+| `src/modules/products/product-update.spec.ts`                        | diff before/after del audit (solo campos enviados que cambian, BigInt como string, null para limpiar) y regla de versión editable (solo ACTIVE + activa)                                                                                                                                                                                  | Detalle de producto     |
 
 ### E2E
 
@@ -129,6 +131,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `test/adaptive-import.e2e-spec.ts`            | `POST /catalogs` (slug autogenerado, 409 duplicado, audit `catalog.created`); preview de CSV raro (`Código, Artículo, Precio final ₡, Cant., Medida, Material, Total`) → mapping + extraFields Medida/Material + Total ignorado; agente mock (`agent.provider=mock`) y heurística sin IA (`agent:null` + warning); import REPLACE + extraFields → atributos en DB; MERGE conserva A2 que no viene en el archivo y REPLACE no; plantilla guardada, reutilizada como `preset` y `usageCount` incrementado; 403 sin `catalog:write` y 404 cross-org                                                                                                                                                                                                                                                                                                             | Importador adaptativo           |
 | `test/ai-images-photo.e2e-spec.ts`            | producto con foto real en `vc-products` → `POST /ai/social-posts` genera SVG con `data:image/png;base64,<foto>` descargable 200 `image/svg+xml`; dos productos con fotos distintas → imágenes distintas; regenerar con prompt custom cambia la imagen; producto sin foto → degradado `data-photo=false`; 403 sin `social:generate` y 404 cross-org; limpia objetos en `afterAll`                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Imágenes con foto               |
 | `test/ai-image-designs.e2e-spec.ts`           | `GET /ai/image-designs` → 3 diseños con preview `data:image/svg+xml`; `PATCH /organizations/settings {imageDesign:'PROMO'}` → 200 y auditado (y sigue aceptando solo `allowSelfApproval`); crear publicación usa PROMO y el SVG descargado trae `data-design="PROMO"` + foto; regenerar con `design:'EDITORIAL'` → otro hash con `data-design="EDITORIAL"`; 403 sin permisos                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Diseños de imagen               |
+| `test/product-detail.e2e-spec.ts`             | `GET /products/:id` con `imageUrl` descargable (`image/png`), `attributes` y `catalogName/versionNumber/versionStatus` (también en versión archivada); vendedor sin `costMinor` (A-R6); `PATCH` de nombre/precio/stock verificado por GET, audit `product.updated` before/after y sin tocar SKU/versión/imagen; cuerpo vacío 422; versión archivada 409 `CATALOG_ARCHIVED`; 404 cross-org/inexistente y 403 sin `product:write`                                                                                                                                                                                                                                                                                                                                                                                                                              | Detalle de producto             |
 
 Criterio §4.1.1 (`lint` + `typecheck` + `test` en verde) se comprueba con
 `pnpm lint`, `pnpm typecheck` y los dos comandos de test de este README. El
@@ -242,6 +245,21 @@ unitarios de `HealthService`.
   `AUTH_WRONG_AUDIENCE`.
 - El checkout reutiliza el patrón de snapshots de ventas y la secuencia
   `PED-YYYY-NNNNNN`; los warnings de imágenes no aplican aquí.
+
+## Hallazgos de detalle y edición de producto (F1)
+
+- Sin migración: `GET /products/:productId` y `PATCH /products/:productId` usan el
+  esquema existente. El detalle incluye `catalogName`, `versionNumber`,
+  `versionStatus`, `attributes`, `imageKey` y `imageUrl` firmada 3600 s; consulta
+  también versiones archivadas (no solo la activa).
+- A-R6: `costMinor` se excluye por serialización para `vendedor`,
+  `social_manager` y `agente_chat` (helper `canViewProductCost`).
+- Edición: solo campos enviados (diff before/after para el audit
+  `product.updated`), valida montos/stock con el schema, no cambia `sku`,
+  `catalogVersionId` ni `imageKey`. Solo la versión ACTIVE del catálogo es
+  editable: una versión archivada o no activa → 409 `CATALOG_ARCHIVED` con
+  `reason=version_not_editable`. Cuerpo vacío → 422 `VALIDATION_FAILED`
+  (`reason=empty_body`). Cross-org y producto inexistente → 404.
 
 ## Hallazgos de diseños de imagen configurables (F3)
 

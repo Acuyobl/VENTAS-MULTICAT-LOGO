@@ -458,6 +458,31 @@ elegido se usa como guía del prompt de edición.
 
 
 
+## 3.18 Galería y detalle de producto (backoffice)
+
+`/panel/productos` pasó de tabla con miniaturas a **galería de tarjetas** con la foto grande del
+producto; cada tarjeta abre `/panel/productos/<id>` con el detalle completo.
+
+| Pieza | Detalle |
+|---|---|
+| Galería | Tarjetas con imagen (4:3), categoría, nombre, SKU/marca, precio y stock; filtros por texto, categoría y versión; paginación por cursor |
+| Detalle | `GET /products/:productId` (`product:read`) con `attributes`, `imageKey`, `imageUrl` firmada 3600 s, catálogo, versión y estado (aunque esté archivada) |
+| Edición | `PATCH /products/:productId` (`product:write`): nombre, descripción, categoría, marca, precio y stock; cuerpo vacío 422; solo editable la versión ACTIVE (archivada → 409) para preservar el histórico; audit `product.updated` con before/after |
+| Foto | Subir/quitar imagen desde el detalle (endpoints existentes) |
+| Campos dinámicos | El detalle muestra los campos extra del importador (`Medida`, `Material`, etc.) con etiqueta legible |
+| A-R6 | `costMinor` se oculta a roles sin permiso (vendedor, social_manager, agente_chat) |
+
+Verificación ejecutada:
+
+```text
+/panel/productos?catalogo=<despensa> → 200 · 20 tarjetas · 20 <img> · «ver detalle →»
+/panel/productos/<ALT-010>            → 200 · imagen · «Editar producto»
+/panel/productos/<TOR-001>            → 200 · «Campos del catálogo» · Medida "1/4 x 2" · Material "Acero"
+PATCH producto ACTIVE                 → precio 250→275, stock 120→130, GET confirma, revertido
+```
+
+
+
 ## 4. Decisiones tomadas
 
 1. **Códigos de error promovidos al contrato**: los 5 códigos de F1 se agregaron a
@@ -506,8 +531,8 @@ curl -F "file=@tools/fixtures/catalogo-demo.csv;type=text/csv" `
 1. **Google Drive** (F1.1/F1.2): crear cliente OAuth en Google Cloud con scope `drive.readonly` y
    `access_type=offline`; el pipeline ya está listo y el importador inteligente se reutiliza.
 2. **PWA de tienda** (F1.13): manifest, service worker e IndexedDB del catálogo activo.
-3. **Importador**: mostrar `attributes` como columnas/chips en la UI de productos, variantes
-   (talla/color) y archivos PDF/OCR. El motor A+B+C ya está (§3.14).
+3. **Importador**: variantes (talla/color) y archivos PDF/OCR. El motor A+B+C y la visualización de
+   campos extra ya están (§3.14 y §3.18).
 4. **F2 restante**: conciliación programada/cierre de meses y reportes por catálogo en PDF.
 5. **F3 restante**: campañas de WhatsApp saliente, chat del cliente, publicación real en redes,
    cuota/costo de IA y credenciales de `OPENAI_API_KEY`/`DEEPSEEK_API_KEY` para IA real.

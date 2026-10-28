@@ -11,6 +11,28 @@ export interface ProductPage {
   nextCursor: string | null;
 }
 
+export interface ProductDetailRow {
+  id: string;
+  catalogId: string;
+  catalogVersionId: string;
+  sku: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  brand: string | null;
+  priceMinor: bigint;
+  costMinor: bigint | null;
+  currency: 'CRC' | 'USD';
+  stock: number | null;
+  attributes: Prisma.JsonValue | null;
+  imageKey: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  catalog: { name: string; organizationId: string; activeVersionId: string | null };
+  catalogVersion: { id: string; versionNumber: number; status: string };
+}
+
 export interface ProductForImage {
   id: string;
   catalogId: string;
@@ -118,5 +140,44 @@ export class ProductsRepository {
       })),
       nextCursor: hasNext ? (page[page.length - 1]?.id ?? null) : null,
     };
+  }
+
+  /** Producto + catálogo/versión para el detalle (incluye versiones archivadas). */
+  findDetail(productId: string): Promise<ProductDetailRow | null> {
+    return this.prisma.product.findFirst({
+      where: { id: productId, deletedAt: null },
+      select: {
+        id: true,
+        catalogId: true,
+        catalogVersionId: true,
+        sku: true,
+        name: true,
+        description: true,
+        category: true,
+        brand: true,
+        priceMinor: true,
+        costMinor: true,
+        currency: true,
+        stock: true,
+        attributes: true,
+        imageKey: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        catalog: { select: { name: true, organizationId: true, activeVersionId: true } },
+        catalogVersion: { select: { id: true, versionNumber: true, status: true } },
+      },
+    });
+  }
+
+  updateProduct(
+    productId: string,
+    data: Prisma.ProductUpdateInput,
+  ): Promise<{ id: string; updatedAt: Date }> {
+    return this.prisma.product.update({
+      where: { id: productId },
+      data,
+      select: { id: true, updatedAt: true },
+    });
   }
 }

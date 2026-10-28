@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import type { CatalogVersionSummary, ProductListResponse } from '@ventascatalogo/contracts';
 import { formatMoney } from '@/lib/format';
 
@@ -21,11 +22,13 @@ export function ProductsBrowser({ catalogId, versions, initialPage }: ProductsBr
   const [versionId, setVersionId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadingId, setUploadingId] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const categories = Array.from(
-    new Set(initialPage.items.map((item) => item.category).filter((value): value is string => Boolean(value))),
+    new Set(
+      initialPage.items
+        .map((item) => item.category)
+        .filter((value): value is string => Boolean(value)),
+    ),
   ).slice(0, 30);
 
   async function load(reset: boolean, cursor?: string | null) {
@@ -47,7 +50,9 @@ export function ProductsBrowser({ catalogId, versions, initialPage }: ProductsBr
         | { message?: string }
         | null;
       if (!response.ok) {
-        throw new Error((payload as { message?: string } | null)?.message ?? 'No pudimos leer los productos.');
+        throw new Error(
+          (payload as { message?: string } | null)?.message ?? 'No pudimos leer los productos.',
+        );
       }
       const page = payload as ProductListResponse;
       setItems((current) => (reset ? page.items : [...current, ...page.items]));
@@ -65,64 +70,13 @@ export function ProductsBrowser({ catalogId, versions, initialPage }: ProductsBr
     void load(true);
   }
 
-  async function uploadImage(productId: string, file: File) {
-    setUploadingId(productId);
-    setUploadError(null);
-    try {
-      const form = new FormData();
-      form.append('file', file);
-      const response = await fetch(`/api/v1/products/${productId}/image`, {
-        method: 'POST',
-        body: form,
-      });
-      const payload = (await response.json().catch(() => null)) as {
-        imageKey?: string | null;
-        imageUrl?: string | null;
-        message?: string;
-      } | null;
-      if (!response.ok) {
-        throw new Error(payload?.message ?? 'No pudimos subir la imagen.');
-      }
-      setItems((current) =>
-        current.map((item) =>
-          item.id === productId
-            ? { ...item, imageKey: payload?.imageKey ?? item.imageKey, imageUrl: payload?.imageUrl ?? null }
-            : item,
-        ),
-      );
-    } catch (caught) {
-      setUploadError(caught instanceof Error ? caught.message : 'Error inesperado.');
-    } finally {
-      setUploadingId(null);
-    }
-  }
-
-  async function removeImage(productId: string) {
-    setUploadingId(productId);
-    setUploadError(null);
-    try {
-      const response = await fetch(`/api/v1/products/${productId}/image`, { method: 'DELETE' });
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(payload?.message ?? 'No pudimos quitar la imagen.');
-      }
-      setItems((current) =>
-        current.map((item) => (item.id === productId ? { ...item, imageKey: null, imageUrl: null } : item)),
-      );
-    } catch (caught) {
-      setUploadError(caught instanceof Error ? caught.message : 'Error inesperado.');
-    } finally {
-      setUploadingId(null);
-    }
-  }
-
   return (
     <section className="panel">
       <div className="panel__head">
         <div>
           <h2>Productos por versión</h2>
           <p className="muted" style={{ fontSize: '0.8rem' }}>
-            Mostrando v{versionNumber} · nunca se mezclan versiones.
+            Mostrando v{versionNumber} · tocá una tarjeta para abrir el detalle.
           </p>
         </div>
         <span className="mono faint">{items.length} cargados</span>
@@ -159,7 +113,11 @@ export function ProductsBrowser({ catalogId, versions, initialPage }: ProductsBr
 
           <label className="field" style={{ minWidth: '200px' }}>
             <span className="field__label">Versión</span>
-            <select className="select" value={versionId} onChange={(event) => setVersionId(event.target.value)}>
+            <select
+              className="select"
+              value={versionId}
+              onChange={(event) => setVersionId(event.target.value)}
+            >
               <option value="">Versión activa</option>
               {versions.map((version) => (
                 <option key={version.id} value={version.id}>
@@ -174,93 +132,45 @@ export function ProductsBrowser({ catalogId, versions, initialPage }: ProductsBr
           </button>
         </form>
 
-        <div aria-live="polite">
-          {error ? <div className="alert">{error}</div> : null}
-          {uploadError ? <div className="alert">{uploadError}</div> : null}
-        </div>
+        {error ? <div className="alert">{error}</div> : null}
       </div>
 
       {items.length > 0 ? (
         <>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Imagen</th>
-                  <th>SKU</th>
-                  <th>Producto</th>
-                  <th>Categoría</th>
-                  <th>Marca</th>
-                  <th>Precio</th>
-                  <th>Stock</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((product) => (
-                  <tr key={product.id}>
-                    <td>
-                      <div className="thumb-cell">
-                        {product.imageUrl ? (
-                          <img
-                            className="thumb"
-                            src={product.imageUrl}
-                            alt={`Imagen de ${product.name}`}
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        ) : (
-                          <span className="thumb thumb--empty" aria-hidden>
-                            —
-                          </span>
-                        )}
-                        <span className="thumb-cell__actions">
-                          <input
-                            className="thumb-input"
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp,image/svg+xml"
-                            aria-label={`Subir imagen de ${product.name}`}
-                            disabled={uploadingId !== null}
-                            onChange={(event) => {
-                              const file = event.target.files?.[0];
-                              if (file) void uploadImage(product.id, file);
-                              event.target.value = '';
-                            }}
-                          />
-                          {product.imageUrl ? (
-                            <button
-                              type="button"
-                              className="thumb-remove"
-                              disabled={uploadingId !== null}
-                              onClick={() => void removeImage(product.id)}
-                            >
-                              Quitar
-                            </button>
-                          ) : null}
-                          {uploadingId === product.id ? (
-                            <span className="mono faint">Subiendo…</span>
-                          ) : null}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="table__num">{product.sku}</td>
-                    <td>
-                      <span className="table__primary">
-                        <strong>{product.name}</strong>
-                        <span>{product.description ?? 'Sin descripción'}</span>
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge">{product.category ?? 'General'}</span>
-                    </td>
-                    <td>{product.brand ?? '—'}</td>
-                    <td className="table__num">
-                      {formatMoney(product.priceMinor, product.currency)}
-                    </td>
-                    <td className="table__num">{product.stock ?? '∞'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="bo-product-grid">
+            {items.map((product) => (
+              <Link
+                className="bo-product-tile"
+                key={product.id}
+                href={`/panel/productos/${product.id}`}
+              >
+                <span className="bo-bo-product-tile__media">
+                  {product.imageUrl ? (
+                    <img
+                      src={product.imageUrl}
+                      alt={`Imagen de ${product.name}`}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  ) : (
+                    <span className="mono faint">Sin imagen</span>
+                  )}
+                </span>
+                <span className="bo-bo-product-tile__body">
+                  <span className="badge">{product.category ?? 'General'}</span>
+                  <strong>{product.name}</strong>
+                  <span className="mono faint" style={{ fontSize: '0.7rem' }}>
+                    {product.sku} · {product.brand ?? 'Sin marca'}
+                  </span>
+                  <span className="bo-bo-product-tile__price">
+                    {formatMoney(product.priceMinor, product.currency)}
+                  </span>
+                  <span className="mono faint" style={{ fontSize: '0.7rem' }}>
+                    Stock {product.stock ?? '∞'} · ver detalle →
+                  </span>
+                </span>
+              </Link>
+            ))}
           </div>
           <div className="panel__body inline" style={{ justifyContent: 'space-between' }}>
             <span className="mono faint">

@@ -50,3 +50,27 @@ export const productListResponseSchema = z.object({
 });
 
 export type ProductListResponse = z.infer<typeof productListResponseSchema>;
+
+export const productDetailSchema = versionedProductSummarySchema.extend({
+  catalogName: z.string(),
+  versionNumber: z.number().int(),
+  versionStatus: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export type ProductDetail = z.infer<typeof productDetailSchema>;
+
+export const productUpdateSchema = z
+  .object({
+    name: z.string().trim().min(2).max(160).optional(),
+    description: z.string().trim().max(1000).nullable().optional(),
+    category: z.string().trim().max(120).nullable().optional(),
+    brand: z.string().trim().max(120).nullable().optional(),
+    priceMinor: z.coerce.bigint().positive().optional(),
+    costMinor: z.coerce.bigint().nonnegative().nullable().optional(),
+    stock: z.coerce.number().int().min(0).max(1_000_000_000).nullable().optional(),
+  })
+  .strict();
+
+export type ProductUpdateInput = z.infer<typeof productUpdateSchema>;

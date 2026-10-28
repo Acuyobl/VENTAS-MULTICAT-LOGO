@@ -3,7 +3,20 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
-## [0.1.7] — 2026-10-28
+## [0.1.8] — 2026-10-28
+
+### Añadido
+- **Galería de productos** en `/panel/productos`: tarjetas con la foto grande del producto, filtros
+  y paginación; cada tarjeta abre el detalle.
+- **Detalle de producto** (`/panel/productos/<id>`): imagen, precio, costo, stock, descripción,
+  catálogo/versión, **campos dinámicos del importador** y gestión de la foto.
+- **Edición de producto**: `GET /products/:id` y `PATCH /products/:id` con validaciones y auditoría;
+  solo la versión activa es editable (archivada → 409) y `costMinor` se oculta a roles sin permiso.
+
+### Pruebas
+- API: **279 unit** (49 archivos) y **124 e2e** (20 archivos). Web: 19 pruebas. CI con cobertura.
+
+
 
 ### Añadido
 - **Tres diseños de imagen** para contenido, configurables por organización: `CLASICA` (foto a

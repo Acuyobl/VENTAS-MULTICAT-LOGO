@@ -1,16 +1,27 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import type {
   AuthenticatedUser,
+  ProductDetail,
   ProductListQuery,
   ProductListResponse,
+  ProductUpdateInput,
 } from '@ventascatalogo/contracts';
-import { ProductsRepository } from './products.repository';
+import { ProductsRepository, type ProductDetailRow } from './products.repository';
 import { CatalogsRepository } from '../catalogs/catalogs.repository';
 import { AppException } from '../../common/errors/app-exception';
 import { apiException } from '../../common/errors/api-error-codes';
-import { DEFAULT_PRODUCT_IMAGE_URL_TTL_SECONDS, StorageService } from '../storage/storage.service';
+import {
+  DEFAULT_PRODUCT_IMAGE_URL_TTL_SECONDS,
+  PUBLIC_PRODUCT_IMAGE_URL_TTL_SECONDS,
+  StorageService,
+} from '../storage/storage.service';
 import { productImageKey, validateProductImageFile } from '../storage/image-utils';
 import { sha256 } from '../../common/utils/crypto';
+import { canViewProductCost } from './product-permissions';
+import { buildProductUpdateDiff, isProductVersionEditable } from './product-update';
+import { AuditService } from '../audit/audit.service';
+import type { AuditMeta } from '../../common/audit/audit.types';
 
 export interface ProductImageUploadResult {
   imageKey: string;
@@ -25,6 +36,7 @@ export class ProductsService {
     private readonly repo: ProductsRepository,
     private readonly catalogs: CatalogsRepository,
     private readonly storage: StorageService,
+    private readonly audit: AuditService,
   ) {}
 
   /**
@@ -71,6 +83,137 @@ export class ProductsService {
    * Sube (o reemplaza) la imagen de un producto. El objeto anterior se borra
    * best-effort: si MinIO falla al borrar no se pierde la subida.
    */
+
+  /** Detalle de producto con imagen firmada, atributos y versión (A-R6 en costo). */
+  async detail(user: AuthenticatedUser, productId: string): Promise<ProductDetail> {
+    const row = await this.requireDetail(user, productId);
+    const imageUrl = row.imageKey
+      ? await this.storage.presignGetObjectSafe(row.imageKey, PUBLIC_PRODUCT_IMAGE_URL_TTL_SECONDS)
+      : null;
+    return this.toDetail(row, user, imageUrl);
+  }
+
+  /**
+   * Edición de producto: solo campos enviados, solo en la versión activa del
+   * catálogo (inmutabilidad histórica) y con audit before/after.
+   */
+  async update(
+    user: AuthenticatedUser,
+    productId: string,
+    input: ProductUpdateInput,
+    meta: AuditMeta,
+  ): Promise<ProductDetail> {
+    if (Object.keys(input).length === 0) {
+      throw new AppException('VALIDATION_FAILED', 422, {
+        reason: 'empty_body',
+        fieldErrors: { body: ['Enviá al menos un campo para editar.'] },
+      });
+    }
+
+    const row = await this.requireDetail(user, productId);
+    if (
+      !isProductVersionEditable({
+        versionId: row.catalogVersion.id,
+        versionStatus: row.catalogVersion.status,
+        activeVersionId: row.catalog.activeVersionId,
+      })
+    ) {
+      throw new AppException('CATALOG_ARCHIVED', 409, {
+        reason: 'version_not_editable',
+        versionId: row.catalogVersion.id,
+        versionStatus: row.catalogVersion.status,
+        versionNumber: row.catalogVersion.versionNumber,
+      });
+    }
+
+    const diff = buildProductUpdateDiff(row, input);
+    if (Object.keys(diff.data).length > 0) {
+      await this.repo.updateProduct(row.id, this.toPrismaUpdate(diff.data));
+      await this.audit.write({
+        organizationId: user.organizationId,
+        actorUserId: user.id,
+        action: 'product.updated',
+        entityType: 'product',
+        entityId: row.id,
+        before: diff.before,
+        after: diff.after,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+        traceId: meta.traceId,
+      });
+    }
+
+    const updated = await this.requireDetail(user, productId);
+    const imageUrl = updated.imageKey
+      ? await this.storage.presignGetObjectSafe(
+          updated.imageKey,
+          PUBLIC_PRODUCT_IMAGE_URL_TTL_SECONDS,
+        )
+      : null;
+    return this.toDetail(updated, user, imageUrl);
+  }
+
+  private toPrismaUpdate(
+    data: Partial<
+      Record<
+        'name' | 'description' | 'category' | 'brand' | 'priceMinor' | 'costMinor' | 'stock',
+        string | bigint | number | null
+      >
+    >,
+  ): Prisma.ProductUpdateInput {
+    const update: Prisma.ProductUpdateInput = {};
+    if ('name' in data) update.name = data.name as string;
+    if ('description' in data) update.description = data.description as string | null;
+    if ('category' in data) update.category = data.category as string | null;
+    if ('brand' in data) update.brand = data.brand as string | null;
+    if ('priceMinor' in data) update.priceMinor = data.priceMinor as bigint;
+    if ('costMinor' in data) update.costMinor = data.costMinor as bigint | null;
+    if ('stock' in data) update.stock = data.stock as number | null;
+    return update;
+  }
+  private async requireDetail(
+    user: AuthenticatedUser,
+    productId: string,
+  ): Promise<ProductDetailRow> {
+    const row = await this.repo.findDetail(productId);
+    // Otra organización o producto borrado: 404 sin revelar existencia.
+    if (!row || row.catalog.organizationId !== user.organizationId) {
+      throw new AppException('NOT_FOUND', 404, { resource: 'product' });
+    }
+    return row;
+  }
+
+  private toDetail(
+    row: ProductDetailRow,
+    user: AuthenticatedUser,
+    imageUrl: string | null,
+  ): ProductDetail {
+    return {
+      id: row.id,
+      catalogId: row.catalogId,
+      catalogVersionId: row.catalogVersionId,
+      sku: row.sku,
+      name: row.name,
+      description: row.description,
+      category: row.category,
+      brand: row.brand,
+      priceMinor: row.priceMinor.toString(),
+      // A-R6: el costo no se serializa para vendedor/social_manager/agente_chat.
+      costMinor:
+        canViewProductCost(user) && row.costMinor !== null ? row.costMinor.toString() : null,
+      currency: row.currency,
+      stock: row.stock,
+      attributes: (row.attributes ?? null) as Record<string, unknown> | null,
+      imageKey: row.imageKey,
+      imageUrl,
+      isActive: row.isActive,
+      catalogName: row.catalog.name,
+      versionNumber: row.catalogVersion.versionNumber,
+      versionStatus: row.catalogVersion.status,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
   async uploadImage(
     user: AuthenticatedUser,
     productId: string,
