@@ -11,6 +11,7 @@ import { resolveReportRange } from './report-range';
 import { buildTopProducts, computeOrderTotals, computeReceivables } from './report-calculations';
 import { aggregateExpenses, computeProfit } from '../expenses/expense-calculations';
 import { buildReconciliationCsv } from './reconciliation-csv';
+import { buildFinancePdf, financePdfFilename } from './finance-pdf';
 import { AppException } from '../../common/errors/app-exception';
 import { AuditService } from '../audit/audit.service';
 import type { AuditMeta } from '../../common/audit/audit.types';
@@ -221,6 +222,44 @@ export class ReportsService {
     return { csv, filename };
   }
 
+  async exportFinancePdf(
+    user: AuthenticatedUser,
+    query: ReportRangeQuery,
+    meta: AuditMeta,
+  ): Promise<{ pdf: Uint8Array; filename: string }> {
+    const organization = await this.requireOrganization(user.organizationId);
+    const [finance, profit, reconciliation] = await Promise.all([
+      this.finance(user.organizationId, query),
+      this.profit(user.organizationId, query),
+      this.reconciliation(user.organizationId, query),
+    ]);
+    const pdf = await buildFinancePdf({
+      organizationName: organization.name,
+      finance,
+      profit,
+      reconciliation,
+    });
+    const filename = financePdfFilename(finance.range.from, finance.range.to);
+
+    await this.audit.write({
+      organizationId: user.organizationId,
+      actorUserId: user.id,
+      action: 'report.exported',
+      entityType: 'finance_report',
+      entityId: user.organizationId,
+      after: {
+        format: 'pdf',
+        from: finance.range.from,
+        to: finance.range.to,
+        rows: reconciliation.rows.length,
+      },
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      traceId: meta.traceId,
+    });
+
+    return { pdf, filename };
+  }
   private async requireOrganization(organizationId: string) {
     const organization = await this.repo.findOrganization(organizationId);
     if (!organization) throw new AppException('NOT_FOUND', 404, { resource: 'organization' });

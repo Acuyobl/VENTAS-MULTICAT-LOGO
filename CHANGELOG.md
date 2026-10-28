@@ -3,7 +3,24 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
-## [0.1.9] — 2026-10-28
+## [0.2.0] — 2026-10-28
+
+### Añadido
+- **PWA de la tienda**: manifest, service worker (network-first para navegación, cache-first para
+  assets), página offline, íconos 192/512 y maskable; registro solo en producción.
+- **Chat del cliente en el portal**: `/mi-cuenta/chat` con hilo y envío; el staff lo ve en
+  `/panel/chat` con no leídos; conversación WEB creada automáticamente si no existe.
+- **Borrar/archivar catálogo**: `DELETE /catalogs/:id` con soft delete, archivo de la versión activa
+  y bloqueo si hay pedidos abiertos; botón con confirmación en el detalle.
+- **Reporte financiero en PDF**: `GET /reports/finance/pdf` con ventas, pagos por método,
+  reembolsos, gastos/utilidad y conciliación; botón «Reporte PDF» en Finanzas.
+- **E2E del DoD de F1**: flujo completo catálogo → importar → activar → cotizar → PDF → pedido →
+  entrega.
+
+### Pruebas
+- API: **295 unit** (53 archivos) y **138 e2e** (24 archivos). Web: 19 pruebas. CI con cobertura.
+
+
 
 ### Corregido
 - **Textos con `�` (U+FFFD)** en catálogo, chat, clientes, gastos, notas, reembolsos y prompts:

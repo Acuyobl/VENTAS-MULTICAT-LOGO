@@ -47,7 +47,8 @@ export class UsersService {
         where: { userId, organizationId, status: 'ACTIVE' },
       });
       if (!account) {
-        throw new AppException('FORBIDDEN', 403, { reason: 'customer_account_missing' });
+        // El chat y el portal esperan este caso como 409 semántico (perfil faltante).
+        throw new AppException('VALIDATION_FAILED', 409, { reason: 'customer_profile_missing' });
       }
     } else {
       const membership = await this.prisma.membership.findUnique({
@@ -127,7 +128,10 @@ export class UsersService {
     });
   }
 
-  async getCustomerSummary(userId: string, organizationId: string): Promise<{
+  async getCustomerSummary(
+    userId: string,
+    organizationId: string,
+  ): Promise<{
     customerId: string;
     name: string;
     email: string | null;

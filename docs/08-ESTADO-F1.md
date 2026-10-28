@@ -508,6 +508,53 @@ CSV UTF-8 con U+FFFD literal → 0 importados · 1 en cuarentena INVALID_TEXT_EN
 
 
 
+## 3.20 PWA de la tienda (F1.13)
+
+| Pieza | Detalle |
+|---|---|
+| Manifest | `/manifest.webmanifest` con nombre, `start_url=/tienda`, `display=standalone`, colores de marca, íconos 192/512 y **maskable**, atajos a catálogo y cuenta |
+| Service worker | `/sw.js`: precache de shell y offline; **network-first** para navegación con cache de respaldo; **cache-first** para `_next/static` e imágenes; nunca cachea `/api/*` ni orígenes externos |
+| Offline | `/offline` con mensaje y enlaces; la página registra el SW solo en producción (`PwaRegister`) |
+| Iconos | PNG generados a partir de la marca (verde/coral con «VC») |
+
+Verificado: `manifest.webmanifest` 200 `application/manifest+json`, `sw.js` 200, `/offline` 200 y el
+HTML de `/tienda` incluye el manifest.
+
+## 3.21 Chat del cliente en el portal (F3)
+
+| Pieza | Detalle |
+|---|---|
+| Endpoints | `GET /me/chat` y `POST /me/chat/messages` (aud=customer, `self:chat:write`): reutiliza/crea la conversación WEB del `CustomerAccount` con el primer catálogo activo |
+| Portal | `/mi-cuenta/chat` con hilo, envío, refresco cada 10 s y nombres resueltos (staff/cliente/sistema) |
+| Staff | La conversación aparece en `/panel/chat` con `unreadCount` y preview |
+| Errores | staff en `/me/chat` → 403 de audiencia; sin perfil de cliente → 409; sin catálogo → 404 |
+
+Verificado: mensaje del cliente creado (`sender=CUSTOMER`), conversación de 4 mensajes, bandeja staff
+con **unread 1** y preview correcto; página `/mi-cuenta/chat` 200.
+
+## 3.22 Borrar/archivar catálogo
+
+`DELETE /catalogs/:id` (`catalog:write`): soft delete, desactiva `activeVersionId`, archiva la versión
+ACTIVE, audita `catalog.deleted`; bloquea con **409 `catalog_has_open_orders`** si hay pedidos por
+cobrar/abonados/pagados; 404 cross-org. Desaparece del listado y el catálogo público da 404. Botón
+«Eliminar catálogo» con confirmación en el detalle.
+
+Verificado: catálogo de prueba → **204** y ya no aparece; `catalogo-demo` con pedidos abiertos → **409**.
+
+## 3.23 Reporte financiero en PDF y E2E del DoD de F1
+
+- `GET /reports/finance/pdf?from&to&catalogId?` (`finance:read`): PDF A4 con ventas, pagos por método,
+  reembolsos, gastos/utilidad y conciliación (máx. 50 filas); `Content-Type: application/pdf`,
+  `Content-Disposition: attachment`, audit `report.exported`. Botón **«Reporte PDF»** en
+  `/panel/finanzas`.
+- **E2E del DoD**: `test/full-flow.e2e-spec.ts` cubre catálogo → importación CSV → activación →
+  cliente → cotización → PDF → aceptación → pedido → entrega, con totales coherentes.
+
+Verificado: PDF 200 `application/pdf`, 3.476 B, empieza con `%PDF-`, nombre
+`reporte-financiero-2026-10-01-2026-10-28.pdf`.
+
+
+
 ## 4. Decisiones tomadas
 
 1. **Códigos de error promovidos al contrato**: los 5 códigos de F1 se agregaron a
@@ -554,12 +601,12 @@ curl -F "file=@tools/fixtures/catalogo-demo.csv;type=text/csv" `
 ## 6. Pendiente
 
 1. **Google Drive** (F1.1/F1.2): crear cliente OAuth en Google Cloud con scope `drive.readonly` y
-   `access_type=offline`; el pipeline ya está listo y el importador inteligente se reutiliza.
-2. **PWA de tienda** (F1.13): manifest, service worker e IndexedDB del catálogo activo.
-3. **Importador**: variantes (talla/color) y archivos PDF/OCR. El motor A+B+C y la visualización de
-   campos extra ya están (§3.14 y §3.18).
-4. **F2 restante**: conciliación programada/cierre de meses y reportes por catálogo en PDF.
-5. **F3 restante**: campañas de WhatsApp saliente, chat del cliente, publicación real en redes,
-   cuota/costo de IA y credenciales de `OPENAI_API_KEY`/`DEEPSEEK_API_KEY` para IA real.
-6. **Cobertura ≥70 % en `catalogs` y `sales`** y E2E importar→activar→cotizar→PDF (DoD de F1).
-7. Alinear el `CHECK` de totales de `docs/03` con la convención de dinero (sigue pendiente de F0).
+   `access_type=offline`; el importador inteligente se reutiliza tal cual.
+2. **Importador**: variantes (talla/color) y archivos PDF/OCR.
+3. **F2 restante**: conciliación programada/cierre de meses y reportes por catálogo.
+4. **F3 restante**: campañas de WhatsApp saliente, publicación real en redes, cuota/costo de IA por
+   organización y credenciales de `OPENAI_API_KEY`/`DEEPSEEK_API_KEY`.
+5. Alinear el `CHECK` de totales de `docs/03` con la convención de dinero (pendiente de F0).
+6. Endurecimiento: `jti`/`sid` blocklist, aviso de `path-to-regexp` en Swagger y límite de intentos
+   en webhooks.
+7. **Cobertura ≥70 %** en `catalogs` y `sales` (el E2E del DoD ya está).

@@ -2,12 +2,14 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { CartProvider } from '@/components/store/cart-provider';
 import { CartLink } from '@/components/store/cart-link';
+import { PwaRegister } from '@/components/store/pwa-register';
 
 const staffUrl = process.env.NEXT_PUBLIC_STAFF_URL ?? 'http://app.localhost:3000';
 
 export default function StoreLayout({ children }: { children: ReactNode }) {
   return (
     <CartProvider>
+      <PwaRegister />
       <div className="store">
         <div className="store__promo">
           Catálogo demo · precios en colones · hecho en Costa Rica

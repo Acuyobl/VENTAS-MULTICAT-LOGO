@@ -60,3 +60,12 @@ export const whatsappReminderResponseSchema = z.object({
 });
 
 export type WhatsappReminderResponse = z.infer<typeof whatsappReminderResponseSchema>;
+
+/** Chat del cliente en el portal: su conversación abierta con el negocio. */
+export const customerChatSchema = z.object({
+  conversationId: z.string().uuid().nullable(),
+  channel: chatChannelSchema,
+  items: z.array(chatMessageSchema),
+});
+
+export type CustomerChat = z.infer<typeof customerChatSchema>;

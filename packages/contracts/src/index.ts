@@ -13,6 +13,7 @@ export * from './payments/refunds';
 export * from './organizations/settings';
 export * from './reports/schemas';
 export * from './ai/schemas';
+export * from './ai/usage';
 export * from './chat/schemas';
 export * from './finance/schemas';
 export * from './payments/gateways';

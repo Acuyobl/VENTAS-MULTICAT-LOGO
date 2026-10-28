@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Req } from '@nestjs/common';
 import {
   catalogCreateSchema,
   type AuthenticatedUser,
@@ -22,6 +22,17 @@ export class CatalogsController {
   @Get()
   list(@CurrentUser() user: AuthenticatedUser) {
     return this.catalogs.list(user);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @RequirePermissions('catalog:write')
+  async delete(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Req() req: RequestWithTrace,
+  ): Promise<void> {
+    await this.catalogs.delete(user, id, salesMetaFrom(req));
   }
 
   @Post()

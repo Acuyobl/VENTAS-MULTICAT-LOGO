@@ -125,6 +125,14 @@ export function FinanceReportView() {
         >
           Exportar desde el servidor
         </a>
+        <a
+          className="btn btn--small btn--ghost"
+          href={`/api/v1/reports/finance/pdf?from=${from}&to=${to}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Reporte PDF
+        </a>
       </form>
 
       {error ? <div className="alert">{error}</div> : null}

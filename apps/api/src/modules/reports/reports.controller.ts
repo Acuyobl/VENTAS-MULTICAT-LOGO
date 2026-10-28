@@ -52,6 +52,20 @@ export class ReportsController {
     return csv;
   }
 
+  @Get('finance/pdf')
+  @RequirePermissions('finance:read')
+  async exportPdf(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query(new ZodValidationPipe(reportRangeQuerySchema)) query: ReportRangeQuery,
+    @Req() req: RequestWithTrace,
+    @Res() response: Response,
+  ): Promise<void> {
+    const { pdf, filename } = await this.reports.exportFinancePdf(user, query, salesMetaFrom(req));
+    response.setHeader('Content-Type', 'application/pdf');
+    response.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    response.setHeader('Content-Length', String(pdf.byteLength));
+    response.end(Buffer.from(pdf));
+  }
   @Get('reconciliation')
   @RequirePermissions('finance:read')
   reconciliation(

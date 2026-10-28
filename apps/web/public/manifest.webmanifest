@@ -1,0 +1,22 @@
+{
+  "name": "VentasCatálogo",
+  "short_name": "VentasCatálogo",
+  "description": "Catálogos, pedidos y clientes. Tienda y backoffice para negocios que venden con identidad propia.",
+  "start_url": "/tienda",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fbf7ed",
+  "theme_color": "#2f6b4f",
+  "lang": "es-CR",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Ver catálogo", "url": "/tienda" },
+    { "name": "Mi cuenta", "url": "/mi-cuenta" }
+  ]
+}

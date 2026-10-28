@@ -120,6 +120,39 @@ export class CatalogsService {
       products,
     };
   }
+
+  /** Soft delete: 409 si hay pedidos abiertos y archiva la versión activa. */
+  async delete(user: AuthenticatedUser, catalogId: string, meta: AuditMeta): Promise<void> {
+    const catalog = await this.repo.findCatalogForDelete(user.organizationId, catalogId);
+    if (!catalog) {
+      throw new AppException('NOT_FOUND', 404, { resource: 'catalog' });
+    }
+    const openOrders = await this.repo.countOpenOrders(catalog.id);
+    if (openOrders > 0) {
+      throw new AppException('VALIDATION_FAILED', 409, {
+        reason: 'catalog_has_open_orders',
+        catalogId: catalog.id,
+        openOrders,
+      });
+    }
+    await this.repo.softDeleteCatalog(catalog.id, catalog.activeVersionId);
+    await this.audit.write({
+      organizationId: user.organizationId,
+      actorUserId: user.id,
+      action: 'catalog.deleted',
+      entityType: 'catalog',
+      entityId: catalog.id,
+      before: {
+        name: catalog.name,
+        slug: catalog.slug,
+        activeVersionId: catalog.activeVersionId,
+      },
+      after: { deletedAt: new Date().toISOString(), activeVersionId: null },
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      traceId: meta.traceId,
+    });
+  }
 }
 
 /** Slug URL-safe a partir del nombre (sin acentos, guiones simples). */

@@ -68,6 +68,9 @@ export default async function AccountPage() {
             <Link className="btn" href="/tienda">
               Seguir mirando el catálogo
             </Link>
+            <Link className="btn btn--secondary" href="/mi-cuenta/chat">
+              Escribir al negocio
+            </Link>
             <LogoutButton
               audience="customer"
               redirectTo="/mi-cuenta/entrar"

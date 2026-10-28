@@ -8,6 +8,7 @@ import { formatDate } from '@/lib/format';
 import type { CatalogSummary } from '@/lib/types';
 import { VersionsPanel } from '@/components/backoffice/versions-panel';
 import { ImportPanel } from '@/components/backoffice/import-panel';
+import { DeleteCatalogButton } from '@/components/backoffice/delete-catalog-button';
 
 export const metadata: Metadata = {
   title: 'Catálogo',
@@ -78,6 +79,11 @@ export default async function CatalogDetailPage({ params }: CatalogDetailPagePro
         <span className="mono faint">
           {versions.length} versiones · {totalProducts} productos históricos
         </span>
+        <DeleteCatalogButton
+          catalogId={catalog.id}
+          catalogName={catalog.name}
+          canWrite={canWrite}
+        />
       </div>
 
       {loadError ? (

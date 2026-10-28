@@ -4,8 +4,9 @@ import type {
   ChatMessage as ChatMessageDto,
   ChatMessageListResponse,
   ConversationListResponse,
+  CustomerChat,
 } from '@ventascatalogo/contracts';
-import type { ChatMessage } from '@prisma/client';
+import type { ChatConversation, ChatMessage } from '@prisma/client';
 import { ChatRepository, type ConversationWithMeta } from './chat.repository';
 import { AppException } from '../../common/errors/app-exception';
 import { AuditService } from '../audit/audit.service';
@@ -48,6 +49,77 @@ export class ChatService {
     };
   }
 
+  /** Chat del portal: devuelve (o crea) la conversación WEB del cliente logueado. */
+  async getCustomerChat(user: AuthenticatedUser): Promise<CustomerChat> {
+    const { conversation, customerName } = await this.ensureCustomerConversation(user);
+    const messages = await this.repo.listMessages(conversation.id);
+    const staffNames = await this.repo.findUserNames(
+      messages.map((message) => message.senderUserId).filter((id): id is string => Boolean(id)),
+    );
+    return {
+      conversationId: conversation.id,
+      channel: 'WEB',
+      items: messages.map((message) => toCustomerChatMessage(message, customerName, staffNames)),
+    };
+  }
+
+  /** Mensaje del cliente desde el portal; el staff lo ve como no leído. */
+  async sendCustomerMessage(
+    user: AuthenticatedUser,
+    body: string,
+    meta: AuditMeta,
+  ): Promise<ChatMessageDto> {
+    const { conversation, customerName } = await this.ensureCustomerConversation(user);
+    const message = await this.repo.createCustomerMessage({
+      conversationId: conversation.id,
+      body,
+    });
+    await this.audit.write({
+      organizationId: user.organizationId,
+      actorUserId: user.id,
+      action: 'chat.message_sent',
+      entityType: 'chat_message',
+      entityId: message.id,
+      after: {
+        conversationId: conversation.id,
+        body,
+        channel: 'WEB',
+        customerId: conversation.customerId,
+      },
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      traceId: meta.traceId,
+    });
+    return toCustomerChatMessage(message, customerName, new Map());
+  }
+
+  private async ensureCustomerConversation(user: AuthenticatedUser): Promise<{
+    conversation: ChatConversation;
+    customerName: string;
+  }> {
+    const account = await this.repo.findCustomerAccount(user.id, user.organizationId);
+    if (!account) {
+      throw new AppException('VALIDATION_FAILED', 409, { reason: 'customer_profile_missing' });
+    }
+    const customerName = account.customer.name;
+    const existing = await this.repo.findOpenWebConversation(
+      user.organizationId,
+      account.customerId,
+    );
+    if (existing) return { conversation: existing, customerName };
+
+    const catalog = await this.repo.findFirstActiveCatalog(user.organizationId);
+    if (!catalog) {
+      throw new AppException('NOT_FOUND', 404, { reason: 'no_catalog' });
+    }
+    const conversation = await this.repo.createWebConversation({
+      organizationId: user.organizationId,
+      catalogId: catalog.id,
+      customerId: account.customerId,
+      subject: 'Consulta desde el portal',
+    });
+    return { conversation, customerName };
+  }
   async sendStaffMessage(
     user: AuthenticatedUser,
     conversationId: string,
@@ -142,5 +214,25 @@ export function toChatMessage(message: ChatMessage): ChatMessageDto {
     body: message.body,
     readAt: message.readAt?.toISOString() ?? null,
     createdAt: message.createdAt.toISOString(),
+  };
+}
+
+/** Nombre visible del remitente: staff → usuario, cliente → su nombre, sistema → marca. */
+export function toCustomerChatMessage(
+  message: ChatMessage,
+  customerName: string,
+  staffNames: Map<string, string>,
+): ChatMessageDto {
+  const senderName =
+    message.senderType === 'STAFF'
+      ? message.senderUserId
+        ? (staffNames.get(message.senderUserId) ?? null)
+        : null
+      : message.senderType === 'CUSTOMER'
+        ? customerName
+        : 'VentasCatálogo';
+  return {
+    ...toChatMessage(message),
+    senderName,
   };
 }

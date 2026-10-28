@@ -123,4 +123,36 @@ export class CatalogsRepository {
       },
     });
   }
+  findCatalogForDelete(organizationId: string, catalogId: string) {
+    return this.prisma.catalog.findFirst({
+      where: { id: catalogId, organizationId, deletedAt: null },
+      select: { id: true, name: true, slug: true, activeVersionId: true },
+    });
+  }
+
+  countOpenOrders(catalogId: string): Promise<number> {
+    return this.prisma.order.count({
+      where: {
+        catalogId,
+        deletedAt: null,
+        status: { in: ['PENDING_PAYMENT', 'PARTIALLY_PAID', 'PAID'] },
+      },
+    });
+  }
+
+  /** Soft delete + desactiva/archiva la versión activa para que el público dé 404. */
+  async softDeleteCatalog(catalogId: string, activeVersionId: string | null): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.catalog.update({
+        where: { id: catalogId },
+        data: { deletedAt: new Date(), activeVersionId: null },
+      });
+      if (activeVersionId) {
+        await tx.catalogVersion.updateMany({
+          where: { id: activeVersionId, status: 'ACTIVE' },
+          data: { status: 'ARCHIVED', archivedAt: new Date() },
+        });
+      }
+    });
+  }
 }

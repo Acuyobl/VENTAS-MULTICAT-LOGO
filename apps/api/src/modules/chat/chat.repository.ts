@@ -118,6 +118,75 @@ export class ChatRepository {
       .then((customer) => customer?.phone ?? null);
   }
 
+  /** CustomerAccount activo del usuario en la organización (portal). */
+  findCustomerAccount(userId: string, organizationId: string) {
+    return this.prisma.customerAccount.findFirst({
+      where: { userId, organizationId, status: 'ACTIVE' },
+      include: { customer: { select: { id: true, name: true, email: true } } },
+    });
+  }
+
+  findOpenWebConversation(organizationId: string, customerId: string) {
+    return this.prisma.chatConversation.findFirst({
+      where: { organizationId, customerId, channel: 'WEB', status: 'OPEN' },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  findFirstActiveCatalog(organizationId: string) {
+    return this.prisma.catalog.findFirst({
+      where: { organizationId, deletedAt: null, activeVersionId: { not: null } },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
+  }
+
+  createWebConversation(input: {
+    organizationId: string;
+    catalogId: string;
+    customerId: string;
+    subject: string;
+  }) {
+    return this.prisma.chatConversation.create({
+      data: {
+        organizationId: input.organizationId,
+        catalogId: input.catalogId,
+        customerId: input.customerId,
+        subject: input.subject,
+        channel: 'WEB',
+        status: 'OPEN',
+      },
+    });
+  }
+
+  async createCustomerMessage(input: {
+    conversationId: string;
+    body: string;
+  }): Promise<ChatMessage> {
+    return this.prisma.$transaction(async (tx) => {
+      const message = await tx.chatMessage.create({
+        data: {
+          conversationId: input.conversationId,
+          senderType: 'CUSTOMER',
+          body: input.body,
+        },
+      });
+      await tx.chatConversation.update({
+        where: { id: input.conversationId },
+        data: { lastMessageAt: message.createdAt },
+      });
+      return message;
+    });
+  }
+
+  async findUserNames(ids: string[]): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map();
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: [...new Set(ids)] } },
+      select: { id: true, fullName: true },
+    });
+    return new Map(users.map((user) => [user.id, user.fullName]));
+  }
   private async customerNames(ids: string[]): Promise<Map<string, string>> {
     if (ids.length === 0) return new Map();
     const customers = await this.prisma.customer.findMany({
