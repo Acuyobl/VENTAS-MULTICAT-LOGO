@@ -3,7 +3,33 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
-## [0.1.1] — 2026-10-28
+## [0.1.2] — 2026-10-28
+
+### Añadido
+- **Autoaprobación configurable** por organización (`allowSelfApproval`) con confirmación explícita,
+  auditoría `payment.refund_self_approved` y pantalla `/panel/ajustes`.
+- **Recordatorios de cobro** por correo (SMTP/Mailpit real) y WhatsApp (Cloud API), con historial
+  `payment_reminders`, estado SENT/FAILED y auditoría.
+- **Reportes financieros y conciliación**: `/panel/finanzas` con rango de fechas, ventas por estado,
+  cobros por método, reembolsos, cuentas por cobrar (vencidas > 30 días), top productos y exportación
+  CSV; endpoints `GET /reports/finance` y `GET /reports/reconciliation`.
+- **IA de contenido**: `/panel/contenido` genera publicaciones desde productos del catálogo
+  (plataforma, tono, objetivo), con proveedor `mock` para demo y `deepseek` para producción, parser
+  tolerante y aprobación/rechazo auditados.
+- **WhatsApp entrante**: webhook con verificación de challenge y firma HMAC que crea cliente,
+  conversación y mensaje.
+- **Chat del backoffice**: `/panel/chat` con lista de conversaciones, no leídos, hilo y respuestas
+  (`chat:write`), marcado de leídos y auditoría.
+- **Seed demo**: conversación `Consulta de demo` con mensajes para probar el chat sin integraciones.
+
+### Corregido
+- El asunto de los correos con acentos/símbolos ahora se codifica con RFC 2047
+  (`=?UTF-8?B?…?=`), evitando «Â·» en clientes estrictos.
+
+### Pruebas
+- API: **198 unit** (34 archivos) y **88 e2e** (14 archivos). Web: 19 pruebas. CI con cobertura.
+
+
 
 ### Añadido
 - **Reembolsos (F2.6)** con segregación de funciones: solicitud (`payment:refund_request`),

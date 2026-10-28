@@ -14,6 +14,10 @@ import { CustomersModule } from './modules/customers/customers.module';
 import { SalesModule } from './modules/sales/sales.module';
 import { StorefrontModule } from './modules/storefront/storefront.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { AiModule } from './modules/ai/ai.module';
+import { ChatModule } from './modules/chat/chat.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { HealthModule } from './modules/health/health.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
@@ -76,6 +80,10 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     SalesModule,
     StorefrontModule,
     PaymentsModule,
+    OrganizationsModule,
+    ReportsModule,
+    AiModule,
+    ChatModule,
     HealthModule,
     OutboxModule,
   ],

@@ -114,6 +114,16 @@ enum OutboxStatus {
   FAILED
 }
 
+enum ReminderChannel {
+  EMAIL
+  WHATSAPP
+}
+
+enum ReminderStatus {
+  SENT
+  FAILED
+}
+
 enum IdempotencyStatus {
   IN_PROGRESS
   COMPLETED
@@ -125,6 +135,7 @@ model Organization {
   name                  String
   slug                  String       @unique
   plan                  Plan         @default(FREE)
+  allowSelfApproval     Boolean      @default(false)
   defaultCurrency       Currency     @default(CRC)
   timezone              String       @default("America/Costa_Rica")
   aiMonthlyQuotaTokens  Int          @default(2000000)
@@ -699,6 +710,25 @@ model Refund {
   @@index([paymentId])
   @@index([orderId])
   @@map("refunds")
+}
+
+model PaymentReminder {
+  id                String          @id @default(uuid(7)) @db.Uuid
+  organizationId    String          @db.Uuid
+  catalogId         String?         @db.Uuid
+  orderId           String          @db.Uuid
+  channel           ReminderChannel
+  to                String
+  status            ReminderStatus
+  providerMessageId String?
+  error             String?
+  sentAt            DateTime?       @db.Timestamptz(3)
+  createdByUserId   String          @db.Uuid
+  createdAt         DateTime        @default(now()) @db.Timestamptz(3)
+
+  @@index([organizationId, createdAt])
+  @@index([orderId, createdAt])
+  @@map("payment_reminders")
 }
 
 model Expense {

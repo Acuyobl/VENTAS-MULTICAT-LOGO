@@ -48,6 +48,7 @@ export type RefundListResponse = z.infer<typeof refundListResponseSchema>;
 export const refundDecisionSchema = z
   .object({
     note: z.string().trim().max(300).optional(),
+    confirmSelfApproval: z.boolean().optional(),
   })
   .strict();
 

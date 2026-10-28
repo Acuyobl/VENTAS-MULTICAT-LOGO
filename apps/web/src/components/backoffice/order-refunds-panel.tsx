@@ -13,6 +13,7 @@ interface OrderRefundsPanelProps {
   canRequest: boolean;
   canApprove: boolean;
   currentUserId: string;
+  allowSelfApproval: boolean;
 }
 
 const REFUND_BADGE: Record<RefundSummary['status'], string> = {
@@ -43,6 +44,7 @@ export function OrderRefundsPanel({
   canRequest,
   canApprove,
   currentUserId,
+  allowSelfApproval,
 }: OrderRefundsPanelProps) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
@@ -146,10 +148,20 @@ export function OrderRefundsPanel({
   }
 
   async function approve(refund: RefundSummary) {
+    const isOwn = refund.requestedByUserId === currentUserId;
+    if (isOwn) {
+      const confirmed = window.confirm(
+        'Estás por aprobar un reembolso que solicitaste vos. Quedará auditado como autoaprobación. ¿Continuar?',
+      );
+      if (!confirmed) return;
+    }
     setBusy(`approve-${refund.id}`);
     setError(null);
     try {
-      await api(`/refunds/${refund.id}/approve`, { method: 'POST', body: JSON.stringify({}) });
+      await api(`/refunds/${refund.id}/approve`, {
+        method: 'POST',
+        body: JSON.stringify({ ...(isOwn ? { confirmSelfApproval: true } : {}) }),
+      });
       setNotice(`Reembolso aprobado por ${formatMoney(refund.amountMinor, currency)}.`);
       router.refresh();
     } catch (caught) {
@@ -274,9 +286,12 @@ export function OrderRefundsPanel({
                       </span>
                     </td>
                     <td>
-                      {refund.status === 'REQUESTED' && refund.requestedByUserId === currentUserId ? (
+                      {refund.status === 'REQUESTED' &&
+                      refund.requestedByUserId === currentUserId &&
+                      !allowSelfApproval ? (
                         <span className="mono faint" style={{ fontSize: '0.72rem' }}>
-                          Solicitado por vos · falta que otra persona lo apruebe
+                          Solicitado por vos · falta que otra persona lo apruebe (o activá la
+                          autoaprobación en Ajustes)
                         </span>
                       ) : canApprove && refund.status === 'REQUESTED' ? (
                         <span className="inline" style={{ gap: '0.35rem' }}>
@@ -326,7 +341,9 @@ export function OrderRefundsPanel({
             </p>
             <p className="mono faint" style={{ fontSize: '0.7rem' }}>
               {canApprove
-                ? 'Tu rol puede aprobar, pero no tus propias solicitudes: la aprobación debe hacerla otra persona.'
+                ? allowSelfApproval
+                  ? 'La autoaprobación está activa: si aprobás tu propia solicitud queda auditada como autoaprobación.'
+                  : 'Tu rol puede aprobar, pero no tus propias solicitudes: la aprobación debe hacerla otra persona.'
                 : 'Después de solicitarlo, otra persona con permiso de aprobación debe aprobarlo.'}
             </p>
           </div>

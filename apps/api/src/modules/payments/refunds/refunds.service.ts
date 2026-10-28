@@ -95,10 +95,18 @@ export class RefundsService {
     if (!refund) throw new AppException('NOT_FOUND', 404, { resource: 'refund' });
 
     if (refund.requestedByUserId === user.id) {
-      throw new AppException('REFUND_SEGREGATION_REQUIRED', 409, {
-        requestedByUserId: refund.requestedByUserId,
-        decidedByUserId: user.id,
-      });
+      const organization = await this.repo.findOrganizationSettings(user.organizationId);
+      if (!organization?.allowSelfApproval) {
+        throw new AppException('REFUND_SEGREGATION_REQUIRED', 409, {
+          requestedByUserId: refund.requestedByUserId,
+          decidedByUserId: user.id,
+        });
+      }
+      if (input.confirmSelfApproval !== true) {
+        throw new AppException('VALIDATION_FAILED', 422, {
+          reason: 'self_approval_confirmation_required',
+        });
+      }
     }
     if (refund.status !== 'REQUESTED') {
       throw new AppException('VALIDATION_FAILED', 409, {
@@ -112,11 +120,12 @@ export class RefundsService {
       approvedByUserId: user.id,
       decisionNote: input.note ?? null,
     });
+    const selfApproval = refund.requestedByUserId === user.id;
 
     await this.audit.write({
       organizationId: user.organizationId,
       actorUserId: user.id,
-      action: 'payment.refund_approved',
+      action: selfApproval ? 'payment.refund_self_approved' : 'payment.refund_approved',
       entityType: 'refund',
       entityId: approved.refund.id,
       before: {
@@ -130,6 +139,7 @@ export class RefundsService {
         orderStatus: approved.order.status,
         orderRefundedMinor: approved.order.refundedMinor.toString(),
         amountMinor: approved.refund.amountMinor.toString(),
+        selfApproval,
       },
       ip: meta.ip,
       userAgent: meta.userAgent,

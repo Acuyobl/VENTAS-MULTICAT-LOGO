@@ -3,13 +3,16 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import type {
   OrderSummary,
+  OrgSettings,
   PaymentListResponse,
   RefundListResponse,
+  ReminderListResponse,
 } from '@ventascatalogo/contracts';
 import { tryApiFetch } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { formatMoney } from '@/lib/format';
 import { OrderRefundsPanel } from '@/components/backoffice/order-refunds-panel';
+import { OrderReminders } from '@/components/backoffice/order-reminders';
 
 export const metadata: Metadata = {
   title: 'Detalle del pedido',
@@ -38,10 +41,12 @@ export default async function BackofficeOrderPage({ params }: OrderDetailPagePro
     redirect(`/login?next=${encodeURIComponent(`/panel/pedidos/${orderId}`)}`);
   }
 
-  const [order, payments, refunds] = await Promise.all([
+  const [order, payments, refunds, reminders, settings] = await Promise.all([
     tryApiFetch<OrderSummary>(`/orders/${orderId}`),
     tryApiFetch<PaymentListResponse>(`/orders/${orderId}/payments`),
     tryApiFetch<RefundListResponse>(`/orders/${orderId}/refunds`),
+    tryApiFetch<ReminderListResponse>(`/orders/${orderId}/reminders`),
+    tryApiFetch<OrgSettings>('/organizations/settings'),
   ]);
   if (!order) notFound();
 
@@ -49,6 +54,8 @@ export default async function BackofficeOrderPage({ params }: OrderDetailPagePro
     session.permissions.includes('payment:refund_request') ||
     session.permissions.includes('payment:write');
   const canApprove = session.permissions.includes('payment:refund_approve');
+  const canSendReminders = session.permissions.includes('payment:write');
+  const allowSelfApproval = settings?.allowSelfApproval ?? false;
   const currency = order.currency;
   const refundedMinor = refunds?.refundedMinor ?? '0';
   const balanceMinor = payments?.balanceMinor ?? '0';
@@ -142,6 +149,17 @@ export default async function BackofficeOrderPage({ params }: OrderDetailPagePro
       </div>
 
       <div style={{ marginTop: '1.2rem' }}>
+        <OrderReminders
+          orderId={order.id}
+          orderNumber={order.number}
+          balanceMinor={balanceMinor}
+          currency={currency}
+          reminders={reminders?.items ?? []}
+          canSend={canSendReminders}
+        />
+      </div>
+
+      <div style={{ marginTop: '1.2rem' }}>
         <OrderRefundsPanel
           orderNumber={order.number}
           currency={currency}
@@ -150,6 +168,7 @@ export default async function BackofficeOrderPage({ params }: OrderDetailPagePro
           canRequest={canRequest}
           canApprove={canApprove}
           currentUserId={session.id}
+          allowSelfApproval={allowSelfApproval}
         />
       </div>
     </div>

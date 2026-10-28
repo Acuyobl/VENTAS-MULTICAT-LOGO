@@ -62,7 +62,11 @@ export const envSchema = z
     GOOGLE_CLIENT_SECRET: z.string().optional().default(''),
     GOOGLE_REDIRECT_URI: z.string().optional().default(''),
     GOOGLE_SCOPES: z.string().optional().default(''),
-    AI_PROVIDER: z.string().default('deepseek'),
+    /**
+     * Proveedor de IA. `mock` es determinista y SOLO para desarrollo/demo:
+     * `validateEnv` aborta el arranque si se combina con `NODE_ENV=production`.
+     */
+    AI_PROVIDER: z.enum(['deepseek', 'mock']).default('deepseek'),
     DEEPSEEK_API_KEY: z.string().optional().default(''),
     DEEPSEEK_BASE_URL: z.string().default('https://api.deepseek.com/v1'),
     AI_MODEL_DEFAULT: z.string().default('deepseek-chat'),
@@ -74,6 +78,13 @@ export const envSchema = z
     AI_USD_PER_1K_INPUT: z.coerce.number().nonnegative().default(0.00027),
     AI_USD_PER_1K_OUTPUT: z.coerce.number().nonnegative().default(0.0011),
     AI_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(86_400),
+    /** Organización destino del WhatsApp entrante (webhook sin sesión). */
+    WHATSAPP_ORG_SLUG: z.string().default('demo'),
+    WHATSAPP_ACCESS_TOKEN: z.string().optional().default(''),
+    WHATSAPP_PHONE_NUMBER_ID: z.string().optional().default(''),
+    WHATSAPP_WABA_ID: z.string().optional().default(''),
+    WHATSAPP_VERIFY_TOKEN: z.string().optional().default(''),
+    WHATSAPP_APP_SECRET: z.string().optional().default(''),
     PAYMENTS_DEFAULT_PROVIDER: z.enum(['sandbox', 'stripe']).default('sandbox'),
     /**
      * Pasarela sandbox para desarrollo/demos. Prohibida en producción:
@@ -110,6 +121,12 @@ export function validateEnv(config: Record<string, unknown>): Env {
   if (result.data.NODE_ENV === 'production' && result.data.PAYMENTS_SANDBOX_ENABLED) {
     throw new Error(
       'PAYMENTS_SANDBOX_ENABLED=true no está permitido con NODE_ENV=production: la pasarela sandbox confirma pagos sin cobrar. Apagá el flag.',
+    );
+  }
+
+  if (result.data.NODE_ENV === 'production' && result.data.AI_PROVIDER === 'mock') {
+    throw new Error(
+      'AI_PROVIDER=mock no está permitido con NODE_ENV=production: genera contenido de relleno en vez de llamar al modelo. Configurá deepseek.',
     );
   }
 

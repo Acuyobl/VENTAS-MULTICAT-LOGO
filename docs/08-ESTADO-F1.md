@@ -212,6 +212,57 @@ UI /panel/pedidos/<id> → 200 con "Pagos", "Reembolsos", "Reembolsado" y segreg
 
 
 
+## 3.6 Autoaprobación configurable (F2, política por organización)
+
+| Pieza | Detalle |
+|---|---|
+| Ajustes | `GET/PATCH /organizations/settings` (`settings:manage`) con `allowSelfApproval` (default `false`) y auditoría `organization.settings_updated` con before/after |
+| Regla | Flag apagado: quien solicita no aprueba (`409 REFUND_SEGREGATION_REQUIRED`). Flag encendido sin confirmar: `422 VALIDATION_FAILED` `reason=self_approval_confirmation_required`. Con `confirmSelfApproval: true`: aprueba y audita `payment.refund_self_approved` |
+| UI | `/panel/ajustes` con el interruptor explicado; el panel de reembolsos muestra Aprobar para la propia solicitud solo si la política está activa y pide confirmación |
+
+## 3.7 Recordatorios de cobro, reportes y conciliación (F2)
+
+| Pieza | Detalle |
+|---|---|
+| Recordatorios | `POST /orders/:id/reminders` (`payment:write`) con canal `EMAIL` (Mailpit/SMTP real, 422 si el cliente no tiene email) o `WHATSAPP` (Cloud API; 409 `INTEGRATION_NOT_CONFIGURED` sin credenciales, 422 sin teléfono). Cada intento queda en `payment_reminders` con estado SENT/FAILED y audit `payment.reminder_sent`; `GET` lista el historial |
+| Reportes | `GET /reports/finance?from&to` (`finance:read`): ventas por estado y montos, cobros por método, reembolsos, cuentas por cobrar (abiertas y vencidas >30 días) y top 10 productos. Default: mes actual (UTC-6), `from>to` → 422 |
+| Conciliación | `GET /reports/reconciliation?from&to`: una fila por pago con pedido, fecha, método, referencia, monto y estado; totales registrado/reembolsado/neto |
+| UI | `/panel/finanzas` con rango de fechas, métricas, tablas y exportación CSV de la conciliación; botón **Recordar por correo / WhatsApp** en el detalle del pedido |
+
+Verificación ejecutada:
+
+```text
+PATCH allowSelfApproval true → GET lo confirma · recordatorio EMAIL → SENT a ruta.test@… · Mailpit 7 mensajes
+reports/finance (mes actual) → pedidos 6 · neto ₡144.000 · cobrado ₡92.700 · por cobrar ₡38.400 · top 4
+reports/reconciliation → 4 filas · registrado ₡92.700 · neto ₡66.500
+autoaprobación sin confirmar → 422 reason=self_approval_confirmation_required · con confirmar → PARTIALLY_REFUNDED
+/panel/ajustes, /panel/finanzas y detalle de pedido → 200 con sus secciones
+Correo: el header Subject viaja como =?UTF-8?B?…?= (Mailpit muestra «Â·» porque su API no decodifica, no es un bug)
+```
+
+## 3.8 IA de contenido, WhatsApp entrante y chat (F3, primer incremento)
+
+| Pieza | Detalle |
+|---|---|
+| IA | `POST /ai/social-posts` (`social:generate`) con catálogo, plataforma, tono, objetivo y hasta 5 productos → `SocialPost` DRAFT con título, cuerpo, hashtags, CTA y sugerencia visual. `GET` lista y `POST /:id/decision` (`social:approve`) aprueba o rechaza. Proveedor `deepseek` (sin key → 409) o `mock` determinista solo fuera de producción |
+| WhatsApp entrante | `GET /webhooks/whatsapp` responde el challenge si coincide `WHATSAPP_VERIFY_TOKEN`; `POST` valida HMAC si hay `WHATSAPP_APP_SECRET` y crea cliente por teléfono + conversación + mensaje del cliente |
+| Chat staff | `GET /chat/conversations` (nombre, no leídos, último mensaje), `GET /chat/conversations/:id/messages` (marca leídos) y `POST …/messages` (`chat:write`, auditado) |
+| UI | `/panel/contenido` (generar, vista previa, aprobar/rechazar, historial) y `/panel/chat` (lista, hilo, respuesta, refresco cada 15 s) |
+
+Verificación ejecutada:
+
+```text
+POST /ai/social-posts con AI_PROVIDER=mock → 201 · título "Producto 1 directo desde Costa Rica" · 5 hashtags · 320/180 tokens
+decision → APPROVED · GET lista → 1 publicación
+GET /webhooks/whatsapp?hub.challenge=… → challenge-123 · POST inbound → processed=1
+/chat/conversations → 2 (Cliente Demo + Cliente WhatsApp) · WhatsApp unread=1 · abrir marca leído · respuesta STAFF OK
+/panel/contenido y /panel/chat → 200 con datos
+```
+
+**Pendiente de F3:** WhatsApp saliente masivo/campañas, chat del cliente en el portal, programación y publicación real en redes, y control de cuota/costo de IA por organización.
+
+
+
 ## 4. Decisiones tomadas
 
 1. **Códigos de error promovidos al contrato**: los 5 códigos de F1 se agregaron a
@@ -261,10 +312,12 @@ curl -F "file=@tools/fixtures/catalogo-demo.csv;type=text/csv" `
    `access_type=offline`; el pipeline de importación ya está listo para recibir el buffer descargado.
 2. **PWA de tienda** (F1.13): manifest, service worker e IndexedDB del catálogo activo (lectura
    offline).
-3. **F2 restante**: UI de configuración de pasarelas por organización, recordatorios de cobro,
-   conciliación bancaria, gastos, panel financiero, reportes y exportación (F2.5–F2.11).
-   Reembolsos ya entregados (§3.5). Stripe real requiere credenciales.
-4. **Cobertura ≥70 % en `catalogs` y `sales`** y E2E importar→activar→cotizar→PDF (DoD de F1).
-5. Alinear el `CHECK` de totales de `docs/03` con la convención de dinero (sigue pendiente de F0).
-6. Endurecer el reclamo: notificación al cliente y límite de intentos por token.
-7. Cerrar F0: bootstrap cronometrado, demo y tag `v0.1.0`.
+3. **F2 restante**: UI de configuración de pasarelas por organización, conciliación programada,
+   gastos, panel financiero y exportación (F2.5, F2.8–F2.11). Cobros, reembolsos, autoaprobación,
+   recordatorios y reportes ya entregados (§3.4–§3.7). Stripe real requiere credenciales.
+4. **F3 restante**: WhatsApp saliente/campañas, chat del cliente en el portal, programación y
+   publicación en redes, cuota y costo de IA por organización (§3.8).
+5. **Cobertura ≥70 % en `catalogs` y `sales`** y E2E importar→activar→cotizar→PDF (DoD de F1).
+6. Alinear el `CHECK` de totales de `docs/03` con la convención de dinero (sigue pendiente de F0).
+7. Endurecer el reclamo y el webhook de WhatsApp: límite de intentos, notificación y rotación de
+   tokens.

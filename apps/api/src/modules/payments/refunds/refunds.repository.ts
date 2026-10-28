@@ -51,6 +51,13 @@ export class RefundsRepository {
     });
   }
 
+  findOrganizationSettings(organizationId: string): Promise<{ allowSelfApproval: boolean } | null> {
+    return this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { allowSelfApproval: true },
+    });
+  }
+
   findRefund(organizationId: string, refundId: string): Promise<Refund | null> {
     return this.prisma.refund.findFirst({
       where: { id: refundId, organizationId },

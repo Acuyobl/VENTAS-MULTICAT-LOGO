@@ -288,6 +288,66 @@ async function ensureSalesCustomer(
   });
 }
 
+/**
+ * Conversación demo idempotente para `/panel/chat`: 1 mensaje CUSTOMER sin leer
+ * y 1 respuesta STAFF. No duplica si ya tiene mensajes.
+ */
+async function ensureDemoConversation(input: {
+  organizationId: string;
+  catalogId: string;
+  customerId: string;
+}) {
+  const existing = await prisma.chatConversation.findFirst({
+    where: {
+      organizationId: input.organizationId,
+      catalogId: input.catalogId,
+      customerId: input.customerId,
+      subject: 'Consulta de demo',
+    },
+  });
+  const conversation =
+    existing ??
+    (await prisma.chatConversation.create({
+      data: {
+        organizationId: input.organizationId,
+        catalogId: input.catalogId,
+        customerId: input.customerId,
+        subject: 'Consulta de demo',
+        status: 'OPEN',
+        lastMessageAt: new Date(),
+      },
+    }));
+
+  const messageCount = await prisma.chatMessage.count({
+    where: { conversationId: conversation.id },
+  });
+  if (messageCount > 0) return conversation;
+
+  const anHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  await prisma.chatMessage.create({
+    data: {
+      conversationId: conversation.id,
+      senderType: 'CUSTOMER',
+      body: '¡Hola! ¿Tienen café de altura disponible para entrega esta semana?',
+      createdAt: anHourAgo,
+    },
+  });
+  await prisma.chatMessage.create({
+    data: {
+      conversationId: conversation.id,
+      senderType: 'STAFF',
+      body: '¡Hola! Sí, hay café de altura en existencia. Te comparto el catálogo para que elijas.',
+      readAt: new Date(anHourAgo.getTime() + 5 * 60 * 1000),
+      createdAt: new Date(anHourAgo.getTime() + 5 * 60 * 1000),
+    },
+  });
+  await prisma.chatConversation.update({
+    where: { id: conversation.id },
+    data: { lastMessageAt: new Date(anHourAgo.getTime() + 5 * 60 * 1000) },
+  });
+  return conversation;
+}
+
 async function ensureCustomerAccount(userId: string, organizationId: string, customerId: string) {
   const existing = await prisma.customerAccount.findFirst({
     where: { userId, organizationId },
@@ -605,6 +665,12 @@ async function main(): Promise<void> {
   await prisma.catalogVersion.update({
     where: { id: version.id },
     data: { productCount: 12 },
+  });
+
+  await ensureDemoConversation({
+    organizationId: orgA.id,
+    catalogId: catalog.id,
+    customerId: customerAsCustomer.id,
   });
 
   const catalogForImages = await prisma.catalog.findUniqueOrThrow({

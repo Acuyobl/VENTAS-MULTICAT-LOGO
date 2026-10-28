@@ -13,14 +13,20 @@ import {
 } from './refunds/refunds.controller';
 import { RefundsRepository } from './refunds/refunds.repository';
 import { RefundsService } from './refunds/refunds.service';
+import { OrderRemindersController } from './reminders/reminders.controller';
+import { RemindersRepository } from './reminders/reminders.repository';
+import { RemindersService } from './reminders/reminders.service';
+import { WhatsappModule } from '../whatsapp/whatsapp.module';
 
 @Module({
+  imports: [WhatsappModule],
   controllers: [
     PaymentsController,
     PublicPaymentsController,
     PaymentRefundsController,
     RefundsController,
     OrderRefundsController,
+    OrderRemindersController,
   ],
   providers: [
     PaymentsRepository,
@@ -30,7 +36,9 @@ import { RefundsService } from './refunds/refunds.service';
     StripeGateway,
     RefundsRepository,
     RefundsService,
+    RemindersRepository,
+    RemindersService,
   ],
-  exports: [PaymentsService, RefundsService],
+  exports: [PaymentsService, RefundsService, RemindersService],
 })
 export class PaymentsModule {}

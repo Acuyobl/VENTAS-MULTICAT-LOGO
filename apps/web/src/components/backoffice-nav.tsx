@@ -9,8 +9,12 @@ const items = [
   { href: '/panel/productos', label: 'Productos', index: '03' },
   { href: '/panel/cotizaciones', label: 'Cotizaciones', index: '04' },
   { href: '/panel/pedidos', label: 'Pedidos', index: '05' },
-  { href: '/panel/usuarios', label: 'Equipo', index: '06' },
-  { href: '/panel/sesiones', label: 'Sesiones', index: '07' },
+  { href: '/panel/finanzas', label: 'Finanzas', index: '06' },
+  { href: '/panel/contenido', label: 'Contenido', index: '07' },
+  { href: '/panel/chat', label: 'Chat', index: '08' },
+  { href: '/panel/usuarios', label: 'Equipo', index: '09' },
+  { href: '/panel/sesiones', label: 'Sesiones', index: '10' },
+  { href: '/panel/ajustes', label: 'Ajustes', index: '11' },
 ];
 
 export function BackofficeNav() {

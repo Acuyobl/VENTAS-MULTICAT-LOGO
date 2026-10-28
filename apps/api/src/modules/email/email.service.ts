@@ -9,6 +9,16 @@ interface SendMailOptions {
   text?: string;
 }
 
+/**
+ * Los asuntos con acentos o símbolos deben viajar con codificación RFC 2047
+ * (`=?UTF-8?B?...?=`); si no, clientes como Mailpit los interpretan como latin-1
+ * y muestran «Â·» en lugar de «·».
+ */
+function encodeSubject(subject: string): string {
+  if (/^[\x20-\x7E]*$/.test(subject)) return subject;
+  return `=?UTF-8?B?${Buffer.from(subject, 'utf8').toString('base64')}?=`;
+}
+
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
@@ -43,7 +53,11 @@ export class EmailService {
       return false;
     }
     try {
-      await this.transporter.sendMail({ from: this.from, ...options });
+      await this.transporter.sendMail({
+        from: this.from,
+        ...options,
+        subject: encodeSubject(options.subject),
+      });
       return true;
     } catch (error) {
       this.logger.error({ err: error, to: options.to }, 'email_send_failed');
