@@ -92,6 +92,11 @@ Vendedor sin product:write   → 403
 **Límites conocidos:** las URLs firmadas caducan (900 s backoffice / 3600 s público) y se regeneran
 en cada render SSR; no hay CDN ni transformación de tamaño todavía.
 
+**Enrutado de las dos caras:** las superficies de la cara B (`/c/[slug]`, `/tienda`, `/mi-cuenta`)
+se sirven en **cualquier host**, de modo que el backoffice puede previsualizar el catálogo público
+desde `app.localhost`. Solo `/panel` se reescribe bajo el host `app.` y sigue protegido por sesión
+staff. Cubierto por `apps/web/src/lib/faces.test.ts`.
+
 
 
 ## 4. Decisiones tomadas

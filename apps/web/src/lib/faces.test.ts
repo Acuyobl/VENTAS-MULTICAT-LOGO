@@ -24,6 +24,17 @@ describe('resolveFace', () => {
     expect(resolveFace('app.localhost:3000', '/panel/usuarios')).toMatchObject({
       requiresStaff: true,
     });
+    expect(resolveFace('tienda.localhost:3000', '/panel')).toMatchObject({
+      requiresStaff: true,
+    });
+  });
+
+  it('mantiene el atajo del backoffice en el host app', () => {
+    expect(resolveFace('app.localhost:3000', '/usuarios')).toMatchObject({
+      face: 'staff',
+      rewriteTo: '/panel/usuarios',
+      requiresStaff: true,
+    });
   });
 
   it('protege /mi-cuenta pero deja entrar a /mi-cuenta/entrar', () => {
@@ -35,9 +46,29 @@ describe('resolveFace', () => {
     });
   });
 
-  it('deja público el catálogo compartido', () => {
+  it('deja público el catálogo compartido en el host de tienda', () => {
     expect(resolveFace('tienda.localhost:3000', '/c/catalogo-demo')).toMatchObject({
       requiresCustomer: false,
+      rewriteTo: null,
+    });
+  });
+
+  it('permite previsualizar el catálogo público desde el host del backoffice', () => {
+    expect(resolveFace('app.localhost:3010', '/c/catalogo-demo')).toMatchObject({
+      face: 'store',
+      rewriteTo: null,
+      requiresStaff: false,
+      requiresCustomer: false,
+    });
+    expect(resolveFace('app.localhost:3010', '/tienda')).toMatchObject({
+      face: 'store',
+      rewriteTo: null,
+      requiresStaff: false,
+    });
+    expect(resolveFace('app.localhost:3010', '/mi-cuenta')).toMatchObject({
+      rewriteTo: null,
+      requiresCustomer: true,
+      requiresStaff: false,
     });
   });
 
