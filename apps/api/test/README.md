@@ -7,10 +7,10 @@ producto (subida a MinIO, URLs firmadas e importación con imágenes), ventas
 (clientes, cotizaciones con PDF y conversión a pedido), la cara B (checkout
 invitado con token público, reclamo de cuenta y portal de pedidos).
 
-- **Unit:** 327 tests en 58 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
+- **Unit:** 354 tests en 59 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
   infraestructura: los servicios externos (ioredis, MinIO) se sustituyen por
   dobles.
-- **E2E:** 149 tests en 28 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
+- **E2E:** 157 tests en 31 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
   una instancia real de Nest (`Test.createTestingModule({ imports: [AppModule] })`)
   en el mismo proceso. No abren puerto fijo ni dependen del `pnpm dev` de la API.
 
@@ -72,6 +72,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `src/modules/catalogs/import/image-downloader.spec.ts`               | descarga con timeout de 8 s, `http_error`, `unsupported_type`, `too_large` por content-length, `timeout` y `network`                                                                                                                                                                                                                      | Imágenes de importación |
 | `src/modules/catalogs/import/image-source.spec.ts`                   | detecta y decodifica data URIs `image/jpeg                                                                                                                                                                                                                                                                                                | png                     | webp` en base64 (con saltos de línea), rechaza mime no permitido, base64 inválido/vacío y >5 MB | Hojas de pedido |
 | `src/modules/catalogs/import/adaptive/order-sheet.spec.ts`           | hoja real (CLIENTE/TALLA/CAMISA/…/COSTO): propone `name=CAMISA`, `price=cost=COSTO` con warning, fallback de nombre nunca elige CLIENTE, cabeceras normales intactas y `resolveImportImages` sube data URI / deja warning si falla                                                                                                        | Hojas de pedido         |
+| `src/modules/catalogs/import/ocr/ocr.spec.ts`                        | mock OCR (texto default/`OCR_MOCK_TEXT`, vacío/10 MB), magic bytes PNG/JPG/WebP, `parseOcrText` (nombre+precio), extracción de JPEG `/DCTDecode` de PDF escaneado, OCR de páginas y tesseract.js con módulo mockeado (`spa+eng`, logger silencioso, caché de worker, error/timeout → null sin descargar)                                  | OCR / importador        |
 | `src/modules/catalogs/import/import-images.spec.ts`                  | URL válida → descarga + subida + key con id de producto; fallo de descarga/subida → warning `IMAGE_DOWNLOAD_FAILED` sin bloquear la fila; valor relativo → `IMAGE_UNRESOLVED` sin key; sin imagen → sin warning; ids únicos por producto                                                                                                  | Imágenes de importación |
 | `src/modules/sales/numbering.spec.ts`                                | formato `COT-YYYY-NNNNNN`/`PED-YYYY-NNNNNN`, sin truncar secuencias, rechazo de año/secuencia inválidos, parseo, año comercial en zona Costa Rica y claves de advisory lock                                                                                                                                                               | Ventas F1 (numeración)  |
 | `src/modules/sales/quote-calculator.spec.ts`                         | totales con `calculateTotals` (₡11.300×2 → 20.000/2.600/22.600), descuento por línea antes del IVA, IVA agregado, `PRODUCT_OUT_OF_STOCK` con `available`, `PRODUCT_INACTIVE`, `PRODUCT_NOT_IN_ACTIVE_VERSION`, backorder y descuento mayor que la línea                                                                                   | Ventas F1 (totales)     |
@@ -149,6 +150,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `test/content-variation.e2e-spec.ts`          | misma foto/producto con 3 combinaciones (Instagram/CERCANO/VENTAS, TikTok/DIVERTIDO/LANZAMIENTO, WhatsApp/PREMIUM/RECORDATORIO): 3 SVG con hashes distintos, `data-platform/tone/goal` correctos, insignias (OFERTA/NUEVO/ÚLTIMOS DÍAS), foto embebida y título/CTA/body distintos; regenerar con `design=EDITORIAL` cambia el SVG manteniendo plataforma/tono/objetivo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Contenido variado                |
 | `test/order-sheet-import.e2e-spec.ts`         | CSV con las 13 columnas reales de Sublimania (3 camisas, una con `Imagen` data URI PNG) y solo preview automático: mapping `CAMISA`→name, `COSTO`→price/cost, 3 productos con 0 cuarentena, SKU sintético `IMP-…`, precios > 0, atributos TALLA/TELA/TIPO, 1 imagen data URI subida a MinIO, activación y catálogo público con 3 productos                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Hojas de pedido                  |
 | `test/catalog-delete-slug.e2e-spec.ts`        | crear catálogo A con slug → DELETE 204: slug renombrado `*-eliminado-<sufijo>` (≤80), audit before/after; crear B con el MISMO slug → 201 y aparece en la lista; público del slug viejo y del renombrado → 404; segundo DELETE → 404; con pedido abierto → 409 sin borrar ni renombrar                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Borrar catálogo                  |
+| `test/ocr-import.e2e-spec.ts`                 | con `OCR_PROVIDER=mock` y `OCR_MOCK_TEXT` en el test: preview de PNG → mapping nombre/precio/SKU y warning de OCR; import PNG/JPG → 2 productos (`Camisa OCR`, `Pantalón OCR`) 0 cuarentena; PDF escaneado (JPEG `/DCTDecode`, sin texto) → OCR y 2 productos; `.exe` → 400 `UNSUPPORTED_FILE_TYPE`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | OCR / importador                 |
 
 Criterio §4.1.1 (`lint` + `typecheck` + `test` en verde) se comprueba con
 `pnpm lint`, `pnpm typecheck` y los dos comandos de test de este README. El
@@ -262,6 +264,26 @@ unitarios de `HealthService`.
   `AUTH_WRONG_AUDIENCE`.
 - El checkout reutiliza el patrón de snapshots de ventas y la secuencia
   `PED-YYYY-NNNNNN`; los warnings de imágenes no aplican aquí.
+
+## Hallazgos de OCR para fotos y PDF escaneados (F3)
+
+- Nueva capa `src/modules/catalogs/import/ocr/`: `OcrProvider` con `MockOcrProvider`
+  (default, texto determinista o `OCR_MOCK_TEXT`) y `TesseractOcrProvider`
+  (tesseract.js `^7.0.0`, `spa+eng`, worker lazy/cacheado, logger silencioso,
+  timeout 60 s, 10 MB). `OCR_PROVIDER=mock|tesseract` en el env schema (default
+  `mock` para CI; `tesseract` documentado para local/demo en `.env.example`).
+- Formatos: `ImportFileExtension` incluye `'image'`; `sniffFileFormat` detecta
+  PNG/JPEG/WebP por magic bytes y acepta `jpg|jpeg|png|webp`; `parseImportFile`
+  rechaza imágenes si se usa sin OCR. `ImportsService` y el preview adaptativo
+  usan `parseImportFileWithOcr` (async): imagen → OCR → `parseUnstructuredLines`;
+  OCR vacío → 400 `EMPTY_IMPORT` con mensaje claro.
+- PDF: si `extractPdfText` deja <20 caracteres útiles se extraen los JPEG
+  embebidos con `/DCTDecode` (máx. 10), se OCR-ean y se concatenan; sin imágenes
+  legibles se mantiene el fallback de 1 fila del PDF. No se rompen PDFs con texto.
+- Límites/seguridad: 10 MB, timeout, concurrencia secuencial en páginas, nunca
+  se loguea el texto OCR ni se guardan imágenes temporales; `.exe` sigue bloqueado
+  con `UNSUPPORTED_FILE_TYPE`. El preview cachea por checksum del archivo para no
+  mezclar dos fotos distintas.
 
 ## Hallazgos de borrado con slug liberado (F1)
 

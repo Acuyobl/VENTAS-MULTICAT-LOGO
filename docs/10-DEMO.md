@@ -1,4 +1,4 @@
-# Guion de demo — VentasCatálogo v0.3.0
+# Guion de demo — VentasCatálogo v0.3.1
 
 Demo de **10–12 minutos** que recorre las dos caras y el ciclo completo: catálogo → cotización →
 pedido → cobro → tienda → portal, más contenido, temas y catálogos reales. Todo corre local; no
@@ -40,6 +40,9 @@ Credenciales: `admin@ventascatalogo.local` / `Demo1234!` (MFA autocompletado en 
    (Reemplazar pregunta antes; Fusionar conserva lo que no venga) → activar la versión.
 5. **Renombrar** un catálogo desde la fila (nombre y slug) y mostrar que la tienda pública cambia
    de enlace; **Eliminar** pide confirmación y libera el slug.
+6. **OCR**: con `OCR_PROVIDER=tesseract` en la API, subir `catalogs/06-lista-ocr.png` (foto de una
+   lista) y `catalogs/07-lista-ocr-escaneada.pdf` (PDF sin texto): el agente reconoce los productos
+   y precios sin escribir una columna.
 
 ## 2. Catálogo real y productos (2 min)
 
@@ -87,8 +90,8 @@ Credenciales: `admin@ventascatalogo.local` / `Demo1234!` (MFA autocompletado en 
 
 - **Promesa**: «Subí tu catálogo como sea y el agente lo deja vendible, publicable y cobrable».
   Hoy Excel/CSV (y hojas de pedido/data URI) están disponibles; PDF, foto y WhatsApp en camino.
-- **Calidad**: API 336 unit + 153 e2e, web 19; CI verde con cobertura (~1,06 MB); tags hasta
-  `v0.3.0`.
+- **Calidad**: API 354 unit + 157 e2e, web 19; CI verde con cobertura (~1,1 MB); tags hasta
+  `v0.3.1`.
 - **Pendiente**: Drive, PDF/OCR, foto/visión, WhatsApp de entrada, variantes, publicación real,
   onboarding/planes y credenciales reales.
 

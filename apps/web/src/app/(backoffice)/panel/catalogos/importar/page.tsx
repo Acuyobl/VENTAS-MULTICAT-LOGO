@@ -33,8 +33,9 @@ export default async function ImportCatalogPage() {
             <span className="badge badge--ok">Excel (.xlsx, .xls, .ods) · disponible</span>
             <span className="badge badge--ok">CSV / TSV / TXT · disponible</span>
             <span className="badge badge--ok">JSON · disponible</span>
-            <span className="badge badge--ok">PDF · disponible (texto)</span>
-            <span className="badge">Foto / WhatsApp · en camino</span>
+            <span className="badge badge--ok">PDF · disponible (texto + OCR)</span>
+            <span className="badge badge--ok">Foto JPG/PNG/WebP · disponible (OCR)</span>
+            <span className="badge">WhatsApp · en camino</span>
           </div>
         </div>
         <div className="page-head__aside">

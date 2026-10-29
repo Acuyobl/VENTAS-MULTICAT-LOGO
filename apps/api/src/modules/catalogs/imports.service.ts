@@ -31,6 +31,9 @@ import { parseAdaptiveImportOptions } from './import/adaptive/import-plan';
 import { headersSignature } from './import/adaptive/heuristic-mapping';
 import { coerceExtraAttributes } from './import/adaptive/attribute-coercion';
 import { ImportTemplatesRepository } from './import-templates.repository';
+import { OcrService } from './import/ocr/ocr.service';
+import { parseImportFileWithOcr } from './import/ocr/ocr-import';
+import { imageContentType } from './import/ocr/ocr-provider';
 
 export const MAX_IMPORT_FILE_BYTES = 10 * 1024 * 1024;
 
@@ -50,6 +53,10 @@ const ACCEPTED_EXTENSIONS: Record<string, ImportFileExtension> = {
   json: 'json',
   pdf: 'pdf',
   prn: 'txt',
+  jpg: 'image',
+  jpeg: 'image',
+  png: 'image',
+  webp: 'image',
 };
 
 export interface ImportFileInput {
@@ -169,6 +176,7 @@ export class ImportsService {
     private readonly storage: StorageService,
     private readonly audit: AuditService,
     private readonly templates: ImportTemplatesRepository,
+    private readonly ocr: OcrService,
     config: ConfigService,
   ) {
     this.docsBucket = config.get<string>('MINIO_BUCKET_DOCS', 'vc-docs');
@@ -224,7 +232,7 @@ export class ImportsService {
       return withPlan(base, (existing.job.mode as ImportMode) ?? 'REPLACE', 0);
     }
 
-    const parsed = this.parse(file.buffer, extension, options);
+    const parsed = await this.parse(file.buffer, extension, options);
 
     // C (aprendizaje): si el archivo coincide con una plantilla y no se envió
     // mapping explícito, se usa la plantilla como base del plan.
@@ -404,14 +412,19 @@ export class ImportsService {
     return toImportResult(existing.job, existing.version, false, storedIssues(existing.job));
   }
 
-  private parse(
+  private async parse(
     buffer: Buffer,
     extension: ImportFileExtension,
     options: ImportOptions,
-  ): ReturnType<typeof parseImportFile> {
+  ): Promise<ReturnType<typeof parseImportFile>> {
     let parsed: ReturnType<typeof parseImportFile>;
     try {
-      parsed = parseImportFile(buffer, extension, options.delimiter);
+      parsed = await parseImportFileWithOcr({
+        buffer,
+        extension,
+        delimiter: options.delimiter,
+        ocr: this.ocr,
+      });
     } catch (error) {
       if (error instanceof ImportParseError) {
         if (error.reason === 'empty_file') {
@@ -454,6 +467,8 @@ export class ImportsService {
       contentType = 'application/json';
     } else if (extension === 'pdf') {
       contentType = 'application/pdf';
+    } else if (extension === 'image') {
+      contentType = imageContentType(buffer);
     }
 
     try {

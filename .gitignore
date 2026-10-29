@@ -44,3 +44,7 @@ graphify-out/.graphify_partial.txt
 
 # Prisma
 apps/api/prisma/*.db
+
+# OCR: modelos descargados por tesseract.js
+*.traineddata
+.tesseract-cache/

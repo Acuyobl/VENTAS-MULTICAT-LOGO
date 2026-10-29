@@ -32,6 +32,9 @@ import { apiException } from '../../common/errors/api-error-codes';
 import { z } from 'zod';
 import type { AuditMeta } from '../../common/audit/audit.types';
 import { AuditService } from '../audit/audit.service';
+import { createHash } from 'node:crypto';
+import { OcrService } from './import/ocr/ocr.service';
+import { parseImportFileWithOcr } from './import/ocr/ocr-import';
 
 const AGENT_MAX_TOKENS = 900;
 const previewBodySchema = z.object({
@@ -62,6 +65,7 @@ export class AdaptiveImportService {
     private readonly templates: ImportTemplatesRepository,
     private readonly aiFactory: AiProviderFactory,
     private readonly audit: AuditService,
+    private readonly ocr: OcrService,
   ) {}
 
   async preview(input: PreviewInput): Promise<ImportPreview> {
@@ -95,7 +99,7 @@ export class AdaptiveImportService {
     const delimiter = parsedBody.success ? parsedBody.data.delimiter : undefined;
     const options = parseImportOptions({ delimiter });
     const extension = resolveImportExtension(file.originalname);
-    const parsed = this.parseFile(file.buffer, extension, options.delimiter);
+    const parsed = await this.parseFile(file.buffer, extension, options.delimiter);
 
     const headers = parsed.headers;
     const rows = parsed.rows;
@@ -111,8 +115,10 @@ export class AdaptiveImportService {
     );
     // El cache incluye la plantilla: si aparece/actualiza una plantilla, el
     // preview se recalcula en vez de devolver el preset viejo.
+    const fileChecksum = createHash('sha256').update(file.buffer).digest('hex');
     const cacheKey = [
       user.organizationId,
+      fileChecksum,
       catalogId,
       signature,
       useAgent ? 'agent' : 'agent-off',
@@ -270,10 +276,14 @@ export class AdaptiveImportService {
     return parsed.data;
   }
 
-  private parseFile(buffer: Buffer, extension: ImportFileExtension, delimiter?: string) {
+  private async parseFile(
+    buffer: Buffer,
+    extension: ImportFileExtension,
+    delimiter?: string,
+  ): Promise<ReturnType<typeof parseImportFile>> {
     let parsed: ReturnType<typeof parseImportFile>;
     try {
-      parsed = parseImportFile(buffer, extension, delimiter);
+      parsed = await parseImportFileWithOcr({ buffer, extension, delimiter, ocr: this.ocr });
     } catch (error) {
       if (error instanceof ImportParseError) {
         if (error.reason === 'empty_file') {

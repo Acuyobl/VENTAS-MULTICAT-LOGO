@@ -71,15 +71,17 @@ organización). Hosts: `app.localhost:3010` (backoffice), `tienda.localhost:3010
 - Sin credenciales de Google Drive ni Stripe el bootstrap funciona igual: sus módulos quedan
   bloqueados con error explícito.
 
-## Actualización — 2026-10-29 (v0.2.9)
+## Actualización — 2026-10-29 (v0.3.1)
 
 - Los tiempos de este documento siguen vigentes como medición histórica de F0; el build actual
   agrega más rutas y el arranque en caliente ronda los 80–90 s.
-- **Catálogos de ejemplo**: tras el seed, `catalogs/` contiene 5 archivos cargables
-  ([README](../catalogs/README.md)). Se importan con la pantalla **Cargar catálogo** o con
+- **Catálogos de ejemplo**: tras el seed, `catalogs/` contiene 5 catálogos cargables y 2 ejemplos
+  para OCR ([README](../catalogs/README.md)). Se importan con la pantalla **Cargar catálogo** o con
   `apps/api/scripts/import-demo-catalogs.mjs` e `import-sublimania.mjs` (requieren `VC_COOKIE`).
 - **Variables nuevas** (opcionales): `STORAGE_PUBLIC_URL` (URL pública de MinIO detrás de
   proxy/CDN), `EMAIL_PROVIDER=resend` + `RESEND_API_KEY`, `AI_MONTHLY_QUOTA_TOKENS` (default
-  2.000.000) y `ENCRYPTION_KEY` para descifrar secretos de pasarelas por organización.
+  2.000.000), `ENCRYPTION_KEY` para descifrar secretos de pasarelas por organización y
+  **`OCR_PROVIDER=mock|tesseract`** para fotos/PDF escaneados (mock en CI; tesseract descarga los
+  modelos `spa+eng` la primera vez).
 - La web de verificación sigue en **3010** con build de producción; los hosts `app.localhost` y
   `tienda.localhost` están documentados en [10-DEMO.md](10-DEMO.md).

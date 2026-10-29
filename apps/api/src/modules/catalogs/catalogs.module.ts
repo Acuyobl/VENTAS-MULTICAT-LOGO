@@ -11,6 +11,7 @@ import { CatalogVersionsService } from './catalog-versions.service';
 import { CatalogImportsController } from './imports.controller';
 import { ImportsRepository } from './imports.repository';
 import { ImportsService } from './imports.service';
+import { OcrService } from './import/ocr/ocr.service';
 
 @Module({
   imports: [AiModule],
@@ -29,6 +30,7 @@ import { ImportsService } from './imports.service';
     ImportsService,
     ImportTemplatesRepository,
     AdaptiveImportService,
+    OcrService,
   ],
   exports: [CatalogsRepository, CatalogsService],
 })

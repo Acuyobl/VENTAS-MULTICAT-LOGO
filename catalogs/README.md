@@ -17,6 +17,16 @@ El catálogo 5 se generó con `tools/convert-sublimania.py` a partir de
 COSTO como costo y precio sugerido ×1.5), extrae las fotos de la hoja «Imagenes» y las embebe
 como `data:image/...;base64` para que el importador las suba a MinIO.
 
+## Ejemplos para OCR
+
+| Archivo | Qué es | Cómo probarlo |
+|---|---|---|
+| `06-lista-ocr.png` | Foto de una lista de precios (4 productos) | `OCR_PROVIDER=tesseract` → **Cargar catálogo** → el agente reconoce nombre y precio |
+| `07-lista-ocr-escaneada.pdf` | El mismo listado como PDF sin texto seleccionable | Se extraen las imágenes y se OCR-ean; importa los mismos productos |
+
+Con el OCR en `mock` (default de CI) estos archivos devuelven texto de ejemplo; para OCR real
+configurá `OCR_PROVIDER=tesseract` en la API (la primera vez descarga los modelos `spa+eng`).
+
 ## Cómo cargarlos
 
 1. `app.localhost:3010` → **Catálogos** → **Cargar catálogo**.

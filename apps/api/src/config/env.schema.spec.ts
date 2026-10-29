@@ -112,3 +112,23 @@ describe('validateEnv · imágenes con IA', () => {
     );
   });
 });
+
+describe('validateEnv · OCR', () => {
+  it('por defecto usa el proveedor mock (CI sin descargas)', () => {
+    const env = validateEnv(baseEnv());
+    expect(env.OCR_PROVIDER).toBe('mock');
+    expect(env.OCR_MOCK_TEXT).toBe('');
+  });
+
+  it('acepta tesseract y texto mock configurable', () => {
+    const env = validateEnv(baseEnv({ OCR_PROVIDER: 'tesseract', OCR_MOCK_TEXT: 'Camisa 5000' }));
+    expect(env.OCR_PROVIDER).toBe('tesseract');
+    expect(env.OCR_MOCK_TEXT).toBe('Camisa 5000');
+  });
+
+  it('rechaza proveedores OCR desconocidos', () => {
+    expect(() => validateEnv(baseEnv({ OCR_PROVIDER: 'vision' }))).toThrow(
+      /Configuración de entorno inválida/,
+    );
+  });
+});

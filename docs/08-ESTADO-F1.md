@@ -710,17 +710,17 @@ Cambios preparados para salir de la demo local, validados con los gates completo
 
 Verificado: `pnpm typecheck`, `lint`, `test`, `build` y **149 e2e** en verde; sin migración nueva.
 
-## 3.29 Estado consolidado al 2026-10-29 (v0.3.0)
+## 3.29 Estado consolidado al 2026-10-29 (v0.3.1)
 
 | Dimensión | Estado |
 |---|---|
-| **Tags** | `v0.1.0` … `v0.3.0` (último: importador universal + rediseño UI) |
+| **Tags** | `v0.1.0` … `v0.3.1` (último: OCR de fotos y PDF escaneados) |
 | **Base de datos** | 10 migraciones aplicadas, sin drift |
-| **API** | 336 unit (58 archivos) + 153 e2e (30 archivos) |
+| **API** | 354 unit (59 archivos) + 157 e2e (31 archivos) |
 | **Web** | 19 pruebas; build de producción de Next 15 |
-| **CI** | verde con cobertura ~1,06 MB en el artefacto |
-| **Catálogos demo** | 5 en `catalogs/` cargados (Boutique Mar, Ferretería Central, Despensa Orgánica, TecnoHogar y Sublimania CR) |
-| **Catálogos en BD** | demo, despensa de altura, ferretería, prueba de codificación y los de ejemplo; borrado con liberación de slug y **renombrado** |
+| **CI** | verde con cobertura ~1,1 MB en el artefacto |
+| **Catálogos demo** | 5 en `catalogs/` cargados + ejemplos OCR (`06-lista-ocr.png`, `07-lista-ocr-escaneada.pdf`) |
+| **Catálogos en BD** | demo, despensa de altura, ferretería, prueba de codificación, los de ejemplo y «Sublimania OCR»; borrado/renombrado |
 | **Usuarios demo** | `admin@`, `cliente@`, `mixto@`, `finanzas.demo@`, `aprobador.demo@` (`Demo1234!`) |
 | **Temas** | Clásica (serif/sidebar), Moderna (sans/barra superior), Compacta (mono/rail angosto) |
 | **Pendiente** | ver §6 |
@@ -745,6 +745,26 @@ para PDF/JSON/TSV/multi-hoja/tablas compuestas. **336 unit + 153 e2e** en verde.
 
 > El OCR de PDF escaneados y las fotos como archivo siguen pendientes: hoy el PDF debe traer texto
 > seleccionable.
+
+## 3.31 OCR de fotos y PDF escaneados (v0.3.1)
+
+| Pieza | Detalle |
+|---|---|
+| Proveedores | `OCR_PROVIDER=mock|tesseract`; mock determinista para CI (`OCR_MOCK_TEXT`) y Tesseract `spa+eng` con worker lazy, timeout 60 s y límite 10 MB |
+| Imágenes | JPG/JPEG/PNG/WebP detectadas por magic bytes; se OCR-ean y pasan por `parseUnstructuredLines` |
+| PDF escaneado | si el texto útil es <20 caracteres, extrae JPEG `/DCTDecode` (máx. 10), OCR y concatena; PDF con texto sigue por la vía rápida |
+| Errores | OCR vacío → 400 `EMPTY_IMPORT` («No pudimos leer texto en la imagen»); `.exe` sigue bloqueado |
+| UI | login, resumen, carga y panel de importación muestran **Foto y PDF escaneado · disponible (OCR)** |
+
+Verificación real con Tesseract (no mock):
+
+```text
+catalogs/06-lista-ocr.png (foto de lista)
+  → 4 productos reconocidos: Camisa Barcelona Yamal 7500 · Pantalón deportivo 8900 ·
+    Miel orgánica 4500 · Taza cerámica 3200; encabezado en cuarentena (precio 0)
+catalogs/07-lista-ocr-escaneada.pdf (PDF sin texto)
+  → 1 imagen DCTDecode OCR-eada → los mismos 4 productos y precios
+```
 
 ## 4. Decisiones tomadas
 
@@ -791,10 +811,9 @@ curl -F "file=@tools/fixtures/catalogo-demo.csv;type=text/csv" `
 
 ## 6. Pendiente (al 2026-10-29)
 
-1. **Entradas que faltan**: OCR para PDF escaneados (hoy solo PDF con texto), foto/visión para
-   cuadernos y listas escritas, WhatsApp de entrada (archivo/foto por webhook) y Google Drive
-   (OAuth). El importador universal ya cubre Excel/CSV/TSV/TXT/JSON/XLS/ODS/PDF con texto,
-   multi-hoja, tablas compuestas y data URI.
+1. **Entradas que faltan**: WhatsApp de entrada (archivo/foto por webhook) y Google Drive (OAuth).
+   Excel/CSV/TSV/TXT/JSON/XLS/ODS/PDF (texto o escaneado), **fotos con OCR**, multi-hoja, tablas
+   compuestas y data URI ya están.
 2. **Variantes reales** talla/color con stock/precio propios (hoy entran como atributos).
 3. **F2 restante**: conciliación programada/cierre de meses y reportes por catálogo.
 4. **F3 restante**: campañas de WhatsApp saliente, publicación real en redes y UI de consumo/cuota

@@ -22,7 +22,7 @@ export interface ParsedImportFile {
 
 /** Extensiones aceptadas y adaptadas por el importador universal. */
 export type ImportFileExtension =
-  'csv' | 'xlsx' | 'xls' | 'tsv' | 'txt' | 'json' | 'pdf' | 'ods' | 'unknown';
+  'csv' | 'xlsx' | 'xls' | 'tsv' | 'txt' | 'json' | 'pdf' | 'ods' | 'image' | 'unknown';
 
 export class ImportParseError extends Error {
   constructor(
@@ -168,6 +168,28 @@ export function parseCsvText(text: string, delimiter: string): string[][] {
 /** Infiere el formato real del archivo a partir de la extensión o magic bytes. */
 export function sniffFileFormat(buffer: Buffer, declaredExt?: string): ImportFileExtension {
   const ext = (declaredExt ?? '').toLowerCase().trim();
+
+  // Imágenes: se detectan por magic bytes (no por la extensión declarada).
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return 'image';
+  }
+  if (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47
+  ) {
+    return 'image';
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.toString('latin1', 0, 4) === 'RIFF' &&
+    buffer.toString('latin1', 8, 12) === 'WEBP'
+  ) {
+    return 'image';
+  }
+  if (['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'].includes(ext)) return 'image';
   if (['xlsx', 'xlsm', 'xlsb'].includes(ext)) return 'xlsx';
   if (['xls'].includes(ext)) return 'xls';
   if (['ods'].includes(ext)) return 'ods';
@@ -337,6 +359,14 @@ export function parseUnstructuredLines(text: string): ParsedImportFile {
           .replace(/[-–—:]\s*$/, '')
           .trim();
       }
+    } else {
+      // Texto OCR simple: "Camisa demo 5000" (nombre + precio separados por un
+      // espacio). Solo si el nombre tiene al menos una palabra y 2 caracteres.
+      const simple = /^(.*\S)\s+([0-9]+(?:[.,][0-9]{1,2})?)\s*$/.exec(line);
+      if (simple && (simple[1] ?? '').trim().length >= 2) {
+        name = (simple[1] ?? '').trim();
+        price = (simple[2] ?? '').trim();
+      }
     }
     if (!name) name = `Producto ${index + 1}`;
     rows.push({
@@ -483,7 +513,10 @@ export function processCompositeTables(matrix: unknown[][]): unknown[][] {
     const filledCells = row.filter((c) => String(c ?? '').trim().length > 0);
     if (filledCells.length === 0) continue;
 
-    const textJoined = row.map((c) => String(c ?? '')).join(' ').toLowerCase();
+    const textJoined = row
+      .map((c) => String(c ?? ''))
+      .join(' ')
+      .toLowerCase();
     if (
       textJoined.includes('total') ||
       textJoined.includes('saldo') ||
@@ -606,7 +639,9 @@ export function parseWorkbookSheets(workbook: XLSX.WorkBook): {
     );
     const overlap = h.filter((header) => header.length > 0 && firstHeader.includes(header)).length;
     const hasImageCol = h.some((c) => c === 'imagen' || c === 'foto' || c === 'image');
-    const hasPriceCol = h.some((c) => c.includes('precio') || c.includes('price') || c.includes('costo'));
+    const hasPriceCol = h.some(
+      (c) => c.includes('precio') || c.includes('price') || c.includes('costo'),
+    );
     const isAuxiliaryTable = hasImageCol && !hasPriceCol;
 
     const minCols = Math.min(firstHeader.length, h.length);
@@ -708,6 +743,13 @@ export function parseImportFile(
   }
 
   const format = sniffFileFormat(buffer, extension);
+
+  if (format === 'image') {
+    throw new ImportParseError(
+      'invalid_file',
+      'La imagen requiere OCR: usá la importación con proveedor OCR para leer fotos.',
+    );
+  }
 
   // 1. Intentar JSON
   if (format === 'json') {

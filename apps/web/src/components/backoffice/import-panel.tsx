@@ -333,8 +333,8 @@ export function ImportPanel({
         <div>
           <h2>Importar catálogo</h2>
           <p className="muted" style={{ fontSize: '0.8rem' }}>
-            Excel, CSV, TSV, TXT, PDF, JSON o texto · el analizador adapta y propone el mapeo; vos
-            confirmás antes de importar.
+            Excel, CSV, TSV, TXT, PDF (texto o escaneado), JSON, fotos (OCR) o texto · el analizador
+            adapta y propone el mapeo; vos confirmás antes de importar.
           </p>
         </div>
         <span className="mono faint">IA + heurística</span>

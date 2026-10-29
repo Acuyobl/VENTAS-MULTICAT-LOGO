@@ -3,6 +3,24 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
+## [0.3.1] — 2026-10-29
+
+### Añadido
+- **OCR de fotos y PDF escaneados**: el importador acepta JPG/JPEG/PNG/WebP y PDFs sin texto
+  seleccionable. Usa `OCR_PROVIDER=mock|tesseract` (Tesseract `spa+eng`, timeout 60 s); en PDF
+  escaneados extrae las imágenes `DCTDecode` y las OCR-ea. OCR vacío → 400 `EMPTY_IMPORT` con
+  mensaje claro.
+- UI actualizada: foto y PDF escaneado figuran como **disponibles (OCR)** en login, resumen, carga
+  de catálogo y panel de importación.
+- Ejemplos en `catalogs/`: `06-lista-ocr.png` y `07-lista-ocr-escaneada.pdf`.
+
+### Verificado
+- OCR real con Tesseract: la foto de lista reconoció 4 productos con precios y el PDF escaneado los
+  mismos 4; el encabezado quedó en cuarentena con motivo.
+
+### Pruebas
+- API: **354 unit** (59 archivos) y **157 e2e** (31 archivos; nuevo `ocr-import`). Web: 19 pruebas.
+
 ## [0.3.0] — 2026-10-29
 
 ### Añadido

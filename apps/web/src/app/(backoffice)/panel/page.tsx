@@ -41,8 +41,8 @@ export default async function PanelPage() {
           </h1>
           <p>
             Excel, PDF, foto o WhatsApp: el agente lo convierte en un catálogo vendible, publicable
-            y cobrable — sin que toques una columna. Hoy entran Excel, CSV, PDF (con texto), JSON,
-            TSV y TXT; foto y WhatsApp vienen en camino.
+            y cobrable — sin que toques una columna. Hoy entran Excel, CSV, PDF (texto y escaneado),
+            JSON, TSV, TXT y fotos (OCR); WhatsApp viene en camino.
           </p>
         </div>
         <div className="page-head__aside">
@@ -65,16 +65,16 @@ export default async function PanelPage() {
           <span className="eyebrow">PDF</span>
           <strong>Factura o tabla</strong>
           <p>
-            Extrae el texto del PDF y arma la tabla automáticamente. Los PDF escaneados (solo
-            imagen) necesitan OCR: en camino.
+            Extrae el texto del PDF; si está escaneado, hace OCR de sus imágenes y arma la tabla
+            automáticamente.
           </p>
-          <span className="badge badge--ok">Disponible (texto)</span>
+          <span className="badge badge--ok">Disponible (texto + OCR)</span>
         </article>
-        <article className="ingest-card">
+        <article className="ingest-card ingest-card--ready">
           <span className="eyebrow">Foto</span>
           <strong>Lista escrita</strong>
-          <p>OCR y visión para leer precios, medidas y nombres desde una foto del cuaderno.</p>
-          <span className="badge">En camino</span>
+          <p>OCR para leer precios, medidas y nombres desde una foto del cuaderno o la pizarra.</p>
+          <span className="badge badge--ok">Disponible (OCR)</span>
         </article>
         <article className="ingest-card">
           <span className="eyebrow">WhatsApp</span>

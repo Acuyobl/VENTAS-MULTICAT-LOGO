@@ -83,6 +83,12 @@ export const envSchema = z
     IMAGE_PROVIDER: z.enum(['mock', 'openai']).default('mock'),
     OPENAI_API_KEY: z.string().optional().default(''),
     OPENAI_IMAGE_MODEL: z.string().default('gpt-image-1'),
+    /**
+     * OCR del importador (fotos JPG/PNG/WebP y PDF escaneados). Default `mock`
+     * para CI/tests sin descargas; en local/demo conviene `tesseract`.
+     */
+    OCR_PROVIDER: z.enum(['mock', 'tesseract']).default('mock'),
+    OCR_MOCK_TEXT: z.string().optional().default(''),
     /** Organización destino del WhatsApp entrante (webhook sin sesión). */
     WHATSAPP_ORG_SLUG: z.string().default('demo'),
     WHATSAPP_ACCESS_TOKEN: z.string().optional().default(''),
