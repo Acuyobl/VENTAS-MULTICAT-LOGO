@@ -7,10 +7,10 @@ producto (subida a MinIO, URLs firmadas e importación con imágenes), ventas
 (clientes, cotizaciones con PDF y conversión a pedido), la cara B (checkout
 invitado con token público, reclamo de cuenta y portal de pedidos).
 
-- **Unit:** 295 tests en 53 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
+- **Unit:** 299 tests en 54 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
   infraestructura: los servicios externos (ioredis, MinIO) se sustituyen por
   dobles.
-- **E2E:** 138 tests en 24 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
+- **E2E:** 143 tests en 25 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
   una instancia real de Nest (`Test.createTestingModule({ imports: [AppModule] })`)
   en el mismo proceso. No abren puerto fijo ni dependen del `pnpm dev` de la API.
 
@@ -111,6 +111,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `src/modules/reports/finance-pdf.spec.ts`                            | PDF A4 `%PDF-` con secciones (ventas, pagos, reembolsos, gastos/utilidad, conciliación), totales en texto, nombre del archivo y paginado/corte a 50 filas                                                                                                                                                                                 | PDF financiero          |
 | `src/modules/catalogs/catalogs.service.spec.ts`                      | soft delete: 409 `catalog_has_open_orders` sin borrar, soft delete + archivado de versión activa + audit cuando no hay pedidos, y 404                                                                                                                                                                                                     | Borrar catálogo         |
 | `src/modules/chat/chat.service.spec.ts`                              | `senderName` del chat del portal: cliente → su nombre, staff → nombre del usuario, sistema → VentasCatálogo                                                                                                                                                                                                                               | Chat del cliente        |
+| `src/modules/organizations/org-settings.service.spec.ts`             | `normalizeAppTheme` (3 temas + fallback `CLASICO`) y contratos: enum válido, PATCH solo/combinado, `NEON` inválido y `orgSettingsSchema` exige `appTheme`                                                                                                                                                                                 | Tema visual             |
 
 ### E2E
 
@@ -140,6 +141,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `test/customer-chat.e2e-spec.ts`              | `GET /me/chat` crea/reutiliza la conversación WEB del `CustomerAccount` (subject «Consulta desde el portal»); `POST /me/chat/messages` guarda CUSTOMER con `senderName` y audit `chat.message_sent`, el staff la ve con `unreadCount=1`; staff en `/me/chat` → 403 `AUTH_WRONG_AUDIENCE`; sin CustomerAccount → 409 `customer_profile_missing`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Chat del cliente                 |
 | `test/catalog-delete-report-pdf.e2e-spec.ts`  | `DELETE /catalogs/:id` → 204, desaparece de `GET /catalogs`, público 404, versión archivada y audit `catalog.deleted`; con pedido abierto → 409 `catalog_has_open_orders`; cross-org 404 y vendedor 403; `GET /reports/finance/pdf` → `application/pdf` con `attachment; filename="reporte-financiero-…"` y audit `report.exported` (`format:pdf`), rango inválido 422 y 403 sin `finance:read`                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Borrar catálogo / PDF financiero |
 | `test/full-flow.e2e-spec.ts`                  | DoD F1 en una org efímera: catálogo → importar CSV (2 productos) → activar versión → cliente → cotización (2 unidades) → `send` con PDF `%PDF-` → `accept` → `convert` a pedido `PED-…` con totales iguales → `fulfill`; limpieza completa en afterAll                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | DoD F1 completo                  |
+| `test/app-theme.e2e-spec.ts`                  | `GET/PATCH /organizations/settings` con `appTheme` (`CLASICO` default → `MODERNO`), PATCH combinado, `NEON` → 422, audit `organization.settings_updated`; `GET /public/app-settings` público con `Cache-Control`, resuelve por `?orgSlug=` (tema de otra org), 404 si no existe y 403 sin `settings:manage`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Tema visual de la app            |
 
 Criterio §4.1.1 (`lint` + `typecheck` + `test` en verde) se comprueba con
 `pnpm lint`, `pnpm typecheck` y los dos comandos de test de este README. El
@@ -253,6 +255,19 @@ unitarios de `HealthService`.
   `AUTH_WRONG_AUDIENCE`.
 - El checkout reutiliza el patrón de snapshots de ventas y la secuencia
   `PED-YYYY-NNNNNN`; los warnings de imágenes no aplican aquí.
+
+## Hallazgos de tema visual (F3)
+
+- Migración `20261028233000_app_theme`: `Organization.appTheme` (default
+  `CLASICO`). `GET/PATCH /organizations/settings` incluye `appTheme` validado por
+  enum (`CLASICO|MODERNO|COMPACTO`); el PATCH sigue siendo parcial y combinable
+  con `allowSelfApproval`/`imageDesign`, con audit `organization.settings_updated`
+  before/after. Un valor inválido responde 422 (pipe local del endpoint).
+- `GET /public/app-settings` (`@Public`, `Cache-Control: public, max-age=60`)
+  devuelve `{appTheme, organizationName, organizationSlug}` de la primera
+  organización no eliminada o de `?orgSlug=`; 404 si no existe. Es liviano y no
+  requiere sesión para que la web aplique el tema antes del login.
+- `normalizeAppTheme` cae a `CLASICO` ante valores desconocidos en la base.
 
 ## Hallazgos de pendientes de cierre (F1/F3)
 

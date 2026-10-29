@@ -9,6 +9,7 @@ import { getSession } from '@/lib/session';
 import { SettingsForm } from '@/components/backoffice/settings-form';
 import { GatewayConfigPanel } from '@/components/backoffice/gateway-config';
 import { ImageDesignPicker } from '@/components/backoffice/image-design-picker';
+import { AppThemePicker } from '@/components/backoffice/app-theme-picker';
 
 export const metadata: Metadata = {
   title: 'Ajustes',
@@ -39,12 +40,13 @@ export default async function SettingsPage() {
           </p>
         </div>
         <div className="page-head__aside">
-          <strong>3</strong>
+          <strong>4</strong>
           <span>políticas configurables</span>
         </div>
       </header>
 
       <SettingsForm initial={settings} canManage={canManage} />
+      <AppThemePicker initialTheme={settings?.appTheme ?? 'CLASICO'} canManage={canManage} />
       <ImageDesignPicker
         designs={designs?.items ?? []}
         initialDesign={settings?.imageDesign ?? 'CLASICA'}

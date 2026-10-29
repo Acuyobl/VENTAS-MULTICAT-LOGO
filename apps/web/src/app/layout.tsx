@@ -6,6 +6,9 @@ import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/500.css';
 import '@fontsource/ibm-plex-mono/600.css';
 import './globals.css';
+import { getPublicAppSettings } from '@/lib/theme';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: {
@@ -37,9 +40,10 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const { appTheme } = await getPublicAppSettings();
   return (
-    <html lang="es">
+    <html lang="es" data-theme={appTheme}>
       <body>{children}</body>
     </html>
   );

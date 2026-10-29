@@ -180,13 +180,21 @@ describe('Diseños de imagen configurables (e2e)', () => {
 
   it('PATCH /organizations/settings cambia imageDesign y sigue aceptando allowSelfApproval', async () => {
     const initial = await adminAgent.get(`${api}/organizations/settings`).expect(200);
-    expect(initial.body).toEqual({ allowSelfApproval: false, imageDesign: 'CLASICA' });
+    expect(initial.body).toEqual({
+      allowSelfApproval: false,
+      imageDesign: 'CLASICA',
+      appTheme: 'CLASICO',
+    });
 
     const patched = await adminAgent
       .patch(`${api}/organizations/settings`)
       .send({ imageDesign: 'PROMO' })
       .expect(200);
-    expect(patched.body).toEqual({ allowSelfApproval: false, imageDesign: 'PROMO' });
+    expect(patched.body).toEqual({
+      allowSelfApproval: false,
+      imageDesign: 'PROMO',
+      appTheme: 'CLASICO',
+    });
 
     const audit = await prisma.auditLog.findFirst({
       where: { action: 'organization.settings_updated', organizationId },
@@ -198,7 +206,11 @@ describe('Diseños de imagen configurables (e2e)', () => {
       .patch(`${api}/organizations/settings`)
       .send({ allowSelfApproval: true })
       .expect(200);
-    expect(onlyApproval.body).toEqual({ allowSelfApproval: true, imageDesign: 'PROMO' });
+    expect(onlyApproval.body).toEqual({
+      allowSelfApproval: true,
+      imageDesign: 'PROMO',
+      appTheme: 'CLASICO',
+    });
   });
 
   it('crear publicación usa el diseño de la organización (PROMO)', async () => {

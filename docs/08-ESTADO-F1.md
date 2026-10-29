@@ -555,6 +555,37 @@ Verificado: PDF 200 `application/pdf`, 3.476 B, empieza con `%PDF-`, nombre
 
 
 
+## 3.24 Temas visuales de toda la app (3 propuestas)
+
+El administrador elige el **tema de toda la aplicación** desde Ajustes: cambia tipografía, tamaños,
+densidad, el shell de navegación y **el orden de los menús**.
+
+| Tema | Qué cambia |
+|---|---|
+| **CLASICA** | Serif (Fraunces), papel cálido, **menú lateral** numerado, espaciado amplio. Es el diseño original |
+| **MODERNO** | Sans (Archivo) más grande, **barra de navegación superior horizontal**, acento verde azulado, grilla más densa y menús reordenados (ventas primero) |
+| **COMPACTO** | Tipografía mono para títulos, **rail angosto**, densidad alta (padding/tablas más chicos) y otro orden de menús (operación primero) |
+
+| Pieza | Detalle |
+|---|---|
+| Ajuste | `GET/PATCH /organizations/settings` con `appTheme` (`CLASICO|MODERNO|COMPACTO`), auditado |
+| Aplicación global | `GET /public/app-settings` (público) alimenta `<html data-theme>` en el layout raíz: aplica a backoffice, tienda y portal; los menus se reordenan por tema en cada shell |
+| UI | `/panel/ajustes` → **Tema visual de la app**: 3 tarjetas con miniatura, “Activo/Disponible” y **«Usar este tema»** |
+
+Verificación ejecutada:
+
+```text
+GET /public/app-settings → {"appTheme":"CLASICO","organizationName":"Organización Demo",...}
+PATCH appTheme=MODERNO   → settings y público reflejan MODERNO
+/panel  → <html data-theme="MODERNO"> · nav: Resumen · Cotizaciones · Pedidos · Productos…
+/tienda → <html data-theme="MODERNO">
+PATCH appTheme=COMPACTO  → /panel data-theme="COMPACTO" · nav: Resumen · Pedidos · Cotizaciones…
+/panel/ajustes           → 3 tarjetas (Clásica/Moderna/Compacta) y «Usar este tema»
+restaurado a CLASICO para la demo
+```
+
+
+
 ## 4. Decisiones tomadas
 
 1. **Códigos de error promovidos al contrato**: los 5 códigos de F1 se agregaron a

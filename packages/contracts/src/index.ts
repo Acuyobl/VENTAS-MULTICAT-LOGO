@@ -11,6 +11,7 @@ export * from './storefront/schemas';
 export * from './payments/schemas';
 export * from './payments/refunds';
 export * from './organizations/settings';
+export * from './organizations/theme';
 export * from './reports/schemas';
 export * from './ai/schemas';
 export * from './ai/usage';

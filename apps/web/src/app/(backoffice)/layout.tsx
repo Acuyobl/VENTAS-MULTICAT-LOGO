@@ -4,12 +4,14 @@ import { getSession } from '@/lib/session';
 import { initials } from '@/lib/format';
 import { BackofficeNav } from '@/components/backoffice-nav';
 import { LogoutButton } from '@/components/logout-button';
+import { getPublicAppSettings } from '@/lib/theme';
 
 export const dynamic = 'force-dynamic';
 
 export default async function BackofficeLayout({ children }: { children: ReactNode }) {
   const user = await getSession();
   if (!user) redirect('/login');
+  const { appTheme } = await getPublicAppSettings();
 
   const today = new Intl.DateTimeFormat('es-CR', {
     weekday: 'long',
@@ -27,7 +29,7 @@ export default async function BackofficeLayout({ children }: { children: ReactNo
           <small>Backoffice · {user.organizationSlug}</small>
         </div>
 
-        <BackofficeNav />
+        <BackofficeNav theme={appTheme} />
 
         <div className="bo__rail-foot">
           <div className="bo__user">

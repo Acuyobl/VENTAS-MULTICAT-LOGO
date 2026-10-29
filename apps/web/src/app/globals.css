@@ -2619,3 +2619,282 @@ svg {
     grid-template-columns: 1fr;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Temas visuales de la aplicación (Ajustes)                          */
+/* ------------------------------------------------------------------ */
+
+html[data-theme='MODERNO'] {
+  --font-display: 'Archivo Variable', 'Segoe UI', sans-serif;
+  --font-body: 'Archivo Variable', 'Segoe UI', sans-serif;
+  --paper: #f7faf7;
+  --paper-2: #ffffff;
+  --paper-3: #e7efe9;
+  --forest: #0f3d36;
+  --forest-2: #15594c;
+  --coral: #0e7490;
+  --coral-dark: #0b5f75;
+  --mango: #eab308;
+  --line: #d8e0da;
+  --line-strong: #b7c4bb;
+  --ink: #12201b;
+  --ink-soft: #3e4f47;
+  --ink-faint: #6b7a72;
+  --shadow-small: none;
+  font-size: 17px;
+}
+
+html[data-theme='MODERNO'] .bo {
+  grid-template-columns: 1fr;
+}
+
+html[data-theme='MODERNO'] .bo__rail {
+  position: static;
+  min-height: auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.5rem 1rem;
+}
+
+html[data-theme='MODERNO'] .bo__brand {
+  padding: 0;
+  border: 0;
+}
+
+html[data-theme='MODERNO'] .bo__brand small {
+  display: none;
+}
+
+html[data-theme='MODERNO'] .bo__nav {
+  display: flex;
+  margin: 0 0 0 1rem;
+  gap: 0.1rem;
+  overflow-x: auto;
+}
+
+html[data-theme='MODERNO'] .bo__nav a {
+  border-left: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0.42rem 0.55rem;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+html[data-theme='MODERNO'] .bo__nav a:hover,
+html[data-theme='MODERNO'] .bo__nav a[data-active='true'] {
+  border-color: var(--mango);
+  background: rgba(251, 247, 237, 0.06);
+}
+
+html[data-theme='MODERNO'] .bo__nav-index {
+  display: none;
+}
+
+html[data-theme='MODERNO'] .bo__rail-foot {
+  margin: 0 0 0 auto;
+  padding: 0;
+  border: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+html[data-theme='MODERNO'] .bo__user-meta {
+  display: none;
+}
+
+html[data-theme='MODERNO'] .bo__content {
+  padding: 1.6rem 2rem;
+}
+
+html[data-theme='MODERNO'] .display {
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
+html[data-theme='MODERNO'] .product-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+html[data-theme='MODERNO'] .store__main {
+  max-width: 1180px;
+}
+
+html[data-theme='COMPACTO'] {
+  --font-display: 'IBM Plex Mono', 'Courier New', monospace;
+  --paper: #f1ede3;
+  --paper-2: #e9e4d8;
+  --paper-3: #dfd8c7;
+  --line: #cec5b0;
+  --line-strong: #b3a88f;
+  font-size: 14.5px;
+}
+
+html[data-theme='COMPACTO'] .bo {
+  grid-template-columns: 13rem minmax(0, 1fr);
+}
+
+html[data-theme='COMPACTO'] .bo__rail {
+  padding: 1rem 0.7rem;
+}
+
+html[data-theme='COMPACTO'] .bo__nav {
+  margin-top: 0.7rem;
+  gap: 0.1rem;
+}
+
+html[data-theme='COMPACTO'] .bo__nav a {
+  padding: 0.38rem 0.4rem;
+  gap: 0.45rem;
+  font-size: 0.76rem;
+}
+
+html[data-theme='COMPACTO'] .bo__nav-index {
+  display: none;
+}
+
+html[data-theme='COMPACTO'] .bo__content {
+  padding: 1rem 1.2rem;
+}
+
+html[data-theme='COMPACTO'] .display {
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  letter-spacing: -0.01em;
+}
+
+html[data-theme='COMPACTO'] .panel__head {
+  padding: 0.6rem 0.8rem;
+}
+
+html[data-theme='COMPACTO'] .panel__body {
+  padding: 0.8rem;
+}
+
+html[data-theme='COMPACTO'] .panel__foot {
+  padding: 0.5rem 0.8rem;
+}
+
+html[data-theme='COMPACTO'] .table th,
+html[data-theme='COMPACTO'] .table td {
+  padding: 0.45rem 0.6rem;
+}
+
+html[data-theme='COMPACTO'] .product-card {
+  min-height: 16rem;
+}
+
+html[data-theme='COMPACTO'] .product-grid {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
+html[data-theme='COMPACTO'] .store__main {
+  max-width: 1080px;
+  padding-inline: 1rem;
+}
+
+/* Miniaturas del selector de temas */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1rem;
+}
+
+.theme-card {
+  display: grid;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.theme-card:hover {
+  transform: translateY(-2px);
+}
+
+.theme-card[data-active='true'] {
+  border-color: var(--coral);
+  box-shadow: 0 0 0 2px var(--coral);
+}
+
+.theme-card__preview {
+  position: relative;
+  display: block;
+  height: 8.5rem;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.theme-preview__rail {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 27%;
+  background: var(--forest);
+}
+
+.theme-preview__bar {
+  display: none;
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 22%;
+  background: var(--forest);
+}
+
+.theme-preview__title {
+  position: absolute;
+  left: 33%;
+  top: 32%;
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  color: var(--ink);
+}
+
+.theme-preview__lines {
+  position: absolute;
+  left: 33%;
+  right: 8%;
+  top: 66%;
+  display: grid;
+  gap: 4px;
+}
+
+.theme-preview__lines i {
+  display: block;
+  height: 5px;
+  background: var(--line-strong);
+  border-radius: 2px;
+}
+
+.theme-preview__lines i:nth-child(2) { width: 78%; }
+.theme-preview__lines i:nth-child(3) { width: 55%; }
+
+.theme-card__preview[data-preview='MODERNO'] .theme-preview__rail { display: none; }
+.theme-card__preview[data-preview='MODERNO'] .theme-preview__bar { display: block; }
+.theme-card__preview[data-preview='MODERNO'] .theme-preview__title {
+  left: 8%;
+  top: 34%;
+  font-family: 'Archivo Variable', sans-serif;
+  font-weight: 600;
+}
+.theme-card__preview[data-preview='MODERNO'] .theme-preview__lines { left: 8%; top: 64%; }
+
+.theme-card__preview[data-preview='COMPACTO'] .theme-preview__rail { width: 18%; }
+.theme-card__preview[data-preview='COMPACTO'] .theme-preview__title {
+  left: 24%;
+  top: 34%;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.2rem;
+}
+.theme-card__preview[data-preview='COMPACTO'] .theme-preview__lines { left: 24%; top: 60%; gap: 3px; }
+.theme-card__preview[data-preview='COMPACTO'] .theme-preview__lines i { height: 4px; }
+
+.theme-card__body {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.7rem 0.8rem;
+}

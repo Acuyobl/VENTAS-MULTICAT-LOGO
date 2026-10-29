@@ -137,6 +137,7 @@ model Organization {
   plan                  Plan         @default(FREE)
   allowSelfApproval     Boolean      @default(false)
   imageDesign           String       @default("CLASICA")
+  appTheme              String       @default("CLASICO")
   defaultCurrency       Currency     @default(CRC)
   timezone              String       @default("America/Costa_Rica")
   aiMonthlyQuotaTokens  Int          @default(2000000)

@@ -1,7 +1,28 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import { getPublicAppSettings } from '@/lib/theme';
 
-export default function PortalLayout({ children }: { children: ReactNode }) {
+const NAV_ITEMS = [
+  { href: '/tienda', label: 'Tienda' },
+  { href: '/mi-cuenta/pedidos', label: 'Mis pedidos' },
+  { href: '/mi-cuenta/chat', label: 'Chat' },
+  { href: '/mi-cuenta', label: 'Mi cuenta' },
+];
+
+function orderedNav(theme: string) {
+  if (theme === 'MODERNO') {
+    return [NAV_ITEMS[2], NAV_ITEMS[0], NAV_ITEMS[1], NAV_ITEMS[3]];
+  }
+  if (theme === 'COMPACTO') {
+    return [NAV_ITEMS[0], NAV_ITEMS[2], NAV_ITEMS[1], NAV_ITEMS[3]];
+  }
+  return NAV_ITEMS;
+}
+
+export default async function PortalLayout({ children }: { children: ReactNode }) {
+  const { appTheme } = await getPublicAppSettings();
+  const nav = orderedNav(appTheme);
+
   return (
     <div className="portal">
       <header className="portal__header">
@@ -9,10 +30,11 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
           Ventas<span>Catálogo</span>
         </Link>
         <nav className="store__nav">
-          <Link href="/tienda">Tienda</Link>
-          <Link href="/mi-cuenta/pedidos">Mis pedidos</Link>
-          <Link href="/mi-cuenta/chat">Chat</Link>
-          <Link href="/mi-cuenta">Mi cuenta</Link>
+          {nav.map((item) => (
+            <Link key={item.href} href={item.href}>
+              {item.label}
+            </Link>
+          ))}
         </nav>
       </header>
       <main className="portal__main">{children}</main>

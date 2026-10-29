@@ -3,7 +3,22 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
-## [0.2.0] — 2026-10-28
+## [0.2.1] — 2026-10-28
+
+### Añadido
+- **3 temas visuales de toda la app** seleccionables por el administrador en Ajustes:
+  - `CLASICA`: serif editorial, menú lateral numerado, espaciado amplio.
+  - `MODERNO`: sans más grande, **barra de navegación superior**, acento verde azulado, grilla densa.
+  - `COMPACTO`: títulos mono, rail angosto y alta densidad para operar rápido.
+- Los temas cambian **tipografía, tamaños, densidad, el shell de navegación y el orden de los menús**
+  en backoffice, tienda y portal.
+- `Organization.appTheme` + `GET /public/app-settings` (público) para aplicar el tema sin sesión;
+  selector con miniaturas en `/panel/ajustes` («Usar este tema»), auditado.
+
+### Pruebas
+- API: **299 unit** (54 archivos) y **143 e2e** (25 archivos). Web: 19 pruebas. CI con cobertura.
+
+
 
 ### Añadido
 - **PWA de la tienda**: manifest, service worker (network-first para navegación, cache-first para
