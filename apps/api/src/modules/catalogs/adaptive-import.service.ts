@@ -417,8 +417,20 @@ export class AdaptiveImportService {
         }
       }
     }
+    // El agente puede omitir `cost` aunque exista la columna: la heurística la
+    // conserva (y puede ser la misma columna que `price` en hojas de pedido).
+    if (!mapping.cost && heuristic.mapping.cost) {
+      mapping.cost = heuristic.mapping.cost;
+    }
     const extraFields = candidate.extraFields.filter((field) => !usedColumns.has(field.column));
     const warnings = [...candidate.warnings];
+    if (
+      mapping.price &&
+      mapping.price === mapping.cost &&
+      !warnings.some((warning) => warning.includes('costo como precio'))
+    ) {
+      warnings.push('No se detectó precio; se usó la columna de costo como precio de venta.');
+    }
     const missing = (['sku', 'name', 'price'] as const).filter((field) => !mapping[field]);
     if (missing.length > 0) {
       warnings.push(`El agente no mapeó: ${missing.join(', ')}.`);

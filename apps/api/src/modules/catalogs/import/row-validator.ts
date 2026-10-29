@@ -79,8 +79,9 @@ export function validateImportRows(
   rows.forEach((row, index) => {
     const rowNumber = index + 2;
     const rawData = { ...row };
-    const sku = cellText(row, mapping.sku);
     const name = collapseSpaces(cellText(row, mapping.name));
+    // Sin columna de SKU (hojas de pedido) se sintetiza uno estable por fila.
+    const sku = mapping.sku ? cellText(row, mapping.sku) : syntheticImportSku(name, rowNumber);
     let rowHasError = false;
 
     const addIssue = (code: ImportErrorCode, message: string): void => {
@@ -227,4 +228,16 @@ function nullableText(value: string): string | null {
 
 function collapseSpaces(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
+}
+
+/** SKU estable para archivos sin columna de código (hojas de pedido). */
+export function syntheticImportSku(name: string, rowNumber: number): string {
+  const slug = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 24);
+  return `IMP-${slug || 'PRODUCTO'}-${String(rowNumber).padStart(4, '0')}`;
 }

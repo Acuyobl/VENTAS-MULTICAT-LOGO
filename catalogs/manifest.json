@@ -40,6 +40,16 @@
       "currency": "USD",
       "products": 8,
       "images": 8
+    },
+    {
+      "slug": "sublimania-cr",
+      "name": "Sublimania CR",
+      "description": "Catálogo convertido de la hoja de pedido real de SUBLIMANIA CR: camisas personalizadas con fotos incrustadas como data URI.",
+      "file": "05-sublimania-cr.csv",
+      "format": "csv-data-uri",
+      "currency": "CRC",
+      "products": 3,
+      "images": 3
     }
   ]
 }

@@ -177,13 +177,61 @@ export function buildHeuristicProposal(input: {
       if (!wanted) continue;
       const header = findHeader(input.headers, wanted);
       if (!header) continue;
-      // La base (plantilla) no debe dejar dos campos apuntando a la misma columna.
-      const duplicate = IMPORT_FIELDS.some((other) => other !== field && mapping[other] === header);
+      // La base (plantilla) no debe dejar dos campos apuntando a la misma columna,
+      // salvo el caso precio/costo compartido (hojas que solo traen COSTO).
+      const sharedCostPrice =
+        (field === 'cost' && mapping.price === header) ||
+        (field === 'price' && mapping.cost === header);
+      const duplicate =
+        !sharedCostPrice &&
+        IMPORT_FIELDS.some((other) => other !== field && mapping[other] === header);
       if (!duplicate) {
         mapping[field] = header;
         usedColumns.add(header);
       }
     }
+  }
+
+  const extraWarnings: string[] = [];
+
+  // Fallback de nombre: columnas de producto conocidas o el TEXT más "largo"
+  // que no sea de persona/contacto/fecha. Evita perder filas de hojas de pedido.
+  if (!mapping.name) {
+    const excluded =
+      /(cliente|telefono|correo|email|direccion|fecha|estado|urgencia|total|nota|observacion|pedido|orden)/;
+    const priority =
+      /(producto|articulo|descripcion|nombre|item|prenda|camisa|playera|blusa|vestido|modelo|concepto)/;
+    const candidates = input.columns.filter((column) => {
+      if (usedColumns.has(column.header)) return false;
+      if (column.type !== 'TEXT') return false;
+      if (excluded.test(column.normalized)) return false;
+      if (isNoiseColumn(column.header, column.emptyRatio)) return false;
+      return true;
+    });
+    const averageLength = (samples: readonly string[]): number =>
+      samples.length === 0
+        ? 0
+        : samples.reduce((sum, sample) => sum + sample.length, 0) / samples.length;
+    candidates.sort((a, b) => {
+      const priorityA = priority.test(a.normalized) ? 1 : 0;
+      const priorityB = priority.test(b.normalized) ? 1 : 0;
+      if (priorityA !== priorityB) return priorityB - priorityA;
+      return averageLength(b.samples) - averageLength(a.samples);
+    });
+    const chosen = candidates.find((column) => averageLength(column.samples) >= 5);
+    if (chosen) {
+      mapping.name = chosen.header;
+      usedColumns.add(chosen.header);
+      extraWarnings.push(
+        `No se detectó una columna de nombre; se usó "${chosen.header}" como nombre de producto.`,
+      );
+    }
+  }
+
+  // Precio: si el archivo solo trae costo, se usa como precio de venta.
+  if (!mapping.price && mapping.cost) {
+    mapping.price = mapping.cost;
+    extraWarnings.push('No se detectó precio; se usó la columna de costo como precio de venta.');
   }
 
   const extraFields: ExtraFieldProposal[] = [];
@@ -222,7 +270,7 @@ export function buildHeuristicProposal(input: {
     usedColumns.add(header);
   }
 
-  const warnings: string[] = [];
+  const warnings: string[] = [...extraWarnings];
   if (!mapping.sku) warnings.push('No se detectó una columna de SKU/código.');
   if (!mapping.name) warnings.push('No se detectó una columna de nombre/artículo.');
   if (!mapping.price) warnings.push('No se detectó una columna de precio.');

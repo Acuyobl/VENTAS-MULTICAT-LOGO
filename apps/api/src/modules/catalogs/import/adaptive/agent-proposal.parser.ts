@@ -50,7 +50,11 @@ export function parseAgentProposal(
     const value = rawMapping[field];
     if (typeof value !== 'string' || value.trim().length === 0) continue;
     const header = findHeader(headers, value);
-    if (!header || usedColumns.has(header)) continue;
+    // Precio y costo pueden compartir la misma columna (archivos solo con COSTO).
+    const sharedCostPrice =
+      (field === 'cost' && mapping.price === header) ||
+      (field === 'price' && mapping.cost === header);
+    if (!header || (usedColumns.has(header) && !sharedCostPrice)) continue;
     mapping[field as ImportField] = header;
     usedColumns.add(header);
   }

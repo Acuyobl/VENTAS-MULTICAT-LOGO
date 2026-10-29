@@ -24,7 +24,22 @@ export type ResolvedMapping = Record<ImportField, string | undefined>;
  */
 export const HEADER_SYNONYMS: Record<ImportField, readonly string[]> = {
   sku: ['sku', 'codigo', 'codigo producto', 'ref', 'referencia'],
-  name: ['nombre', 'producto', 'articulo', 'descripcion corta', 'titulo'],
+  name: [
+    'nombre',
+    'producto',
+    'articulo',
+    'descripcion corta',
+    'titulo',
+    'camisa',
+    'camisas',
+    'playera',
+    'blusa',
+    'vestido',
+    'prenda',
+    'prendas',
+    'item',
+    'concepto',
+  ],
   description: ['descripcion', 'detalle'],
   category: ['categoria', 'rubro', 'linea'],
   brand: ['marca', 'fabricante'],
@@ -102,6 +117,9 @@ export function resolveHeaderMapping(
       }
     }
   }
+
+  // Archivos de pedidos suelen traer COSTO pero no PRECIO: se usa costo como venta.
+  if (!mapping.price && mapping.cost) mapping.price = mapping.cost;
 
   return { mapping, unmatchedColumns };
 }

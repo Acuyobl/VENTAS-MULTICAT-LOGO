@@ -659,6 +659,36 @@ errores de red con backoff (1 s / 3 s, `Retry-After` ≤ 10 s), limita a 3 desca
 
 
 
+## 3.27 Catálogo real de SUBLIMANIA CR (hoja de pedido)
+
+El archivo real `Pedido_27-10-2026_SUBLIMANIA_CR.xlsx` **no era un catálogo tabular**: es una hoja
+de pedidos (una fila por camisa, columnas `CLIENTE/TALLA/CAMISA/TELA/TIPO/CUELLO/GENERO/CANTIDAD/
+DETALLE/MANGA/COSTO/URGENCIA/ESTADO`) y las fotos están **incrustadas** en la hoja «Imagenes».
+El importador la rechazaba en la práctica: no mapeaba `CAMISA` como nombre ni encontraba precio.
+
+Cambios para que se pueda cargar:
+
+| Mejora | Detalle |
+|---|---|
+| Nombre | `HEADER_SYNONYMS.name` reconoce `camisa(s)`, `playera`, `blusa`, `vestido`, `prenda(s)`, `item`, `concepto`; si no hay, se elige la mejor columna TEXT (excluyendo cliente/contacto/fecha/estado) con warning |
+| Precio | Si no hay precio y sí costo, se usa la misma columna como precio y costo, con warning explícito |
+| SKU | Si el archivo no trae código se sintetiza `IMP-<NOMBRE>-<NNNN>` |
+| Imágenes | Se acepta `data:image/(jpeg|png|webp);base64,…` (≤5 MB) en la columna `imagen`, se decodifica y sube a MinIO igual que una URL |
+
+Conversión y carga:
+
+- `tools/convert-sublimania.py` lee el pedido, compone descripciones, calcula **precio sugerido =
+  costo × 1.5**, extrae las 3 fotos incrustadas de «Imagenes» y genera
+  `catalogs/05-sublimania-cr.csv` con data URIs.
+- Cargado por API como **«Sublimania CR»**: **3 productos, 3/3 imágenes, 0 cuarentena**, atributos
+  `talla, tela, tipo, cuello, genero, manga, detalle, urgencia`; versión activa.
+- Tienda pública: `/c/sublimania-cr` → 200 con las fotos y las 3 camisas.
+- El XLSX original ya se analiza bien (nombre `CAMISA`, precio/costo `COSTO`, stock `CANTIDAD`); sus
+  fotos están en otra hoja, por eso el catálogo cargado usa el CSV convertido (las hojas separadas
+  no se cruzan automáticamente todavía).
+
+
+
 ## 4. Decisiones tomadas
 
 1. **Códigos de error promovidos al contrato**: los 5 códigos de F1 se agregaron a

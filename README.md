@@ -27,10 +27,11 @@ administradores y colaboradores, y tienda/portal para los clientes.
 > codificaciones (UTF-8/Windows-1252) con guardia contra texto corrupto**, **PWA de la tienda,
 > chat del cliente en el portal, borrado de catálogo, reporte financiero en PDF y E2E del DoD de
 > F1**, **3 temas visuales de toda la app configurables en Ajustes (tipografía, tamaños, densidad,
-> shell y orden de menús)**, **4 catálogos de ejemplo en `catalogs/` en formatos distintos y pantalla
-> “Cargar catálogo” con reemplazo/fusión y borrado confirmado**, con más de 480 pruebas automáticas.
-> Pendiente: Drive, variantes, PDF/OCR, conciliación programada, campañas de WhatsApp, publicación
-> real en redes, cuota de IA y credenciales reales. Detalle en
+> shell y orden de menús)**, **5 catálogos de ejemplo en `catalogs/` en formatos distintos (incluida
+> una hoja de pedido real con fotos incrustadas) y pantalla “Cargar catálogo” con reemplazo/fusión y
+> borrado confirmado**, con más de 490 pruebas automáticas. Pendiente: Drive, variantes, PDF/OCR,
+> conciliación programada, campañas de WhatsApp, publicación real en redes, cuota de IA y
+> credenciales reales. Detalle en
 > [`docs/07-ESTADO-IMPLEMENTACION.md`](docs/07-ESTADO-IMPLEMENTACION.md),
 > [`docs/08-ESTADO-F1.md`](docs/08-ESTADO-F1.md) e hitos en
 > [`CHANGELOG.md`](CHANGELOG.md).

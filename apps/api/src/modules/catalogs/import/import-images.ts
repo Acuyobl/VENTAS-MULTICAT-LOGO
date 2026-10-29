@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { sha256 } from '../../../common/utils/crypto';
 import { extensionForContentType, productImageKey } from '../../storage/image-utils';
 import type { ImportProductRow, ImportRowIssueData } from './row-validator';
+import { decodeDataUriImage, isDataUriImage } from './image-source';
 
 /** Producto ya validado, con id asignado y su imagen resuelta a una key de MinIO (o null). */
 export interface ResolvedImportProduct extends Omit<ImportProductRow, 'imageRef' | 'rawData'> {
@@ -74,9 +75,11 @@ export async function resolveImportImages(
     const productId = randomUUID();
     let imageKey: string | null = null;
 
-    if (imageRef && isHttpImageUrl(imageRef)) {
+    if (imageRef && (isHttpImageUrl(imageRef) || isDataUriImage(imageRef))) {
       try {
-        const { buffer, contentType } = await deps.download(imageRef);
+        const { buffer, contentType } = isDataUriImage(imageRef)
+          ? decodeDataUriImage(imageRef)
+          : await deps.download(imageRef);
         const ext = extensionForContentType(contentType);
         if (!ext) throw new Error(`content_type_no_soportado:${contentType}`);
 

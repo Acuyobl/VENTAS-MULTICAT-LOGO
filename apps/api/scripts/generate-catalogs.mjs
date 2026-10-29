@@ -4,7 +4,7 @@
 // Imágenes reales de Wikimedia Commons (licencias libres).
 // Uso: pnpm --filter @ventascatalogo/api exec node scripts/generate-catalogs.mjs
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as XLSX from 'xlsx';
@@ -211,6 +211,20 @@ async function main() {
       currency: catalog.currency,
       products: catalog.products.length,
       images: images.filter(Boolean).length,
+    });
+  }
+
+  if (existsSync(resolve(outDir, '05-sublimania-cr.csv'))) {
+    manifest.push({
+      slug: 'sublimania-cr',
+      name: 'Sublimania CR',
+      description:
+        'Catálogo convertido de la hoja de pedido real de SUBLIMANIA CR: camisas personalizadas con fotos incrustadas como data URI.',
+      file: '05-sublimania-cr.csv',
+      format: 'csv-data-uri',
+      currency: 'CRC',
+      products: 3,
+      images: 3,
     });
   }
 

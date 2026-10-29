@@ -7,10 +7,10 @@ producto (subida a MinIO, URLs firmadas e importación con imágenes), ventas
 (clientes, cotizaciones con PDF y conversión a pedido), la cara B (checkout
 invitado con token público, reclamo de cuenta y portal de pedidos).
 
-- **Unit:** 313 tests en 56 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
+- **Unit:** 325 tests en 58 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
   infraestructura: los servicios externos (ioredis, MinIO) se sustituyen por
   dobles.
-- **E2E:** 145 tests en 26 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
+- **E2E:** 147 tests en 27 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
   una instancia real de Nest (`Test.createTestingModule({ imports: [AppModule] })`)
   en el mismo proceso. No abren puerto fijo ni dependen del `pnpm dev` de la API.
 
@@ -70,6 +70,8 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `src/modules/auth/dev-auth.service.spec.ts`                          | flag apagado → `404 NOT_FOUND` sin tocar Prisma/tokens; flag encendido + secreto → TOTP de 6 dígitos con `expiresInSeconds` 1-30; enrolamiento (`mfaEnabled=false` + `purpose=mfa:enroll`) permitido; sin secreto → `409 AUTH_MFA_INVALID` (`mfa_not_enrolled`); `mfaToken` inválido → `401 AUTH_MFA_REQUIRED`; usuario inexistente → 401 | Tarea 10 (dev MFA)      |
 | `src/modules/storage/image-utils.spec.ts`                            | content-types permitidos (JPEG/PNG/WebP/SVG), normalización con parámetros, extensión canónica, `productImageKey` (`products/{catalog}/{version}/{productId}-{checksum12}.{ext}`) y validación de tamaño (≤5 MB, vacío, tipo inválido)                                                                                                    | Imágenes de producto    |
 | `src/modules/catalogs/import/image-downloader.spec.ts`               | descarga con timeout de 8 s, `http_error`, `unsupported_type`, `too_large` por content-length, `timeout` y `network`                                                                                                                                                                                                                      | Imágenes de importación |
+| `src/modules/catalogs/import/image-source.spec.ts`                   | detecta y decodifica data URIs `image/jpeg                                                                                                                                                                                                                                                                                                | png                     | webp` en base64 (con saltos de línea), rechaza mime no permitido, base64 inválido/vacío y >5 MB | Hojas de pedido |
+| `src/modules/catalogs/import/adaptive/order-sheet.spec.ts`           | hoja real (CLIENTE/TALLA/CAMISA/…/COSTO): propone `name=CAMISA`, `price=cost=COSTO` con warning, fallback de nombre nunca elige CLIENTE, cabeceras normales intactas y `resolveImportImages` sube data URI / deja warning si falla                                                                                                        | Hojas de pedido         |
 | `src/modules/catalogs/import/import-images.spec.ts`                  | URL válida → descarga + subida + key con id de producto; fallo de descarga/subida → warning `IMAGE_DOWNLOAD_FAILED` sin bloquear la fila; valor relativo → `IMAGE_UNRESOLVED` sin key; sin imagen → sin warning; ids únicos por producto                                                                                                  | Imágenes de importación |
 | `src/modules/sales/numbering.spec.ts`                                | formato `COT-YYYY-NNNNNN`/`PED-YYYY-NNNNNN`, sin truncar secuencias, rechazo de año/secuencia inválidos, parseo, año comercial en zona Costa Rica y claves de advisory lock                                                                                                                                                               | Ventas F1 (numeración)  |
 | `src/modules/sales/quote-calculator.spec.ts`                         | totales con `calculateTotals` (₡11.300×2 → 20.000/2.600/22.600), descuento por línea antes del IVA, IVA agregado, `PRODUCT_OUT_OF_STOCK` con `available`, `PRODUCT_INACTIVE`, `PRODUCT_NOT_IN_ACTIVE_VERSION`, backorder y descuento mayor que la línea                                                                                   | Ventas F1 (totales)     |
@@ -145,6 +147,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `test/full-flow.e2e-spec.ts`                  | DoD F1 en una org efímera: catálogo → importar CSV (2 productos) → activar versión → cliente → cotización (2 unidades) → `send` con PDF `%PDF-` → `accept` → `convert` a pedido `PED-…` con totales iguales → `fulfill`; limpieza completa en afterAll                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | DoD F1 completo                  |
 | `test/app-theme.e2e-spec.ts`                  | `GET/PATCH /organizations/settings` con `appTheme` (`CLASICO` default → `MODERNO`), PATCH combinado, `NEON` → 422, audit `organization.settings_updated`; `GET /public/app-settings` público con `Cache-Control`, resuelve por `?orgSlug=` (tema de otra org), 404 si no existe y 403 sin `settings:manage`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Tema visual de la app            |
 | `test/content-variation.e2e-spec.ts`          | misma foto/producto con 3 combinaciones (Instagram/CERCANO/VENTAS, TikTok/DIVERTIDO/LANZAMIENTO, WhatsApp/PREMIUM/RECORDATORIO): 3 SVG con hashes distintos, `data-platform/tone/goal` correctos, insignias (OFERTA/NUEVO/ÚLTIMOS DÍAS), foto embebida y título/CTA/body distintos; regenerar con `design=EDITORIAL` cambia el SVG manteniendo plataforma/tono/objetivo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Contenido variado                |
+| `test/order-sheet-import.e2e-spec.ts`         | CSV con las 13 columnas reales de Sublimania (3 camisas, una con `Imagen` data URI PNG) y solo preview automático: mapping `CAMISA`→name, `COSTO`→price/cost, 3 productos con 0 cuarentena, SKU sintético `IMP-…`, precios > 0, atributos TALLA/TELA/TIPO, 1 imagen data URI subida a MinIO, activación y catálogo público con 3 productos                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Hojas de pedido                  |
 
 Criterio §4.1.1 (`lint` + `typecheck` + `test` en verde) se comprueba con
 `pnpm lint`, `pnpm typecheck` y los dos comandos de test de este README. El
@@ -258,6 +261,31 @@ unitarios de `HealthService`.
   `AUTH_WRONG_AUDIENCE`.
 - El checkout reutiliza el patrón de snapshots de ventas y la secuencia
   `PED-YYYY-NNNNNN`; los warnings de imágenes no aplican aquí.
+
+## Hallazgos de hojas de pedido e imágenes data URI (F3)
+
+- Sinónimos de producto en `HEADER_SYNONYMS.name`: `camisa(s)`, `playera`,
+  `blusa`, `vestido`, `prenda(s)`, `item`, `concepto` (además de nombre,
+  producto, artículo, título). Hojas como `Pedido_27-10-2026_SUBLIMANIA_CR.xlsx`
+  ahora mapean `CAMISA` → `name`.
+- Fallback de nombre en `buildHeuristicProposal`: si no hay columna de nombre,
+  elige la mejor columna `TEXT` no usada excluyendo cliente/teléfono/correo/
+  dirección/fecha/estado/urgencia/total/notas, priorizando cabeceras de producto y
+  luego la mayor longitud media de samples (≥ 5 caracteres); agrega warning
+  explicando la elección.
+- Precio: si no hay columna de precio y sí de costo, se usa la misma columna de
+  costo como `price` y `cost`, con el warning «No se detectó precio; se usó la
+  columna de costo como precio de venta.». Se permite que `price` y `cost`
+  compartan columna en `resolveHeaderMapping`, el parser del agente y el merge
+  agente↔heurística.
+- SKU: si el archivo no trae columna de código (típico en hojas de pedido), el
+  validador sintetiza un SKU estable por fila `IMP-<NOMBRE>-<NNNN>`; si la
+  columna existe pero la celda está vacía sigue siendo error `MISSING_SKU`.
+- Imágenes data URI: `image-source.ts` (`isDataUriImage`, `decodeDataUriImage`)
+  acepta `data:image/(jpeg|png|webp);base64,…` hasta 5 MB decodificados;
+  `resolveImportImages` las decodifica y sube a MinIO con la misma key/extensión
+  que las URLs (sin `fetch`), y un data URI inválido queda como warning
+  `IMAGE_DOWNLOAD_FAILED` sin mandar la fila a cuarentena.
 
 ## Hallazgos de descarga de imágenes del importador (F3)
 

@@ -3,7 +3,20 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
-## [0.2.4] — 2026-10-28
+## [0.2.5] — 2026-10-28
+
+### Añadido
+- **Catálogo real de SUBLIMANIA CR**: el XLSX era una hoja de pedidos con fotos incrustadas.
+  `tools/convert-sublimania.py` la convierte en `catalogs/05-sublimania-cr.csv` (3 camisas, fotos
+  como data URI, precio sugerido = costo × 1.5) y quedó cargado/activo en `/c/sublimania-cr`.
+- El importador ahora **reconoce hojas de pedido**: `CAMISA`/`PLAYERA`/`BLUSA`/… como nombre,
+  fallback de nombre por columna TEXT, precio a partir del costo si no hay precio, SKU sintetizado
+  y **imágenes data URI** (base64) además de URLs.
+
+### Pruebas
+- API: **325 unit** (58 archivos) y **147 e2e** (27 archivos). Web: 19 pruebas. CI con cobertura.
+
+
 
 ### Corregido
 - **Productos por catálogo**: al cambiar de catálogo en `/panel/productos?catalogo=…`, el listado
