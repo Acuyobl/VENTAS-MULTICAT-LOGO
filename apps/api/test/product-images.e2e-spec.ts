@@ -344,8 +344,18 @@ describe('Imágenes de producto: subida, URLs firmadas, público e importación 
         `^products/${importCatalog.catalogId}/${importVersionId}/[0-9a-f-]{36}-[a-f0-9]{12}\\.png$`,
       ),
     );
-    expect(bySku.get('IMG-BROKEN-1')).toBeNull();
-    expect(bySku.get('IMG-REL-1')).toBeNull();
+    // Fallback activo: la URL rota y la ruta relativa generan una maqueta SVG para que el
+    // producto nunca quede sin imagen visible en la tienda ni en el backoffice.
+    expect(bySku.get('IMG-BROKEN-1')).toMatch(
+      new RegExp(
+        `^products/${importCatalog.catalogId}/${importVersionId}/[0-9a-f-]{36}-[a-f0-9]{12}\\.svg$`,
+      ),
+    );
+    expect(bySku.get('IMG-REL-1')).toMatch(
+      new RegExp(
+        `^products/${importCatalog.catalogId}/${importVersionId}/[0-9a-f-]{36}-[a-f0-9]{12}\\.svg$`,
+      ),
+    );
 
     // El producto con imagen accesible se sirve con URL firmada y descarga bien.
     const list = await staffAgent

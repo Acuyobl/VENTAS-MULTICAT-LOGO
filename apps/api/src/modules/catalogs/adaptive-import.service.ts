@@ -132,6 +132,9 @@ export class AdaptiveImportService {
       baseExtraFields,
       presetName: template?.name,
     });
+    if (parsed.sheetSelection) {
+      heuristic.warnings.unshift(`Pestañas: ${parsed.sheetSelection}`);
+    }
     let proposal: MappingProposal = {
       ...heuristic,
       agent: null,

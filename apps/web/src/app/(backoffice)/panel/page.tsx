@@ -41,8 +41,8 @@ export default async function PanelPage() {
           </h1>
           <p>
             Excel, PDF, foto o WhatsApp: el agente lo convierte en un catálogo vendible, publicable
-            y cobrable — sin que toques una columna. Hoy entran Excel y CSV; PDF, foto y WhatsApp
-            vienen en camino.
+            y cobrable — sin que toques una columna. Hoy entran Excel, CSV, PDF (con texto), JSON,
+            TSV y TXT; foto y WhatsApp vienen en camino.
           </p>
         </div>
         <div className="page-head__aside">
@@ -53,16 +53,22 @@ export default async function PanelPage() {
 
       <section className="ingest-grid" aria-label="Formas de cargar un catálogo">
         <Link className="ingest-card ingest-card--ready" href="/panel/catalogos/importar">
-          <span className="eyebrow">Excel / CSV</span>
+          <span className="eyebrow">Excel / CSV / PDF / JSON</span>
           <strong>Subilo y listo</strong>
-          <p>CSV, XLSX y hojas de pedido. El agente propone mapeo, campos extra y precio.</p>
+          <p>
+            CSV, XLSX, PDF con texto, JSON, TSV y TXT, incluidas hojas de pedido. El agente propone
+            mapeo, campos extra y precio.
+          </p>
           <span className="badge badge--ok">Disponible</span>
         </Link>
-        <article className="ingest-card">
+        <article className="ingest-card ingest-card--ready">
           <span className="eyebrow">PDF</span>
           <strong>Factura o tabla</strong>
-          <p>Extracción de tablas con IA para listas de precios y catálogos impresos.</p>
-          <span className="badge">En camino</span>
+          <p>
+            Extrae el texto del PDF y arma la tabla automáticamente. Los PDF escaneados (solo
+            imagen) necesitan OCR: en camino.
+          </p>
+          <span className="badge badge--ok">Disponible (texto)</span>
         </article>
         <article className="ingest-card">
           <span className="eyebrow">Foto</span>

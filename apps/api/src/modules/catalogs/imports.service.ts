@@ -34,9 +34,22 @@ import { ImportTemplatesRepository } from './import-templates.repository';
 
 export const MAX_IMPORT_FILE_BYTES = 10 * 1024 * 1024;
 
+export const BLOCKED_EXTENSIONS = new Set(['exe', 'dll', 'bin', 'zip', 'tar', 'gz', 'iso', 'so']);
+
 const ACCEPTED_EXTENSIONS: Record<string, ImportFileExtension> = {
   csv: 'csv',
+  tsv: 'tsv',
+  tab: 'tsv',
   xlsx: 'xlsx',
+  xlsm: 'xlsx',
+  xlsb: 'xlsx',
+  xls: 'xls',
+  ods: 'ods',
+  txt: 'txt',
+  text: 'txt',
+  json: 'json',
+  pdf: 'pdf',
+  prn: 'txt',
 };
 
 export interface ImportFileInput {
@@ -86,21 +99,20 @@ export function parseImportOptions(body: Record<string, unknown>): ImportOptions
   return parsed.data;
 }
 
-/** Resuelve la extensión aceptada (`.csv`/`.xlsx`) o lanza `UNSUPPORTED_FILE_TYPE`. */
+/** Resuelve la extensión del archivo para importación universal o rechaza ejecutables. */
 export function resolveImportExtension(originalName: string | undefined): ImportFileExtension {
   const name = (originalName ?? '').toLowerCase();
   const dot = name.lastIndexOf('.');
   const extension = dot === -1 ? '' : name.slice(dot + 1);
-  const resolved = ACCEPTED_EXTENSIONS[extension];
-  if (!resolved) {
+  if (BLOCKED_EXTENSIONS.has(extension)) {
     throw apiException(
       'UNSUPPORTED_FILE_TYPE',
       400,
       { extension, accepted: Object.keys(ACCEPTED_EXTENSIONS) },
-      'Formato no soportado: subí un archivo .csv o .xlsx.',
+      'Formato no soportado: los archivos ejecutables o comprimidos no son válidos como catálogo.',
     );
   }
-  return resolved;
+  return ACCEPTED_EXTENSIONS[extension] ?? 'unknown';
 }
 
 export interface ImportResultIssue {
@@ -270,6 +282,7 @@ export class ImportsService {
       catalogVersionId: versionId,
       download: downloadImage,
       upload: (key, buffer, contentType) => this.storage.putObject(key, buffer, contentType),
+      generateMockupFallback: true,
     });
     const issues = [...validation.issues, ...images.warnings];
 
@@ -432,12 +445,20 @@ export class ImportsService {
     buffer: Buffer,
   ): Promise<string | null> {
     const objectKey = `imports/${catalogId}/${checksum}.${extension}`;
+    let contentType = 'application/octet-stream';
+    if (extension === 'csv' || extension === 'tsv' || extension === 'txt') {
+      contentType = 'text/csv; charset=utf-8';
+    } else if (extension === 'xlsx' || extension === 'xls' || extension === 'ods') {
+      contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    } else if (extension === 'json') {
+      contentType = 'application/json';
+    } else if (extension === 'pdf') {
+      contentType = 'application/pdf';
+    }
+
     try {
       await this.storage.client.putObject(this.docsBucket, objectKey, buffer, buffer.length, {
-        'Content-Type':
-          extension === 'csv'
-            ? 'text/csv; charset=utf-8'
-            : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Type': contentType,
       });
       return objectKey;
     } catch (error) {

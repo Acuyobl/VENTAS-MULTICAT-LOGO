@@ -25,9 +25,7 @@ export function SettingsForm({ initial, canManage }: SettingsFormProps) {
         body: JSON.stringify({ allowSelfApproval }),
       });
       const payload = (await response.json().catch(() => null)) as
-        | OrgSettings
-        | { message?: string }
-        | null;
+        OrgSettings | { message?: string } | null;
       if (!response.ok) {
         throw new Error(
           (payload as { message?: string } | null)?.message ?? 'No pudimos guardar los ajustes.',
@@ -63,14 +61,18 @@ export function SettingsForm({ initial, canManage }: SettingsFormProps) {
           <span className="stack" style={{ gap: '0.2rem' }}>
             <strong>Permitir que la misma persona solicite y apruebe un reembolso</strong>
             <span className="mono faint" style={{ fontSize: '0.72rem' }}>
-              Apagado (recomendado): quien solicita no puede aprobar. Encendido: el mismo usuario puede
-              aprobar su solicitud, pero debe confirmarlo de forma explícita y queda auditado como
-              «autoaprobación».
+              Apagado (recomendado): quien solicita no puede aprobar. Encendido: el mismo usuario
+              puede aprobar su solicitud, pero debe confirmarlo de forma explícita y queda auditado
+              como «autoaprobación».
             </span>
           </span>
         </label>
 
-        {error ? <div className="alert" style={{ marginTop: '0.8rem' }}>{error}</div> : null}
+        {error ? (
+          <div className="alert" style={{ marginTop: '0.8rem' }}>
+            {error}
+          </div>
+        ) : null}
         {saved ? (
           <div className="alert alert--ok" style={{ marginTop: '0.8rem' }}>
             Ajustes guardados.

@@ -5,6 +5,7 @@ import { getSession } from '@/lib/session';
 import { formatDate } from '@/lib/format';
 import type { CatalogSummary } from '@/lib/types';
 import { DeleteCatalogButton } from '@/components/backoffice/delete-catalog-button';
+import { RenameCatalogButton } from '@/components/backoffice/rename-catalog-button';
 
 export const metadata: Metadata = {
   title: 'Catálogos',
@@ -58,10 +59,11 @@ export default async function CatalogsPage() {
                   <span>
                     <span className="catalog-row__name">{catalog.name}</span>
                     <span className="catalog-row__meta" style={{ display: 'block' }}>
-                      /{catalog.slug} · v{catalog.activeVersionNumber ?? '—'} ·{' '}
+                      /{catalog.slug} · v{catalog.activeVersionNumber ?? '—'}{' '}
+                      {catalog.activeVersionId ? '(publicada)' : '(borrador)'} ·{' '}
                       {catalog.currency} · {formatDate(catalog.updatedAt)}
                     </span>
-                    <span className="inline" style={{ marginTop: '0.5rem' }}>
+                    <span className="inline" style={{ marginTop: '0.5rem', flexWrap: 'wrap', gap: '0.4rem' }}>
                       <Link className="btn btn--small" href={`/panel/catalogos/${catalog.id}`}>
                         Versiones e importar
                       </Link>
@@ -69,7 +71,7 @@ export default async function CatalogsPage() {
                         className="btn btn--small btn--secondary"
                         href={`/panel/productos?catalogo=${catalog.id}`}
                       >
-                        Productos
+                        Productos ({catalog.productCount})
                       </Link>
                       <a
                         className="btn btn--small btn--ghost"
@@ -79,6 +81,12 @@ export default async function CatalogsPage() {
                       >
                         Ver tienda ↗
                       </a>
+                      <RenameCatalogButton
+                        catalogId={catalog.id}
+                        catalogName={catalog.name}
+                        currentSlug={catalog.slug}
+                        canWrite={canWrite}
+                      />
                       <DeleteCatalogButton
                         catalogId={catalog.id}
                         catalogName={catalog.name}
@@ -93,19 +101,33 @@ export default async function CatalogsPage() {
                 </div>
               ))}
             </div>
+          ) : catalogs === null ? (
+            <div className="empty">
+              <span className="empty__mark">⚠️</span>
+              <h3>Servidor API desconectado</h3>
+              <p>
+                No pudimos conectar con el servidor backend en <code>http://localhost:3001</code>.
+                Asegurate de que <code>pnpm dev</code> esté corriendo en tu terminal.
+              </p>
+            </div>
           ) : (
             <div className="empty">
               <span className="empty__mark">∅</span>
-              <h3>No hay catálogos visibles</h3>
+              <h3>No hay catálogos creados todavía</h3>
               <p>
-                Si ya corriste el seed, revisá que tu rol tenga <code>catalog:read</code> y que
-                exista una asignación en tu organización.
+                Podés crear uno nuevo subiendo cualquier archivo (Excel, CSV, PDF, texto) desde
+                el botón «Cargar catálogo».
               </p>
+              <div style={{ marginTop: '1rem' }}>
+                <Link className="btn btn--small" href="/panel/catalogos/importar">
+                  Cargar mi primer catálogo →
+                </Link>
+              </div>
             </div>
           )}
           <div className="panel__foot">
-            Importación CSV/XLSX con cuarentena, versionado y activación ya disponibles. Google
-            Drive llega en el siguiente incremento de F1.
+            Importación universal (CSV, XLSX, PDF, JSON, TXT) con cuarentena, versionado y activación
+            ya disponibles. Google Drive llega con credenciales OAuth.
           </div>
         </section>
 

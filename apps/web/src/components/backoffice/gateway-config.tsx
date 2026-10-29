@@ -67,9 +67,7 @@ export function GatewayConfigPanel({ initial, canManage }: GatewayConfigPanelPro
         },
       );
       const payload = (await response.json().catch(() => null)) as
-        | GatewayConfig
-        | { code?: string; message?: string }
-        | null;
+        GatewayConfig | { code?: string; message?: string } | null;
       if (!response.ok) {
         throw new Error(
           describe(
@@ -138,7 +136,9 @@ export function GatewayConfigPanel({ initial, canManage }: GatewayConfigPanelPro
                   <tr key={item.provider}>
                     <td>{PROVIDER_LABEL[item.provider] ?? item.provider}</td>
                     <td className="mono faint">{item.mode}</td>
-                    <td className="mono faint">{item.maskedKey ?? (item.hasSecret ? '••••' : '—')}</td>
+                    <td className="mono faint">
+                      {item.maskedKey ?? (item.hasSecret ? '••••' : '—')}
+                    </td>
                     <td>
                       <span className={item.enabled ? 'badge badge--ok' : 'badge'}>
                         {item.enabled ? 'Habilitada' : 'Deshabilitada'}

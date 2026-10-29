@@ -28,16 +28,15 @@ export function AppThemePicker({ initialTheme, canManage }: AppThemePickerProps)
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ appTheme: selected }),
       });
-      const payload = (await response.json().catch(() => null)) as
-        | { appTheme?: AppThemeKey; message?: string }
-        | null;
+      const payload = (await response.json().catch(() => null)) as {
+        appTheme?: AppThemeKey;
+        message?: string;
+      } | null;
       if (!response.ok) {
         throw new Error(payload?.message ?? 'No pudimos guardar el tema.');
       }
       setSaved(selected);
-      setNotice(
-        `Tema «${APP_THEME_META[selected].label}» aplicado. Recargando la interfaz…`,
-      );
+      setNotice(`Tema «${APP_THEME_META[selected].label}» aplicado. Recargando la interfaz…`);
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Error inesperado.');
@@ -52,7 +51,8 @@ export function AppThemePicker({ initialTheme, canManage }: AppThemePickerProps)
         <div>
           <h2>Tema visual de la app</h2>
           <p className="muted" style={{ fontSize: '0.8rem' }}>
-            Cambia tipografía, tamaños, densidad y la forma/orden de los menús en toda la aplicación.
+            Cambia tipografía, tamaños, densidad y la forma/orden de los menús en toda la
+            aplicación.
           </p>
         </div>
         <span className="mono faint">3 propuestas</span>
@@ -102,7 +102,11 @@ export function AppThemePicker({ initialTheme, canManage }: AppThemePickerProps)
           })}
         </div>
 
-        {error ? <div className="alert" style={{ marginTop: '0.8rem' }}>{error}</div> : null}
+        {error ? (
+          <div className="alert" style={{ marginTop: '0.8rem' }}>
+            {error}
+          </div>
+        ) : null}
         {notice ? (
           <div className="alert alert--ok" style={{ marginTop: '0.8rem' }}>
             {notice}
@@ -130,7 +134,8 @@ export function AppThemePicker({ initialTheme, canManage }: AppThemePickerProps)
         </div>
       </div>
       <div className="panel__foot">
-        Es una preferencia de la organización: el administrador puede volver a cambiarla cuando quiera.
+        Es una preferencia de la organización: el administrador puede volver a cambiarla cuando
+        quiera.
       </div>
     </section>
   );

@@ -58,9 +58,7 @@ export function ProductDetailPanel({ product, canWrite }: ProductDetailPanelProp
         }),
       });
       const payload = (await response.json().catch(() => null)) as
-        | ProductDetail
-        | { message?: string }
-        | null;
+        ProductDetail | { message?: string } | null;
       if (!response.ok) {
         throw new Error(
           (payload as { message?: string } | null)?.message ?? 'No pudimos guardar los cambios.',
@@ -229,16 +227,29 @@ export function ProductDetailPanel({ product, canWrite }: ProductDetailPanelProp
             <div className="panel__body form-grid">
               <label className="field">
                 <span className="field__label">Nombre</span>
-                <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
+                <input
+                  className="input"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
               </label>
               <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
                 <label className="field">
                   <span className="field__label">Categoría</span>
-                  <input className="input" value={category} onChange={(e) => setCategory(e.target.value)} />
+                  <input
+                    className="input"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                  />
                 </label>
                 <label className="field">
                   <span className="field__label">Marca</span>
-                  <input className="input" value={brand} onChange={(e) => setBrand(e.target.value)} />
+                  <input
+                    className="input"
+                    value={brand}
+                    onChange={(e) => setBrand(e.target.value)}
+                  />
                 </label>
               </div>
               <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
@@ -277,7 +288,8 @@ export function ProductDetailPanel({ product, canWrite }: ProductDetailPanelProp
               </button>
             </div>
             <div className="panel__foot">
-              Editar un producto de una versión archivada está bloqueado para conservar el histórico.
+              Editar un producto de una versión archivada está bloqueado para conservar el
+              histórico.
             </div>
           </form>
         ) : null}

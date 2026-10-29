@@ -4,6 +4,7 @@ import type {
   AuthenticatedUser,
   CatalogCreateInput,
   CatalogSummary,
+  CatalogUpdateInput,
 } from '@ventascatalogo/contracts';
 import { CatalogsRepository } from './catalogs.repository';
 import { AppException } from '../../common/errors/app-exception';
@@ -22,18 +23,85 @@ export class CatalogsService {
   async list(user: AuthenticatedUser) {
     const rows = await this.repo.listForMember(user.organizationId, user.id, user.audience);
     return {
-      items: rows.map(({ catalog, productCount }) => ({
+      items: rows.map(({ catalog, productCount, latestVersion }) => ({
         id: catalog.id,
         name: catalog.name,
         slug: catalog.slug,
         description: catalog.description,
         activeVersionId: catalog.activeVersionId,
-        activeVersionNumber: catalog.activeVersion?.versionNumber ?? null,
+        activeVersionNumber:
+          catalog.activeVersion?.versionNumber ?? latestVersion?.versionNumber ?? null,
         productCount,
-        currency: catalog.activeVersion?.currency ?? 'CRC',
+        currency: catalog.activeVersion?.currency ?? latestVersion?.currency ?? 'CRC',
         updatedAt: catalog.updatedAt.toISOString(),
       })),
     };
+  }
+
+  async update(
+    user: AuthenticatedUser,
+    id: string,
+    input: CatalogUpdateInput,
+    meta: AuditMeta,
+  ): Promise<CatalogSummary> {
+    const catalog = await this.repo.findForMember(id, user.id, user.audience, user.organizationId);
+    if (!catalog) {
+      throw new AppException('CATALOG_NOT_FOUND', 404);
+    }
+
+    let slug = catalog.slug;
+    if (input.slug && input.slug !== catalog.slug) {
+      const existing = await this.repo.findCatalogBySlug(user.organizationId, input.slug);
+      if (existing && existing.id !== id) {
+        throw new AppException('VALIDATION_FAILED', 409, {
+          reason: 'catalog_slug_taken',
+          slug: input.slug,
+        });
+      }
+      slug = input.slug;
+    } else if (input.name && !input.slug && input.name !== catalog.name) {
+      const newSlug = slugifyName(input.name);
+      const existing = await this.repo.findCatalogBySlug(user.organizationId, newSlug);
+      if (!existing || existing.id === id) {
+        slug = newSlug;
+      }
+    }
+
+    const updated = await this.repo.updateCatalog(id, {
+      name: input.name ?? catalog.name,
+      slug,
+      description: input.description !== undefined ? input.description : catalog.description,
+    });
+
+    await this.audit.write({
+      organizationId: user.organizationId,
+      actorUserId: user.id,
+      action: 'catalog.updated',
+      entityType: 'catalog',
+      entityId: catalog.id,
+      before: { name: catalog.name, slug: catalog.slug, description: catalog.description },
+      after: { name: updated.name, slug: updated.slug, description: updated.description },
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      traceId: meta.traceId,
+    });
+
+    const activeVersion = catalog.activeVersion;
+    const productCount = activeVersion
+      ? await this.repo.countActiveProducts(activeVersion.id)
+      : 0;
+
+    return {
+      id: updated.id,
+      name: updated.name,
+      slug: updated.slug,
+      description: updated.description,
+      activeVersionId: updated.activeVersionId,
+      activeVersionNumber: activeVersion?.versionNumber ?? null,
+      productCount,
+      currency: activeVersion?.currency ?? 'CRC',
+      updatedAt: updated.updatedAt.toISOString(),
+    } as CatalogSummary;
   }
 
   async create(

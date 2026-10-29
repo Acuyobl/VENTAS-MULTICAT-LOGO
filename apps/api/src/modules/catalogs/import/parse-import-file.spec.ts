@@ -1,3 +1,4 @@
+import * as XLSX from 'xlsx';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -160,5 +161,166 @@ describe('decodeCsvBuffer · Windows-1252 y U+FFFD', () => {
   it('si el UTF-8 es válido pero trae U+FFFD literal, NO lo repara: queda para cuarentena', () => {
     const csv = Buffer.from('SKU,Nombre\nA-1,Ferreter\uFFFDa', 'utf8');
     expect(decodeCsvBuffer(csv)).toContain('\uFFFD');
+  });
+});
+
+describe('importador universal · formatos adaptativos', () => {
+  it('parsea un JSON con arreglo de productos', () => {
+    const json = JSON.stringify([
+      { sku: 'J-1', nombre: 'Zapatos de cuero', precio: '25000' },
+      { sku: 'J-2', nombre: 'Camisa formal', precio: '18000' },
+    ]);
+    const parsed = parseImportFile(Buffer.from(json, 'utf8'), 'json');
+    expect(parsed.headers).toContain('nombre');
+    expect(parsed.rows).toHaveLength(2);
+    expect(parsed.rows[0]?.nombre).toBe('Zapatos de cuero');
+  });
+
+  it('parsea un archivo TXT con líneas desestructuradas (nombre y precio)', () => {
+    const txt = 'Camisa Blanca $15.000\nPantalón Negro 25000 CRC\nZapatos Cuero - 35000';
+    const parsed = parseImportFile(Buffer.from(txt, 'utf8'), 'txt');
+    expect(parsed.rows).toHaveLength(3);
+    expect(parsed.rows[0]?.Nombre).toBe('Camisa Blanca');
+    expect(parsed.rows[0]?.Precio).toBe('15.000');
+    expect(parsed.rows[1]?.Nombre).toBe('Pantalón Negro');
+  });
+
+  it('adapta archivos con delimitador pipe (|)', () => {
+    const pipeText = 'SKU|Nombre|Precio\nP-01|Gorra deportiva|5000';
+    const parsed = parseImportFile(Buffer.from(pipeText, 'utf8'), 'csv');
+    expect(parsed.headers).toEqual(['SKU', 'Nombre', 'Precio']);
+    expect(parsed.rows).toHaveLength(1);
+    expect(parsed.rows[0]?.Nombre).toBe('Gorra deportiva');
+  });
+
+  it('soporta archivos de una sola fila de datos sin cabecera', () => {
+    const single = 'Camisa Polo, 12000';
+    const parsed = parseImportFile(Buffer.from(single, 'utf8'), 'csv');
+    expect(parsed.rows).toHaveLength(1);
+    expect(parsed.rows[0]?.Producto).toBe('Camisa Polo');
+    expect(parsed.rows[0]?.Precio).toBe('12000');
+  });
+
+  it('adapta buffers PDF devolviendo estructura válida', () => {
+    const fakePdf = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF');
+    const parsed = parseImportFile(fakePdf, 'pdf');
+    expect(parsed.headers).toEqual(['SKU', 'Nombre', 'Precio']);
+    expect(parsed.rows.length).toBeGreaterThan(0);
+  });
+
+  it('analiza y combina múltiples pestañas de Excel descartando hojas de portada', () => {
+    const XLSX = require('xlsx');
+    const wb = XLSX.utils.book_new();
+
+    // Pestaña 1: Portada (sin productos)
+    const coverSheet = XLSX.utils.aoa_to_sheet([
+      ['Catálogo Verano 2026'],
+      ['Instrucciones de llenado'],
+    ]);
+    XLSX.utils.book_append_sheet(wb, coverSheet, 'Portada');
+
+    // Pestaña 2: Ropa Hombre
+    const menSheet = XLSX.utils.aoa_to_sheet([
+      ['SKU', 'Nombre', 'Precio'],
+      ['H-1', 'Camisa Lino', '22000'],
+      ['H-2', 'Bermuda', '15000'],
+    ]);
+    XLSX.utils.book_append_sheet(wb, menSheet, 'Hombre');
+
+    // Pestaña 3: Ropa Mujer
+    const womenSheet = XLSX.utils.aoa_to_sheet([
+      ['SKU', 'Nombre', 'Precio'],
+      ['M-1', 'Vestido Seda', '35000'],
+    ]);
+    XLSX.utils.book_append_sheet(wb, womenSheet, 'Mujer');
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const parsed = parseImportFile(buffer, 'xlsx');
+
+    expect(parsed.headers).toContain('Categoría');
+    expect(parsed.rows).toHaveLength(3);
+    expect(parsed.rows[0]?.Categoría).toBe('Hombre');
+    expect(parsed.rows[2]?.Categoría).toBe('Mujer');
+    expect(parsed.sheetSelection).toContain('Se combinaron 2 pestañas');
+  });
+
+  it('procesa tablas compuestas vinculando la sub-tabla de imágenes por cliente', () => {
+    const csvContent = [
+      'CLIENTE,TALLA,CAMISA,PRECIO',
+      'KENDALL ACUÑA,L,CAMISA BLACK CLOVER,10000',
+      'MAGALY BARBOZA,4,CAMISA MOTOCROSS,10000',
+      ',,,',
+      ',,,20000',
+      'Total,,saldo ,debo',
+      'Pedido ID,Cliente,Imagen',
+      '378,KENDALL ACUÑA,pedido_378.jpeg',
+      '379,MAGALY BARBOZA,pedido_379.jpeg',
+    ].join('\n');
+
+    const parsed = parseImportFile(Buffer.from(csvContent, 'utf-8'), 'csv');
+
+    expect(parsed.headers).toContain('Imagen');
+    expect(parsed.rows).toHaveLength(2);
+    expect(parsed.rows[0]?.Imagen).toBe('pedido_378.jpeg');
+    expect(parsed.rows[1]?.Imagen).toBe('pedido_379.jpeg');
+    expect(parsed.rows[0]?.CAMISA).toBe('CAMISA BLACK CLOVER');
+  });
+
+  it('combina libro Excel con pestaña principal de productos y pestaña auxiliar de imágenes', () => {
+    const wb = XLSX.utils.book_new();
+    const prodSheet = XLSX.utils.aoa_to_sheet([
+      ['CLIENTE', 'TALLA', 'CAMISA', 'PRECIO'],
+      ['KENDALL ACUÑA', 'L', 'CAMISA BLACK CLOVER', '10000'],
+      ['MAGALY BARBOZA', '4', 'CAMISA MOTOCROSS', '10000'],
+      ['', '', '', ''],
+      [null, null, null, '20000'],
+      [null, null, 'Total', 'debo'],
+    ]);
+    XLSX.utils.book_append_sheet(wb, prodSheet, 'Pedido SUBLIMANIA CR');
+
+    const imgSheet = XLSX.utils.aoa_to_sheet([
+      ['Pedido ID', 'Cliente', 'Imagen'],
+      ['378', 'KENDALL ACUÑA', 'pedido_378.jpeg'],
+      ['379', 'MAGALY BARBOZA', 'pedido_379.jpeg'],
+    ]);
+    XLSX.utils.book_append_sheet(wb, imgSheet, 'Imagenes');
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const parsed = parseImportFile(buffer, 'xlsx');
+
+    expect(parsed.headers).toContain('Imagen');
+    expect(parsed.rows).toHaveLength(2);
+    expect(parsed.rows[0]?.Imagen).toBe('pedido_378.jpeg');
+    expect(parsed.rows[1]?.Imagen).toBe('pedido_379.jpeg');
+    expect(parsed.sheetSelection).toContain('vinculada con fotos de "Imagenes"');
+  });
+
+  it('parsea correctamente el archivo real Pedido_15-10-2026_SUBLIMANIA_CR.xlsx', () => {
+    const realPath =
+      'C:/Users/Usuario/.gemini/antigravity/brain/8ef4ed41-cdc6-4d74-9e67-352b89fb81e9/.user_uploaded/media_1793286968976_095aa1a6.xlsx';
+    if (!existsSync(realPath)) return;
+    const buf = readFileSync(realPath);
+    const parsed = parseImportFile(buf, 'xlsx');
+    expect(parsed.headers).toContain('Imagen');
+    expect(parsed.rows).toHaveLength(22);
+    expect(parsed.rows[0]?.Imagen).toBe(
+      'pedido_378_88282395-c558-4912-869e-82d2c120001d.jpeg',
+    );
+    expect(parsed.rows[21]?.Imagen).toBe(
+      'pedido_392_facd6090-4afd-4969-8962-ef715347df2d.jpg',
+    );
+
+    const { mapping } = resolveHeaderMapping(parsed.headers);
+    expect(mapping.image).toBe('Imagen');
+    expect(mapping.price).toBe('PRECIO');
+    expect(mapping.name).toBe('CAMISA');
+
+    const validation = validateImportRows(parsed.rows, { mapping, currency: 'CRC' });
+    expect(validation.totalRows).toBe(22);
+    expect(validation.quarantineRows).toBe(0);
+    expect(validation.products).toHaveLength(22);
+    expect(validation.products[0]?.imageRef).toBe(
+      'pedido_378_88282395-c558-4912-869e-82d2c120001d.jpeg',
+    );
   });
 });

@@ -1,8 +1,11 @@
+'use client';
+
 import Link from 'next/link';
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { formatMoney, taxLabel } from '@/lib/format';
-import type { PublicCatalog } from '@/lib/types';
+import type { PublicCatalog, ProductSummary } from '@/lib/types';
 import { AddToCartButton } from '@/components/store/add-to-cart-button';
+import { ProductDetailModal } from '@/components/store/product-detail-modal';
 
 interface CatalogViewProps {
   catalog: PublicCatalog;
@@ -11,6 +14,8 @@ interface CatalogViewProps {
 }
 
 export function CatalogView({ catalog, category, basePath }: CatalogViewProps) {
+  const [selectedProduct, setSelectedProduct] = useState<ProductSummary | null>(null);
+
   const categories = [...new Set(catalog.products.map((product) => product.category ?? 'General'))];
   const visible = category
     ? catalog.products.filter((product) => (product.category ?? 'General') === category)
@@ -98,7 +103,19 @@ export function CatalogView({ catalog, category, basePath }: CatalogViewProps) {
                 key={product.id}
                 style={{ '--i': Math.min(index, 8) } as CSSProperties}
               >
-                <div className="product-card__media">
+                <div
+                  className="product-card__media product-card__media--clickable"
+                  onClick={() => setSelectedProduct(product)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedProduct(product);
+                    }
+                  }}
+                  aria-label={`Ver detalle de ${product.name}`}
+                >
                   {product.imageUrl ? (
                     <img
                       className="product-card__img"
@@ -112,6 +129,9 @@ export function CatalogView({ catalog, category, basePath }: CatalogViewProps) {
                       {(product.name.trim()[0] ?? '·').toUpperCase()}
                     </span>
                   )}
+                  <span className="product-card__media-hint" aria-hidden>
+                    Ver detalle ↗
+                  </span>
                 </div>
                 <div className="product-card__top">
                   <span className="product-card__index">
@@ -119,21 +139,40 @@ export function CatalogView({ catalog, category, basePath }: CatalogViewProps) {
                   </span>
                   <span className="product-card__cat">{product.category ?? 'General'}</span>
                 </div>
-                <div className="product-card__body">
+                <div
+                  className="product-card__body product-card__body--clickable"
+                  onClick={() => setSelectedProduct(product)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedProduct(product);
+                    }
+                  }}
+                  aria-label={`Ver detalle de ${product.name}`}
+                >
                   <h3 className="product-card__name">{product.name}</h3>
                   <p className="product-card__desc">{product.description ?? 'Selección de la casa.'}</p>
+                  <span className="product-card__detail-link">Ver detalle ↗</span>
                 </div>
                 <div className="product-card__foot">
-                  <span className="product-card__price">
-                    {formatMoney(product.priceMinor, product.currency)}
-                  </span>
-                  <span className="product-card__stock">
-                    {product.stock === null
-                      ? 'Disponible'
-                      : product.stock > 0
-                        ? `${product.stock} en stock`
-                        : 'Agotado'}
-                  </span>
+                  <div
+                    onClick={() => setSelectedProduct(product)}
+                    style={{ cursor: 'pointer' }}
+                    title="Ver detalle"
+                  >
+                    <span className="product-card__price">
+                      {formatMoney(product.priceMinor, product.currency)}
+                    </span>
+                    <span className="product-card__stock">
+                      {product.stock === null
+                        ? 'Disponible'
+                        : product.stock > 0
+                          ? `${product.stock} en stock`
+                          : 'Agotado'}
+                    </span>
+                  </div>
                 </div>
                 <div className="product-card__actions">
                   <AddToCartButton
@@ -164,6 +203,20 @@ export function CatalogView({ catalog, category, basePath }: CatalogViewProps) {
           </div>
         )}
       </section>
+
+      {selectedProduct ? (
+        <ProductDetailModal
+          product={selectedProduct}
+          catalog={{
+            slug: catalog.slug,
+            name: catalog.name,
+            currency: catalog.currency,
+            taxRateBp: catalog.taxRateBp,
+            taxIncluded: catalog.taxIncluded,
+          }}
+          onClose={() => setSelectedProduct(null)}
+        />
+      ) : null}
     </>
   );
 }

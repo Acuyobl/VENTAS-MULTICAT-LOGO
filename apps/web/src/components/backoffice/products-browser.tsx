@@ -46,9 +46,7 @@ export function ProductsBrowser({ catalogId, versions, initialPage }: ProductsBr
         headers: { accept: 'application/json' },
       });
       const payload = (await response.json().catch(() => null)) as
-        | ProductListResponse
-        | { message?: string }
-        | null;
+        ProductListResponse | { message?: string } | null;
       if (!response.ok) {
         throw new Error(
           (payload as { message?: string } | null)?.message ?? 'No pudimos leer los productos.',
@@ -83,7 +81,11 @@ export function ProductsBrowser({ catalogId, versions, initialPage }: ProductsBr
       </div>
 
       <div className="panel__body">
-        <form className="filter-row" onSubmit={handleSubmit} style={{ flexWrap: 'wrap', gap: '0.6rem' }}>
+        <form
+          className="filter-row"
+          onSubmit={handleSubmit}
+          style={{ flexWrap: 'wrap', gap: '0.6rem' }}
+        >
           <label className="field" style={{ minWidth: '220px' }}>
             <span className="field__label">Buscar</span>
             <input

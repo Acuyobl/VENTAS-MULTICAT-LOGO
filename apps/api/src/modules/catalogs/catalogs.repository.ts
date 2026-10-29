@@ -52,6 +52,26 @@ export class CatalogsRepository {
     return this.prisma.catalog.create({ data: input });
   }
 
+  updateCatalog(
+    id: string,
+    data: {
+      name?: string;
+      slug?: string;
+      description?: string | null;
+    },
+  ) {
+    return this.prisma.catalog.update({
+      where: { id },
+      data,
+    });
+  }
+
+  countActiveProducts(versionId: string): Promise<number> {
+    return this.prisma.product.count({
+      where: { catalogVersionId: versionId, deletedAt: null, isActive: true },
+    });
+  }
+
   async findVersion(catalogId: string, versionId: string) {
     return this.prisma.catalogVersion.findFirst({
       where: { id: versionId, catalogId },
@@ -79,17 +99,25 @@ export class CatalogsRepository {
           ? { id: { in: scopedCatalogIds } }
           : {}),
       },
-      include: { activeVersion: true },
+      include: {
+        activeVersion: true,
+        versions: {
+          orderBy: { versionNumber: 'desc' },
+          take: 1,
+        },
+      },
       orderBy: { createdAt: 'asc' },
     });
+
+    const relevantVersionIds = catalogs
+      .map((catalog) => catalog.activeVersionId ?? catalog.versions[0]?.id)
+      .filter((id): id is string => Boolean(id));
 
     const counts = await this.prisma.product.groupBy({
       by: ['catalogVersionId'],
       where: {
         catalogVersionId: {
-          in: catalogs
-            .map((catalog) => catalog.activeVersionId)
-            .filter((id): id is string => Boolean(id)),
+          in: relevantVersionIds,
         },
         deletedAt: null,
         isActive: true,
@@ -98,12 +126,15 @@ export class CatalogsRepository {
     });
     const countByVersion = new Map(counts.map((row) => [row.catalogVersionId, row._count._all]));
 
-    return catalogs.map((catalog) => ({
-      catalog,
-      productCount: catalog.activeVersionId
-        ? (countByVersion.get(catalog.activeVersionId) ?? 0)
-        : 0,
-    }));
+    return catalogs.map((catalog) => {
+      const activeOrLatestId = catalog.activeVersionId ?? catalog.versions[0]?.id;
+      const productCount = activeOrLatestId ? (countByVersion.get(activeOrLatestId) ?? 0) : 0;
+      return {
+        catalog,
+        latestVersion: catalog.versions[0] ?? null,
+        productCount,
+      };
+    });
   }
 
   async findPublicBySlug(slug: string) {

@@ -53,9 +53,11 @@ export function OrderReminders({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ channel }),
       });
-      const payload = (await response.json().catch(() => null)) as
-        | { code?: string; message?: string; details?: { reason?: string } }
-        | null;
+      const payload = (await response.json().catch(() => null)) as {
+        code?: string;
+        message?: string;
+        details?: { reason?: string };
+      } | null;
       if (!response.ok) {
         throw new Error(describeError(payload?.code, payload?.message));
       }
@@ -133,7 +135,11 @@ export function OrderReminders({
                   <td>{CHANNEL_LABEL[reminder.channel] ?? reminder.channel}</td>
                   <td className="mono faint">{reminder.to}</td>
                   <td>
-                    <span className={reminder.status === 'SENT' ? 'badge badge--ok' : 'badge badge--danger'}>
+                    <span
+                      className={
+                        reminder.status === 'SENT' ? 'badge badge--ok' : 'badge badge--danger'
+                      }
+                    >
                       {reminder.status === 'SENT' ? 'Enviado' : 'Falló'}
                     </span>
                   </td>

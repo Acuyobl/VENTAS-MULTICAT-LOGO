@@ -42,9 +42,7 @@ export function VersionsPanel({ catalogId, versions, canWrite }: VersionsPanelPr
         { method: 'POST', headers: { accept: 'application/json' } },
       );
       const payload = (await response.json().catch(() => null)) as
-        | CatalogVersionSummary
-        | { message?: string }
-        | null;
+        CatalogVersionSummary | { message?: string } | null;
       if (!response.ok) {
         throw new Error(
           (payload as { message?: string } | null)?.message ?? 'No pudimos completar la acción.',
@@ -161,7 +159,7 @@ export function VersionsPanel({ catalogId, versions, canWrite }: VersionsPanelPr
         <div className="empty">
           <span className="empty__mark">∅</span>
           <h3>Todavía no hay versiones</h3>
-          <p>Importá un CSV o XLSX para crear la primera versión validada del catálogo.</p>
+          <p>Importá un archivo (CSV, XLSX, PDF, JSON o texto) para crear la primera versión validada del catálogo.</p>
         </div>
       )}
 

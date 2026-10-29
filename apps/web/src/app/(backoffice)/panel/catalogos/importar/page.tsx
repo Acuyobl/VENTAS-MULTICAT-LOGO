@@ -26,15 +26,15 @@ export default async function ImportCatalogPage() {
             Subí tu catálogo <em>como sea</em>.
           </h1>
           <p>
-            Excel, PDF, foto o WhatsApp: el agente lo convierte en un catálogo vendible, publicable
-            y cobrable — sin que toques una columna. Hoy entran Excel y CSV (incluidas hojas de
-            pedido); PDF, foto y WhatsApp vienen en camino.
+            Excel, CSV, TSV, TXT, JSON, PDF o texto libre: el agente adapta cualquier formato y
+            lo convierte en un catálogo vendible, publicable y cobrable — sin que toques una columna.
           </p>
           <div className="chip-row" style={{ marginTop: '0.6rem' }}>
-            <span className="badge badge--ok">Excel / CSV · disponible</span>
-            <span className="badge">PDF · en camino</span>
-            <span className="badge">Foto · en camino</span>
-            <span className="badge">WhatsApp · en camino</span>
+            <span className="badge badge--ok">Excel (.xlsx, .xls, .ods) · disponible</span>
+            <span className="badge badge--ok">CSV / TSV / TXT · disponible</span>
+            <span className="badge badge--ok">JSON · disponible</span>
+            <span className="badge badge--ok">PDF · disponible (texto)</span>
+            <span className="badge">Foto / WhatsApp · en camino</span>
           </div>
         </div>
         <div className="page-head__aside">

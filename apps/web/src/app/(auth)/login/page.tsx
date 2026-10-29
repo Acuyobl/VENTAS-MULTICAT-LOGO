@@ -36,7 +36,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </div>
         <div className="auth__meta">
           <span>Excel/CSV · listo</span>
-          <span>PDF · en camino</span>
+          <span>PDF/JSON/TXT · listo</span>
           <span>Foto · en camino</span>
           <span>WhatsApp · en camino</span>
         </div>

@@ -152,10 +152,19 @@ describe('Importación de hoja de pedidos con imágenes data URI (e2e)', () => {
       });
     }
 
+    // Todos los productos terminan con imagen: la fila con data URI usa el PNG real y
+    // las demás reciben la maqueta SVG de fallback para no quedar sin foto.
     const withImage = items.filter((item) => item.imageKey);
-    expect(withImage).toHaveLength(1);
-    const stored = await storage.getObjectBuffer('vc-products', withImage[0]!.imageKey!);
+    expect(withImage).toHaveLength(3);
+    const pngItem = items.find((item) => item.name === 'Camisa sublimada manga corta');
+    expect(pngItem?.imageKey).toMatch(/\.png$/);
+    const stored = await storage.getObjectBuffer('vc-products', pngItem!.imageKey!);
     expect(stored?.equals(PNG)).toBe(true);
+    for (const item of items.filter((entry) => entry !== pngItem)) {
+      expect(item.imageKey).toMatch(/\.svg$/);
+      const mockup = await storage.getObjectBuffer('vc-products', item.imageKey!);
+      expect(mockup?.toString('utf8')).toContain('<svg');
+    }
 
     // Activar la versión y verificar catálogo público.
     await agent.post(`${api}/catalogs/${catalogId}/versions/${versionId}/activate`).expect(200);

@@ -9,6 +9,7 @@ import type { CatalogSummary } from '@/lib/types';
 import { VersionsPanel } from '@/components/backoffice/versions-panel';
 import { ImportPanel } from '@/components/backoffice/import-panel';
 import { DeleteCatalogButton } from '@/components/backoffice/delete-catalog-button';
+import { RenameCatalogButton } from '@/components/backoffice/rename-catalog-button';
 
 export const metadata: Metadata = {
   title: 'Catálogo',
@@ -79,6 +80,12 @@ export default async function CatalogDetailPage({ params }: CatalogDetailPagePro
         <span className="mono faint">
           {versions.length} versiones · {totalProducts} productos históricos
         </span>
+        <RenameCatalogButton
+          catalogId={catalog.id}
+          catalogName={catalog.name}
+          currentSlug={catalog.slug}
+          canWrite={canWrite}
+        />
         <DeleteCatalogButton
           catalogId={catalog.id}
           catalogName={catalog.name}

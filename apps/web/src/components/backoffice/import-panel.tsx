@@ -1,28 +1,21 @@
 'use client';
 
 import { useRef, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type {
-  ImportPreview,
-  ImportResult,
-  MappingProposal,
-} from '@ventascatalogo/contracts';
+import type { ImportPreview, ImportResult, MappingProposal } from '@ventascatalogo/contracts';
+import { formatMoney } from '@/lib/format';
 
 interface ImportPanelProps {
-  catalogId: string;
+  catalogId?: string | null;
+  catalogName?: string;
   canWrite: boolean;
+  onEnsureCatalog?: () => Promise<{ id: string; name: string; slug: string }>;
+  onFileSelect?: (file: File) => void;
 }
 
 type MappingKey =
-  | 'sku'
-  | 'name'
-  | 'description'
-  | 'category'
-  | 'brand'
-  | 'price'
-  | 'cost'
-  | 'stock'
-  | 'image';
+  'sku' | 'name' | 'description' | 'category' | 'brand' | 'price' | 'cost' | 'stock' | 'image';
 
 const MAPPING_FIELDS: Array<{ key: MappingKey; label: string }> = [
   { key: 'sku', label: 'SKU' },
@@ -64,9 +57,17 @@ function downloadIssues(result: ImportResult) {
   URL.revokeObjectURL(url);
 }
 
-export function ImportPanel({ catalogId, canWrite }: ImportPanelProps) {
+export function ImportPanel({
+  catalogId,
+  catalogName,
+  canWrite,
+  onEnsureCatalog,
+  onFileSelect,
+}: ImportPanelProps) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
+  const [activeCatalogId, setActiveCatalogId] = useState<string | null>(catalogId ?? null);
+  const [_activeCatalogName, setActiveCatalogName] = useState<string | null>(catalogName ?? null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [mapping, setMapping] = useState<Record<MappingKey, string>>({
@@ -92,6 +93,19 @@ export function ImportPanel({ catalogId, canWrite }: ImportPanelProps) {
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResultWithMeta | null>(null);
+  const [importedProducts, setImportedProducts] = useState<
+    Array<{
+      id: string;
+      sku: string;
+      name: string;
+      category?: string | null;
+      priceMinor: number | string | bigint;
+      stock?: number | null;
+      imageUrl?: string | null;
+    }>
+  >([]);
+  const [activating, setActivating] = useState(false);
+  const [activatedSuccess, setActivatedSuccess] = useState(false);
 
   function proposalFrom(previewResponse: ImportPreview): MappingProposal {
     return previewResponse.proposal;
@@ -99,25 +113,33 @@ export function ImportPanel({ catalogId, canWrite }: ImportPanelProps) {
 
   async function analyze() {
     if (!file) {
-      setError('Elegí un archivo CSV o XLSX.');
+      setError('Elegí un archivo para importar.');
       return;
     }
     setAnalyzing(true);
     setError(null);
     setResult(null);
     try {
+      let effectiveId = activeCatalogId ?? catalogId;
+      if (!effectiveId && onEnsureCatalog) {
+        const created = await onEnsureCatalog();
+        effectiveId = created.id;
+        setActiveCatalogId(created.id);
+        setActiveCatalogName(created.name);
+      }
+      if (!effectiveId) {
+        throw new Error('Elegí o creá un catálogo antes de analizar.');
+      }
       const form = new FormData();
       form.append('file', file);
       form.append('useAgent', 'true');
-      const response = await fetch(`/api/v1/catalogs/${catalogId}/imports/preview`, {
+      const response = await fetch(`/api/v1/catalogs/${effectiveId}/imports/preview`, {
         method: 'POST',
         body: form,
         headers: { accept: 'application/json' },
       });
       const payload = (await response.json().catch(() => null)) as
-        | ImportPreview
-        | { message?: string }
-        | null;
+        ImportPreview | { message?: string } | null;
       if (!response.ok) {
         throw new Error(
           (payload as { message?: string } | null)?.message ??
@@ -162,7 +184,7 @@ export function ImportPanel({ catalogId, canWrite }: ImportPanelProps) {
   async function importCatalog(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
     if (!file) {
-      setError('Elegí un archivo CSV o XLSX.');
+      setError('Elegí un archivo para importar.');
       return;
     }
     if (mode === 'REPLACE') {
@@ -177,6 +199,16 @@ export function ImportPanel({ catalogId, canWrite }: ImportPanelProps) {
     setError(null);
     setResult(null);
     try {
+      let effectiveId = activeCatalogId ?? catalogId;
+      if (!effectiveId && onEnsureCatalog) {
+        const created = await onEnsureCatalog();
+        effectiveId = created.id;
+        setActiveCatalogId(created.id);
+        setActiveCatalogName(created.name);
+      }
+      if (!effectiveId) {
+        throw new Error('Elegí o creá un catálogo antes de importar.');
+      }
       const form = new FormData();
       form.append('file', file);
       form.append('currency', currency);
@@ -204,15 +236,13 @@ export function ImportPanel({ catalogId, canWrite }: ImportPanelProps) {
         form.append('extraFields', JSON.stringify(selectedExtras));
       }
 
-      const response = await fetch(`/api/v1/catalogs/${catalogId}/imports`, {
+      const response = await fetch(`/api/v1/catalogs/${effectiveId}/imports`, {
         method: 'POST',
         body: form,
         headers: { accept: 'application/json' },
       });
       const payload = (await response.json().catch(() => null)) as
-        | ImportResultWithMeta
-        | { message?: string }
-        | null;
+        ImportResultWithMeta | { message?: string } | null;
       if (!response.ok) {
         throw new Error(
           (payload as { message?: string } | null)?.message ?? 'No pudimos importar el archivo.',
@@ -222,19 +252,48 @@ export function ImportPanel({ catalogId, canWrite }: ImportPanelProps) {
       const imported = payload as ImportResultWithMeta;
       if (activateVersion) {
         const activateResponse = await fetch(
-          `/api/v1/catalogs/${catalogId}/versions/${imported.catalogVersionId}/activate`,
+          `/api/v1/catalogs/${effectiveId}/versions/${imported.catalogVersionId}/activate`,
           { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' },
         );
-        if (!activateResponse.ok) {
-          const activatePayload = (await activateResponse.json().catch(() => null)) as
-            | { message?: string }
-            | null;
+        if (activateResponse.ok) {
+          setActivatedSuccess(true);
+        } else {
+          const activatePayload = (await activateResponse.json().catch(() => null)) as {
+            message?: string;
+          } | null;
           throw new Error(
             activatePayload?.message ??
               'La versión se importó pero no pudimos activarla; activala desde Versiones.',
           );
         }
       }
+
+      // Obtener vista previa de los productos cargados
+      try {
+        const prodsResponse = await fetch(
+          `/api/v1/products?catalogId=${effectiveId}&versionId=${imported.catalogVersionId}&limit=10`,
+          { headers: { accept: 'application/json' } },
+        );
+        if (prodsResponse.ok) {
+          const prodsData = (await prodsResponse.json()) as { items?: unknown[] };
+          if (Array.isArray(prodsData.items)) {
+            setImportedProducts(
+              prodsData.items as Array<{
+                id: string;
+                sku: string;
+                name: string;
+                category?: string | null;
+                priceMinor: number | string | bigint;
+                stock?: number | null;
+                imageUrl?: string | null;
+              }>,
+            );
+          }
+        }
+      } catch {
+        // No bloqueante
+      }
+
       setFile(null);
       setPreview(null);
       if (fileInput.current) fileInput.current.value = '';
@@ -246,6 +305,26 @@ export function ImportPanel({ catalogId, canWrite }: ImportPanelProps) {
     }
   }
 
+  async function activateCurrentVersion(versionId: string) {
+    const effectiveId = activeCatalogId ?? catalogId;
+    if (!effectiveId) return;
+    setActivating(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/v1/catalogs/${effectiveId}/versions/${versionId}/activate`,
+        { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' },
+      );
+      if (!response.ok) throw new Error('No se pudo activar la versión.');
+      setActivatedSuccess(true);
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Error al activar.');
+    } finally {
+      setActivating(false);
+    }
+  }
+
   const headers = preview?.headers ?? [];
 
   return (
@@ -254,7 +333,8 @@ export function ImportPanel({ catalogId, canWrite }: ImportPanelProps) {
         <div>
           <h2>Importar catálogo</h2>
           <p className="muted" style={{ fontSize: '0.8rem' }}>
-            CSV o XLSX · el analizador propone el mapeo; vos confirmás antes de importar.
+            Excel, CSV, TSV, TXT, PDF, JSON o texto · el analizador adapta y propone el mapeo; vos
+            confirmás antes de importar.
           </p>
         </div>
         <span className="mono faint">IA + heurística</span>
@@ -268,13 +348,15 @@ export function ImportPanel({ catalogId, canWrite }: ImportPanelProps) {
               ref={fileInput}
               className="input"
               type="file"
-              accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              accept="*/*"
               disabled={!canWrite || importing || analyzing}
               onChange={(event) => {
-                setFile(event.target.files?.[0] ?? null);
+                const selected = event.target.files?.[0] ?? null;
+                setFile(selected);
                 setPreview(null);
                 setResult(null);
                 setError(null);
+                if (selected) onFileSelect?.(selected);
               }}
             />
           </label>
@@ -476,7 +558,9 @@ export function ImportPanel({ catalogId, canWrite }: ImportPanelProps) {
                   disabled={!canWrite || importing}
                   onChange={(event) => setMode(event.target.value as 'REPLACE' | 'MERGE')}
                 >
-                  <option value="REPLACE">Reemplazar (borra los que no vengan en el archivo)</option>
+                  <option value="REPLACE">
+                    Reemplazar (borra los que no vengan en el archivo)
+                  </option>
                   <option value="MERGE">Fusionar (conserva los productos que no vienen)</option>
                 </select>
               </label>
@@ -603,25 +687,132 @@ export function ImportPanel({ catalogId, canWrite }: ImportPanelProps) {
           </div>
         )}
 
-        {result ? (
-          <div style={{ marginTop: '1.2rem' }} aria-live="polite">
+        {result ? (() => {
+          const effectiveCatalogId = activeCatalogId ?? catalogId;
+          return (
+            <div style={{ marginTop: '1.2rem' }} aria-live="polite">
             <div className={result.quarantineRows > 0 ? 'alert' : 'alert alert--ok'}>
-              Versión <strong>v{result.versionNumber}</strong> creada · {result.totalRows} filas
-              leídas · <strong>{result.importedRows}</strong> productos ·{' '}
-              <strong>{result.quarantineRows}</strong> en cuarentena
-              {result.mode ? ` · modo ${result.mode}` : ''}
-              {typeof result.carriedOver === 'number'
-                ? ` · ${result.carriedOver} conservados`
-                : ''}
-              .
-              {result.idempotent ? (
-                <span> El archivo ya se había importado: se reutilizó la misma versión.</span>
+              <div>
+                <strong>¡Versión v{result.versionNumber} lista con {result.importedRows} productos cargados!</strong>
+                <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.86rem' }}>
+                  {result.totalRows} filas leídas · {result.importedRows} productos creados
+                  {result.quarantineRows > 0 ? ` · ${result.quarantineRows} en cuarentena` : ''}
+                  {result.mode ? ` · modo ${result.mode}` : ''}
+                  {typeof result.carriedOver === 'number' ? ` · ${result.carriedOver} conservados` : ''}
+                  .
+                  {result.idempotent ? (
+                    <span> (El archivo ya estaba registrado: se conservaron los {result.importedRows} productos de esta versión).</span>
+                  ) : null}
+                </p>
+                {activateVersion || activatedSuccess ? (
+                  <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.82rem', color: 'var(--color-ok)' }}>
+                    ✓ Versión activa en la tienda pública y catálogo.
+                  </p>
+                ) : (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <button
+                      type="button"
+                      className="btn btn--small btn--primary"
+                      disabled={activating}
+                      onClick={() => void activateCurrentVersion(result.catalogVersionId)}
+                    >
+                      {activating ? 'Activando…' : 'Activar esta versión ahora (publicar)'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="inline" style={{ gap: '0.6rem', marginTop: '0.8rem', flexWrap: 'wrap' }}>
+              <Link
+                className="btn btn--small btn--primary"
+                href={`/panel/productos?catalogo=${effectiveCatalogId}&version=${result.catalogVersionId}`}
+              >
+                Ver los {result.importedRows} productos en el panel →
+              </Link>
+              <Link className="btn btn--small btn--secondary" href="/panel/catalogos">
+                Ver en inventario de catálogos →
+              </Link>
+              <Link className="btn btn--small btn--ghost" href="/tienda" target="_blank">
+                Ver en la tienda ↗
+              </Link>
+              {effectiveCatalogId ? (
+                <Link className="btn btn--small btn--ghost" href={`/panel/catalogos/${effectiveCatalogId}`}>
+                  Gestionar versiones
+                </Link>
               ) : null}
             </div>
 
+            {importedProducts.length > 0 ? (
+              <div style={{ marginTop: '1.2rem' }}>
+                <div className="panel__head" style={{ paddingInline: 0 }}>
+                  <h3 style={{ fontSize: '1rem', margin: 0 }}>
+                    Vista previa de productos ({importedProducts.length} de {result.importedRows}):
+                  </h3>
+                </div>
+                <div className="table-wrap">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: 56 }}>Imagen</th>
+                        <th>SKU</th>
+                        <th>Nombre</th>
+                        <th>Categoría</th>
+                        <th>Precio</th>
+                        <th>Stock</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importedProducts.map((p) => (
+                        <tr key={p.id}>
+                          <td>
+                            {p.imageUrl ? (
+                              <img
+                                src={p.imageUrl}
+                                alt={p.name}
+                                style={{
+                                  width: 44,
+                                  height: 44,
+                                  objectFit: 'cover',
+                                  borderRadius: 6,
+                                  border: '1px solid rgba(255,255,255,0.1)',
+                                }}
+                              />
+                            ) : (
+                              <span
+                                style={{
+                                  display: 'inline-block',
+                                  width: 44,
+                                  height: 44,
+                                  borderRadius: 6,
+                                  backgroundColor: 'rgba(255,255,255,0.06)',
+                                  textAlign: 'center',
+                                  lineHeight: '44px',
+                                  fontSize: '1.2rem',
+                                }}
+                              >
+                                👕
+                              </span>
+                            )}
+                          </td>
+                          <td><code>{p.sku}</code></td>
+                          <td><strong>{p.name}</strong></td>
+                          <td>{p.category ?? '—'}</td>
+                          <td className="table__num">
+                            {formatMoney(BigInt(p.priceMinor), currency)}
+                          </td>
+                          <td className="table__num">{p.stock ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
+
             {result.issues.length > 0 ? (
               <>
-                <div className="panel__head" style={{ paddingInline: 0 }}>
+                <div className="panel__head" style={{ paddingInline: 0, marginTop: '1rem' }}>
                   <h3>Filas en cuarentena</h3>
                   <button
                     type="button"
@@ -656,11 +847,13 @@ export function ImportPanel({ catalogId, canWrite }: ImportPanelProps) {
               </>
             ) : null}
           </div>
-        ) : null}
+          );
+        })() : null}
       </div>
 
       <div className="panel__foot">
-        Las filas con error no crean producto: quedan en cuarentena con el motivo y la fila original.
+        Las filas con error no crean producto: quedan en cuarentena con el motivo y la fila
+        original.
       </div>
     </section>
   );

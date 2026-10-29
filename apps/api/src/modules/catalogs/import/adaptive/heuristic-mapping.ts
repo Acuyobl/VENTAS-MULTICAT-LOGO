@@ -201,8 +201,10 @@ export function buildHeuristicProposal(input: {
       /(cliente|telefono|correo|email|direccion|fecha|estado|urgencia|total|nota|observacion|pedido|orden)/;
     const priority =
       /(producto|articulo|descripcion|nombre|item|prenda|camisa|playera|blusa|vestido|modelo|concepto)/;
+    const extraFieldCols = new Set((input.baseExtraFields ?? []).map((f) => f.column));
     const candidates = input.columns.filter((column) => {
       if (usedColumns.has(column.header)) return false;
+      if (extraFieldCols.has(column.header)) return false;
       if (column.type !== 'TEXT') return false;
       if (excluded.test(column.normalized)) return false;
       if (isNoiseColumn(column.header, column.emptyRatio)) return false;
@@ -218,7 +220,10 @@ export function buildHeuristicProposal(input: {
       if (priorityA !== priorityB) return priorityB - priorityA;
       return averageLength(b.samples) - averageLength(a.samples);
     });
-    const chosen = candidates.find((column) => averageLength(column.samples) >= 5);
+    let chosen = candidates.find((column) => averageLength(column.samples) >= 5);
+    if (!chosen && !input.presetName && candidates.length > 0) {
+      chosen = candidates[0];
+    }
     if (chosen) {
       mapping.name = chosen.header;
       usedColumns.add(chosen.header);
@@ -232,6 +237,17 @@ export function buildHeuristicProposal(input: {
   if (!mapping.price && mapping.cost) {
     mapping.price = mapping.cost;
     extraWarnings.push('No se detectó precio; se usó la columna de costo como precio de venta.');
+  } else if (!mapping.price) {
+    const numericCol = input.columns.find(
+      (c) => !usedColumns.has(c.header) && (c.type === 'CURRENCY' || c.type === 'NUMBER'),
+    );
+    if (numericCol) {
+      mapping.price = numericCol.header;
+      usedColumns.add(numericCol.header);
+      extraWarnings.push(
+        `No se detectó precio; se usó la columna "${numericCol.header}" como precio de venta.`,
+      );
+    }
   }
 
   const extraFields: ExtraFieldProposal[] = [];

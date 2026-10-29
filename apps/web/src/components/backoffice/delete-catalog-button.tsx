@@ -9,7 +9,11 @@ interface DeleteCatalogButtonProps {
   canWrite: boolean;
 }
 
-export function DeleteCatalogButton({ catalogId, catalogName, canWrite }: DeleteCatalogButtonProps) {
+export function DeleteCatalogButton({
+  catalogId,
+  catalogName,
+  canWrite,
+}: DeleteCatalogButtonProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,9 +28,10 @@ export function DeleteCatalogButton({ catalogId, catalogName, canWrite }: Delete
     try {
       const response = await fetch(`/api/v1/catalogs/${catalogId}`, { method: 'DELETE' });
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
-          | { message?: string; details?: { reason?: string } }
-          | null;
+        const payload = (await response.json().catch(() => null)) as {
+          message?: string;
+          details?: { reason?: string };
+        } | null;
         throw new Error(
           payload?.details?.reason === 'catalog_has_open_orders'
             ? 'No se puede eliminar: el catálogo tiene pedidos abiertos (por cobrar o pagados). Cancelalos o entregalos primero.'

@@ -460,7 +460,7 @@ describe('F1 catálogo: importación CSV/XLSX, versionado y productos por versi�
 
     const unsupported = await agent
       .post(url)
-      .attach('file', Buffer.from('no soy un catálogo'), 'catalogo.pdf')
+      .attach('file', Buffer.from('no soy un catálogo'), 'catalogo.bin')
       .expect(400);
     expect(unsupported.body.code).toBe('UNSUPPORTED_FILE_TYPE');
 

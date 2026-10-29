@@ -97,9 +97,7 @@ export function ExpensesPanel({ catalogs, initial }: ExpensesPanelProps) {
         }),
       });
       const payload = (await response.json().catch(() => null)) as
-        | ExpenseSummary
-        | { message?: string }
-        | null;
+        ExpenseSummary | { message?: string } | null;
       if (!response.ok) {
         throw new Error((payload as { message?: string } | null)?.message ?? 'No pudimos guardar.');
       }
@@ -161,9 +159,7 @@ export function ExpensesPanel({ catalogs, initial }: ExpensesPanelProps) {
               <select
                 className="select"
                 value={category}
-                onChange={(event) =>
-                  setCategory(event.target.value as (typeof CATEGORIES)[number])
-                }
+                onChange={(event) => setCategory(event.target.value as (typeof CATEGORIES)[number])}
               >
                 {CATEGORIES.map((item) => (
                   <option key={item} value={item}>
@@ -281,7 +277,10 @@ export function ExpensesPanel({ catalogs, initial }: ExpensesPanelProps) {
           {data.totals.byCategory.length > 0 ? (
             <p className="mono faint" style={{ fontSize: '0.72rem', marginTop: '0.6rem' }}>
               {data.totals.byCategory
-                .map((row) => `${CATEGORY_LABEL[row.category] ?? row.category}: ${formatMoney(row.amountMinor, 'CRC')}`)
+                .map(
+                  (row) =>
+                    `${CATEGORY_LABEL[row.category] ?? row.category}: ${formatMoney(row.amountMinor, 'CRC')}`,
+                )
                 .join(' · ')}
             </p>
           ) : null}

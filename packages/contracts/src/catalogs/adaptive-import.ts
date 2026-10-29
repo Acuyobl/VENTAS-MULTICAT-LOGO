@@ -125,3 +125,19 @@ export const catalogCreateSchema = z
   .strict();
 
 export type CatalogCreateInput = z.infer<typeof catalogCreateSchema>;
+
+export const catalogUpdateSchema = z
+  .object({
+    name: z.string().trim().min(2).max(80).optional(),
+    slug: z
+      .string()
+      .trim()
+      .min(2)
+      .max(80)
+      .regex(/^[a-z0-9][a-z0-9-]*$/)
+      .optional(),
+    description: z.string().trim().max(300).nullable().optional(),
+  })
+  .strict();
+
+export type CatalogUpdateInput = z.infer<typeof catalogUpdateSchema>;

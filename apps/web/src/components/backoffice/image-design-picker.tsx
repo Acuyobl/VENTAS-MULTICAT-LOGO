@@ -26,9 +26,10 @@ export function ImageDesignPicker({ designs, initialDesign, canManage }: ImageDe
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ imageDesign: selected }),
       });
-      const payload = (await response.json().catch(() => null)) as
-        | { imageDesign?: string; message?: string }
-        | null;
+      const payload = (await response.json().catch(() => null)) as {
+        imageDesign?: string;
+        message?: string;
+      } | null;
       if (!response.ok) {
         throw new Error(payload?.message ?? 'No pudimos guardar el diseño.');
       }
@@ -92,7 +93,11 @@ export function ImageDesignPicker({ designs, initialDesign, canManage }: ImageDe
           })}
         </div>
 
-        {error ? <div className="alert" style={{ marginTop: '0.8rem' }}>{error}</div> : null}
+        {error ? (
+          <div className="alert" style={{ marginTop: '0.8rem' }}>
+            {error}
+          </div>
+        ) : null}
         {notice ? (
           <div className="alert alert--ok" style={{ marginTop: '0.8rem' }}>
             {notice}
@@ -120,8 +125,8 @@ export function ImageDesignPicker({ designs, initialDesign, canManage }: ImageDe
         </div>
       </div>
       <div className="panel__foot">
-        Cada diseño embebe la foto real del producto y varía la composición; con `IMAGE_PROVIDER=openai`
-        el estilo se usa como guía del prompt.
+        Cada diseño embebe la foto real del producto y varía la composición; con
+        `IMAGE_PROVIDER=openai` el estilo se usa como guía del prompt.
       </div>
     </section>
   );

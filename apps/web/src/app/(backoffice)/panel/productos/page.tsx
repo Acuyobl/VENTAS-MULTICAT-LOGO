@@ -53,8 +53,11 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   );
   const versions = versionsPage?.items ?? [];
 
+  const targetVersionId =
+    params.version || (selected.activeVersionId ? undefined : versions[0]?.id);
+
   const query = new URLSearchParams({ catalogId: selected.id, limit: '20' });
-  if (params.version) query.set('versionId', params.version);
+  if (targetVersionId) query.set('versionId', targetVersionId);
   if (params.q) query.set('q', params.q);
   if (params.categoria) query.set('category', params.categoria);
 

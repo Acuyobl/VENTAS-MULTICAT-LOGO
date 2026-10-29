@@ -76,11 +76,13 @@ export function OrderRefundsPanel({
     dialog.current?.close();
   }
 
-  function describeError(payload: {
-    code?: string;
-    message?: string;
-    details?: { availableMinor?: string; reason?: string } | null;
-  } | null): string {
+  function describeError(
+    payload: {
+      code?: string;
+      message?: string;
+      details?: { availableMinor?: string; reason?: string } | null;
+    } | null,
+  ): string {
     switch (payload?.code) {
       case 'REFUND_SEGREGATION_REQUIRED':
         return 'Vos solicitaste este reembolso y no podés aprobarlo: debe aprobarlo otra persona con permiso de aprobación (por ejemplo aprobador.demo@ventascatalogo.local).';
@@ -225,12 +227,12 @@ export function OrderRefundsPanel({
                       <td>{payment.method ?? payment.provider}</td>
                       <td className="mono faint">{payment.reference ?? '—'}</td>
                       <td>
-                        <span className="badge">{PAYMENT_LABEL[payment.status] ?? payment.status}</span>
+                        <span className="badge">
+                          {PAYMENT_LABEL[payment.status] ?? payment.status}
+                        </span>
                       </td>
                       <td className="table__num">{formatMoney(payment.amountMinor, currency)}</td>
-                      <td className="table__num">
-                        {formatMoney(availableFor(payment), currency)}
-                      </td>
+                      <td className="table__num">{formatMoney(availableFor(payment), currency)}</td>
                       <td>
                         {canRequest && refundable ? (
                           <button
@@ -331,13 +333,18 @@ export function OrderRefundsPanel({
         </div>
       </section>
 
-      <dialog ref={dialog} className="pay-dialog" aria-label={`Solicitar reembolso de ${orderNumber}`}>
+      <dialog
+        ref={dialog}
+        className="pay-dialog"
+        aria-label={`Solicitar reembolso de ${orderNumber}`}
+      >
         <form className="form-grid" onSubmit={requestRefund}>
           <div className="stack" style={{ gap: '0.2rem' }}>
             <span className="eyebrow">Reembolso</span>
             <h3>Solicitar reembolso</h3>
             <p className="mono faint" style={{ fontSize: '0.72rem' }}>
-              Pedido {orderNumber} · disponible {selected ? formatMoney(availableFor(selected), currency) : ''}
+              Pedido {orderNumber} · disponible{' '}
+              {selected ? formatMoney(availableFor(selected), currency) : ''}
             </p>
             <p className="mono faint" style={{ fontSize: '0.7rem' }}>
               {canApprove
@@ -375,7 +382,12 @@ export function OrderRefundsPanel({
           {error ? <div className="alert">{error}</div> : null}
 
           <div className="inline" style={{ justifyContent: 'flex-end' }}>
-            <button type="button" className="btn btn--ghost" onClick={closeDialog} disabled={busy !== null}>
+            <button
+              type="button"
+              className="btn btn--ghost"
+              onClick={closeDialog}
+              disabled={busy !== null}
+            >
               Cancelar
             </button>
             <button type="submit" className="btn" disabled={busy !== null}>

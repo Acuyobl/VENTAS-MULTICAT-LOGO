@@ -1,9 +1,11 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Req } from '@nestjs/common';
 import {
   catalogCreateSchema,
+  catalogUpdateSchema,
   type AuthenticatedUser,
   type CatalogCreateInput,
   type CatalogSummary,
+  type CatalogUpdateInput,
 } from '@ventascatalogo/contracts';
 import { CatalogsService } from './catalogs.service';
 import { Public } from '../../common/decorators/public.decorator';
@@ -44,6 +46,17 @@ export class CatalogsController {
     @Req() req: RequestWithTrace,
   ): Promise<CatalogSummary> {
     return this.catalogs.create(user, body, salesMetaFrom(req));
+  }
+
+  @Patch(':id')
+  @RequirePermissions('catalog:write')
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(catalogUpdateSchema)) body: CatalogUpdateInput,
+    @Req() req: RequestWithTrace,
+  ): Promise<CatalogSummary> {
+    return this.catalogs.update(user, id, body, salesMetaFrom(req));
   }
 }
 

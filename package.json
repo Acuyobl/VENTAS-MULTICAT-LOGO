@@ -7,7 +7,9 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "dev": "turbo run dev --parallel",
+    "dev": "pnpm --parallel --filter @ventascatalogo/api --filter @ventascatalogo/web dev",
+    "dev:api": "pnpm --filter @ventascatalogo/api dev",
+    "dev:web": "pnpm --filter @ventascatalogo/web dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",

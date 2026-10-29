@@ -36,6 +36,7 @@ export interface ProductSummary {
   priceMinor: string;
   currency: 'CRC' | 'USD';
   stock: number | null;
+  attributes?: Record<string, unknown> | null;
   imageKey: string | null;
   /** URL firmada de la imagen (MinIO); null si el producto no tiene imagen. */
   imageUrl?: string | null;

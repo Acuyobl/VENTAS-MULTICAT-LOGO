@@ -79,7 +79,15 @@ export function validateImportRows(
   rows.forEach((row, index) => {
     const rowNumber = index + 2;
     const rawData = { ...row };
-    const name = collapseSpaces(cellText(row, mapping.name));
+    let name = collapseSpaces(cellText(row, mapping.name));
+    if (!name && !mapping.name) {
+      const fallback = Object.values(row)
+        .map((v) => collapseSpaces(String(v ?? '')))
+        .find((v) => v.length > 0);
+      if (fallback) {
+        name = fallback;
+      }
+    }
     // Sin columna de SKU (hojas de pedido) se sintetiza uno estable por fila.
     const sku = mapping.sku ? cellText(row, mapping.sku) : syntheticImportSku(name, rowNumber);
     let rowHasError = false;
@@ -115,7 +123,9 @@ export function validateImportRows(
 
     if (!name) addIssue('MISSING_NAME', 'La fila no tiene nombre de producto.');
 
-    const price = parsePriceCell(cellText(row, mapping.price), currency);
+    const price = mapping.price
+      ? parsePriceCell(cellText(row, mapping.price), currency)
+      : { ok: true as const, minor: 0n };
     let priceMinor = 0n;
     if (price.ok) {
       priceMinor = price.minor;

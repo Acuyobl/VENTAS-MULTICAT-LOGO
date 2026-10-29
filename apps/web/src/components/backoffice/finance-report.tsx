@@ -41,13 +41,15 @@ export function FinanceReportView() {
       const query = `from=${rangeFrom}&to=${rangeTo}`;
       const [financeResponse, reconciliationResponse, profitResponse] = await Promise.all([
         fetch(`/api/v1/reports/finance?${query}`, { headers: { accept: 'application/json' } }),
-        fetch(`/api/v1/reports/reconciliation?${query}`, { headers: { accept: 'application/json' } }),
+        fetch(`/api/v1/reports/reconciliation?${query}`, {
+          headers: { accept: 'application/json' },
+        }),
         fetch(`/api/v1/reports/profit?${query}`, { headers: { accept: 'application/json' } }),
       ]);
       if (!financeResponse.ok || !reconciliationResponse.ok || !profitResponse.ok) {
-        const payload = (await financeResponse.json().catch(() => null)) as
-          | { message?: string }
-          | null;
+        const payload = (await financeResponse.json().catch(() => null)) as {
+          message?: string;
+        } | null;
         throw new Error(payload?.message ?? 'No pudimos cargar el reporte.');
       }
       setFinance((await financeResponse.json()) as FinanceReport);
@@ -100,7 +102,12 @@ export function FinanceReportView() {
       >
         <label className="field" style={{ maxWidth: '12rem' }}>
           <span className="field__label">Desde</span>
-          <input className="input" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <input
+            className="input"
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+          />
         </label>
         <label className="field" style={{ maxWidth: '12rem' }}>
           <span className="field__label">Hasta</span>
@@ -162,9 +169,7 @@ export function FinanceReportView() {
             </article>
             <article className="metric">
               <span className="metric__label">Utilidad</span>
-              <strong className="metric__value">
-                {formatMoney(profit.profitMinor, currency)}
-              </strong>
+              <strong className="metric__value">{formatMoney(profit.profitMinor, currency)}</strong>
               <span className="metric__hint">ingresos − reembolsos − gastos</span>
             </article>
             <article className="metric">
@@ -203,12 +208,16 @@ export function FinanceReportView() {
           <div className="metrics">
             <article className="metric">
               <span className="metric__label">Ventas netas</span>
-              <strong className="metric__value">{formatMoney(finance.sales.netMinor, currency)}</strong>
+              <strong className="metric__value">
+                {formatMoney(finance.sales.netMinor, currency)}
+              </strong>
               <span className="metric__hint">{finance.sales.orders} pedidos en el rango</span>
             </article>
             <article className="metric">
               <span className="metric__label">Cobrado</span>
-              <strong className="metric__value">{formatMoney(finance.sales.paidMinor, currency)}</strong>
+              <strong className="metric__value">
+                {formatMoney(finance.sales.paidMinor, currency)}
+              </strong>
               <span className="metric__hint">{finance.payments.count} pagos registrados</span>
             </article>
             <article className="metric">
@@ -237,7 +246,9 @@ export function FinanceReportView() {
             <section className="panel">
               <div className="panel__head">
                 <h2>Pedidos por estado</h2>
-                <span className="mono faint">{finance.range.from} → {finance.range.to}</span>
+                <span className="mono faint">
+                  {finance.range.from} → {finance.range.to}
+                </span>
               </div>
               <div className="table-wrap">
                 <table className="table">
@@ -274,7 +285,9 @@ export function FinanceReportView() {
             <section className="panel">
               <div className="panel__head">
                 <h2>Cobros por método</h2>
-                <span className="mono faint">{formatMoney(finance.payments.totalMinor, currency)}</span>
+                <span className="mono faint">
+                  {formatMoney(finance.payments.totalMinor, currency)}
+                </span>
               </div>
               <div className="table-wrap">
                 <table className="table">
@@ -347,8 +360,8 @@ export function FinanceReportView() {
           <div className="panel__head">
             <h2>Conciliación</h2>
             <span className="mono faint">
-              registrado {formatMoney(reconciliation.totals.registeredMinor, currency)} · reembolsado{' '}
-              {formatMoney(reconciliation.totals.refundedMinor, currency)} · neto{' '}
+              registrado {formatMoney(reconciliation.totals.registeredMinor, currency)} ·
+              reembolsado {formatMoney(reconciliation.totals.refundedMinor, currency)} · neto{' '}
               {formatMoney(reconciliation.totals.netMinor, currency)}
             </span>
           </div>

@@ -92,9 +92,10 @@ export function SalesBoard({ mode, catalogs, initialQuotes, initialOrders }: Sal
       ...init,
       headers: { 'content-type': 'application/json', accept: 'application/json', ...extraHeaders },
     });
-    const payload = (await response.json().catch(() => null)) as
-      | { message?: string; details?: unknown }
-      | null;
+    const payload = (await response.json().catch(() => null)) as {
+      message?: string;
+      details?: unknown;
+    } | null;
     if (!response.ok) {
       throw new Error(payload?.message ?? `Error HTTP ${response.status}`);
     }
@@ -201,7 +202,9 @@ export function SalesBoard({ mode, catalogs, initialQuotes, initialOrders }: Sal
       setLines([]);
       setNotes('');
       setTab('quotes');
-      setNotice(`Cotización ${created.number} creada por ${formatMoney(created.totalMinor, created.currency)}.`);
+      setNotice(
+        `Cotización ${created.number} creada por ${formatMoney(created.totalMinor, created.currency)}.`,
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'No pudimos crear la cotización.');
     } finally {
@@ -269,9 +272,7 @@ export function SalesBoard({ mode, catalogs, initialQuotes, initialOrders }: Sal
       );
       try {
         await navigator.clipboard.writeText(link.url);
-        setNotice(
-          (previous) => `${previous ?? ''} Copiado al portapapeles.`.trim(),
-        );
+        setNotice((previous) => `${previous ?? ''} Copiado al portapapeles.`.trim());
       } catch {
         // sin permiso de portapapeles: el usuario puede abrir el link igual
       }
@@ -427,7 +428,8 @@ export function SalesBoard({ mode, catalogs, initialQuotes, initialOrders }: Sal
                       {products.length === 0 ? <option value="">Sin productos</option> : null}
                       {products.map((product) => (
                         <option key={product.id} value={product.id}>
-                          {product.sku} · {product.name} · {formatMoney(product.priceMinor, product.currency)}
+                          {product.sku} · {product.name} ·{' '}
+                          {formatMoney(product.priceMinor, product.currency)}
                         </option>
                       ))}
                     </select>
@@ -509,7 +511,8 @@ export function SalesBoard({ mode, catalogs, initialQuotes, initialOrders }: Sal
                   {selectedCatalog
                     ? `${selectedCatalog.name} · precios con IVA ${selectedCatalog.currency}`
                     : 'Elegí un catálogo'}
-                  {' · '}suma de líneas {formatMoney(draftTotal, selectedCatalog?.currency ?? 'CRC')}
+                  {' · '}suma de líneas{' '}
+                  {formatMoney(draftTotal, selectedCatalog?.currency ?? 'CRC')}
                   {' · '}el IVA y el total se calculan en el servidor.
                 </p>
 
@@ -676,7 +679,9 @@ export function SalesBoard({ mode, catalogs, initialQuotes, initialOrders }: Sal
                           {STATUS_LABEL[order.status] ?? order.status}
                         </span>
                       </td>
-                      <td className="table__num">{formatMoney(order.totalMinor, order.currency)}</td>
+                      <td className="table__num">
+                        {formatMoney(order.totalMinor, order.currency)}
+                      </td>
                       <td className="table__num">{formatMoney(order.paidMinor, order.currency)}</td>
                       <td className="table__num">
                         {formatMoney(

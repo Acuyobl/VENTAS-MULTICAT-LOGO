@@ -39,10 +39,9 @@ export function ChatPanel({ initialConversations }: ChatPanelProps) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(
-        `/api/v1/chat/conversations/${conversationId}/messages`,
-        { headers: { accept: 'application/json' } },
-      );
+      const response = await fetch(`/api/v1/chat/conversations/${conversationId}/messages`, {
+        headers: { accept: 'application/json' },
+      });
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as { message?: string } | null;
         throw new Error(payload?.message ?? 'No pudimos cargar la conversación.');
@@ -84,9 +83,10 @@ export function ChatPanel({ initialConversations }: ChatPanelProps) {
         body: JSON.stringify({ body: draft.trim() }),
       });
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
-          | { code?: string; message?: string }
-          | null;
+        const payload = (await response.json().catch(() => null)) as {
+          code?: string;
+          message?: string;
+        } | null;
         throw new Error(
           payload?.code === 'INTEGRATION_NOT_CONFIGURED'
             ? 'Esta conversación es de WhatsApp y faltan las credenciales de la Cloud API. Configuralas para responder por ese canal.'
@@ -151,10 +151,13 @@ export function ChatPanel({ initialConversations }: ChatPanelProps) {
 
         <div className="chat-thread__messages">
           {messages.map((message) => (
-            <article key={message.id} className="chat-bubble" data-own={message.senderType === 'STAFF'}>
+            <article
+              key={message.id}
+              className="chat-bubble"
+              data-own={message.senderType === 'STAFF'}
+            >
               <span className="chat-bubble__meta">
-                {message.senderName ?? message.senderType} ·{' '}
-                {message.createdAt.slice(11, 16)}
+                {message.senderName ?? message.senderType} · {message.createdAt.slice(11, 16)}
               </span>
               <p>{message.body}</p>
             </article>
