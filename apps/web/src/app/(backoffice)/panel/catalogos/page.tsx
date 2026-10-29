@@ -30,6 +30,9 @@ export default async function CatalogsPage() {
         <div className="page-head__aside">
           <strong>{items.length}</strong>
           <span>catálogos en la organización</span>
+          <Link className="btn btn--small" href="/panel/catalogos/importar">
+            Cargar catálogo
+          </Link>
         </div>
       </header>
 

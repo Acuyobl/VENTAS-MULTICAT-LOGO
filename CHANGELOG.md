@@ -3,7 +3,27 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
-## [0.2.2] — 2026-10-28
+## [0.2.3] — 2026-10-28
+
+### Añadido
+- **Carpeta `catalogs/`** en la raíz con **4 catálogos de ejemplo** en formatos distintos (CSV UTF-8,
+  CSV Windows-1252 con `;`, XLSX estándar y XLSX con encabezados raros), con fotos reales,
+  descripciones, campos extra, `manifest.json` y guía.
+- **Pantalla «Cargar catálogo»** (`/panel/catalogos/importar`): crear catálogo nuevo o elegir uno
+  existente, analizar con IA, importar (reemplazar/fusionar), activar la versión y **preguntar antes
+  de reemplazar**; opción explícita de **eliminar el catálogo anterior** con confirmación (409 si
+  tiene pedidos abiertos).
+- Scripts `generate-catalogs.mjs` e `import-demo-catalogs.mjs` para regenerar y cargar los catálogos.
+
+### Corregido
+- **Descarga de imágenes del importador**: User-Agent descriptivo, limpieza de `utm_*`, reintentos
+  con backoff para 429/5xx, `Retry-After`, concurrencia ≤3 y 20 s por imagen. Los 4 catálogos quedan
+  con **32/32 imágenes** (antes fallaban por 403/429 de Wikimedia).
+
+### Pruebas
+- API: **313 unit** (56 archivos) y **145 e2e** (26 archivos). Web: 19 pruebas. CI con cobertura.
+
+
 
 ### Corregido
 - **Contenido con IA**: cambiar **plataforma, tono u objetivo** no cambiaba el resultado. Ahora:

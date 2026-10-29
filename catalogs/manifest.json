@@ -1,0 +1,45 @@
+{
+  "generatedAt": "2026-10-29T01:58:54.096Z",
+  "catalogs": [
+    {
+      "slug": "boutique-mar",
+      "name": "Boutique Mar",
+      "description": "Moda costera en lino y algodón: vestidos, camisas, calzado y accesorios tejidos. Formato CSV UTF-8.",
+      "file": "01-boutique-mar.csv",
+      "format": "csv",
+      "currency": "CRC",
+      "products": 8,
+      "images": 8
+    },
+    {
+      "slug": "ferreteria-central",
+      "name": "Ferretería Central",
+      "description": "Herramientas y ferretería general para el hogar y el taller. Formato XLSX con encabezados abreviados y campos extra.",
+      "file": "02-ferreteria-central.xlsx",
+      "format": "xlsx-ferreteria",
+      "currency": "CRC",
+      "products": 8,
+      "images": 8
+    },
+    {
+      "slug": "despensa-organica",
+      "name": "Despensa Orgánica",
+      "description": "Despensa artesanal: miel, café, chocolate, tés y granola. Formato CSV en Windows-1252 con punto y coma y campos de peso/vencimiento.",
+      "file": "03-despensa-organica.csv",
+      "format": "csv-latin1",
+      "currency": "CRC",
+      "products": 8,
+      "images": 8
+    },
+    {
+      "slug": "tecnohogar",
+      "name": "TecnoHogar",
+      "description": "Tecnología y hogar en dólares: audio, iluminación, accesorios de escritorio y relojes. Formato XLSX con encabezados no estándar.",
+      "file": "04-tecnohogar.xlsx",
+      "format": "xlsx-tech",
+      "currency": "USD",
+      "products": 8,
+      "images": 8
+    }
+  ]
+}

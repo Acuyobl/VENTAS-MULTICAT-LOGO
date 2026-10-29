@@ -7,7 +7,7 @@ producto (subida a MinIO, URLs firmadas e importación con imágenes), ventas
 (clientes, cotizaciones con PDF y conversión a pedido), la cara B (checkout
 invitado con token público, reclamo de cuenta y portal de pedidos).
 
-- **Unit:** 309 tests en 56 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
+- **Unit:** 313 tests en 56 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
   infraestructura: los servicios externos (ioredis, MinIO) se sustituyen por
   dobles.
 - **E2E:** 145 tests en 26 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
@@ -258,6 +258,25 @@ unitarios de `HealthService`.
   `AUTH_WRONG_AUDIENCE`.
 - El checkout reutiliza el patrón de snapshots de ventas y la secuencia
   `PED-YYYY-NNNNNN`; los warnings de imágenes no aplican aquí.
+
+## Hallazgos de descarga de imágenes del importador (F3)
+
+- `downloadImage` envía `User-Agent: VentasCatalogoImporter/1.0
+(+https://github.com/Acuyobl/VENTAS-MULTICAT-LOGO)` y `Accept: image/*`; sin
+  User-Agent decoroso Wikimedia responde 403/429 y la foto se perdía.
+- Hasta 3 intentos por imagen ante `429/500/502/503/504` y errores de red, con
+  backoff 1 s/3 s o `Retry-After` (máximo 10 s). Presupuesto total ≤ 20 s por
+  imagen (se pasa `AbortSignal.timeout` con lo que resta).
+- Se limpian query params `utm_*` antes de descargar (Wikimedia agrega tracking
+  que no cambia el archivo).
+- `resolveImportImages` descarga con concurrencia máxima 3 (pool que preserva el
+  orden de filas); las fallas siguen siendo warning `IMAGE_DOWNLOAD_FAILED` (la
+  fila se importa sin imagen, nunca a cuarentena). Se mantienen límite de 5 MB y
+  tipos permitidos (JPEG/PNG/WebP/SVG).
+- Tests unitarios con `fetch` mockeado: 429→200 respetando `Retry-After`, 403
+  persistente sin reintentos, backoff 1s/3s, red/timeout agotando 3 intentos,
+  UA presente, tope 5 MB por header y por stream, limpieza de `utm_*` y
+  concurrencia ≤ 3 preservando orden.
 
 ## Hallazgos de contenido variado por plataforma/tono/objetivo (F3)
 

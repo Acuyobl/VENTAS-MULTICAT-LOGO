@@ -29,10 +29,34 @@ export function isHttpImageUrl(value: string): boolean {
   return /^https?:\/\/\S+$/i.test(value.trim());
 }
 
+/** Máximo de descargas simultáneas para no gatillar límites del origen. */
+export const IMPORT_IMAGE_CONCURRENCY = 3;
+
+/** Ejecuta `worker` con concurrencia acotada preservando el orden de `items`. */
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (true) {
+      const index = nextIndex;
+      nextIndex += 1;
+      if (index >= items.length) return;
+      results[index] = await worker(items[index] as T, index);
+    }
+  });
+  await Promise.all(runners);
+  return results;
+}
+
 /**
  * Resuelve la columna `imagen` de las filas válidas de una importación.
  *
- * - URL `http(s)`: descarga, valida, sube a MinIO y guarda la key.
+ * - URL `http(s)`: descarga (UA + reintentos del downloader), valida, sube a
+ *   MinIO y guarda la key. Hasta 3 descargas concurrentes.
  * - URL que falla (red, HTTP, tipo, tamaño, subida): warning
  *   `IMAGE_DOWNLOAD_FAILED`; el producto igual se importa, sin imagen.
  * - Valor relativo/quebrado: warning `IMAGE_UNRESOLVED`, sin key inválida.
@@ -44,9 +68,8 @@ export async function resolveImportImages(
   deps: ImportImageDeps,
 ): Promise<ImportImageResolution> {
   const warnings: ImportRowIssueData[] = [];
-  const resolved: ResolvedImportProduct[] = [];
 
-  for (const product of products) {
+  const resolved = await mapWithConcurrency(products, IMPORT_IMAGE_CONCURRENCY, async (product) => {
     const { imageRef, rawData, ...rest } = product;
     const productId = randomUUID();
     let imageKey: string | null = null;
@@ -87,8 +110,9 @@ export async function resolveImportImages(
       });
     }
 
-    resolved.push({ ...rest, id: productId, imageKey });
-  }
+    return { ...rest, id: productId, imageKey };
+  });
 
+  warnings.sort((a, b) => a.rowNumber - b.rowNumber);
   return { products: resolved, warnings };
 }

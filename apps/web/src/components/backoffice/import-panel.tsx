@@ -165,6 +165,14 @@ export function ImportPanel({ catalogId, canWrite }: ImportPanelProps) {
       setError('Elegí un archivo CSV o XLSX.');
       return;
     }
+    if (mode === 'REPLACE') {
+      const confirmed = window.confirm(
+        'Modo Reemplazar: el catálogo quedará SOLO con los productos del archivo. ' +
+          'Los productos que no vengan en el archivo dejarán de estar activos cuando actives esta versión ' +
+          '(la versión anterior se archiva, no se borra). ¿Continuar?',
+      );
+      if (!confirmed) return;
+    }
     setImporting(true);
     setError(null);
     setResult(null);
@@ -468,8 +476,8 @@ export function ImportPanel({ catalogId, canWrite }: ImportPanelProps) {
                   disabled={!canWrite || importing}
                   onChange={(event) => setMode(event.target.value as 'REPLACE' | 'MERGE')}
                 >
-                  <option value="REPLACE">Reemplazar el catálogo (solo lo del archivo)</option>
-                  <option value="MERGE">Fusionar (conserva productos que no vienen)</option>
+                  <option value="REPLACE">Reemplazar (borra los que no vengan en el archivo)</option>
+                  <option value="MERGE">Fusionar (conserva los productos que no vienen)</option>
                 </select>
               </label>
               <label className="field">

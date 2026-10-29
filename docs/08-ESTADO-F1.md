@@ -612,6 +612,53 @@ regenerar con design=EDITORIAL → conserva WHATSAPP/PREMIUM/RECORDATORIO
 
 
 
+## 3.26 Cuatro catálogos de ejemplo y pantalla “Cargar catálogo”
+
+### Catálogos en la raíz
+
+La carpeta [`catalogs/`](../catalogs) contiene **4 catálogos con fotos reales y descripciones**, cada
+uno en un formato distinto, más `manifest.json` y `README.md`:
+
+| # | Archivo | Catálogo | Formato | Moneda | Campos extra |
+|---|---|---|---|---|---|
+| 1 | `01-boutique-mar.csv` | Boutique Mar | CSV UTF-8 separado por coma | CRC | — |
+| 2 | `02-ferreteria-central.xlsx` | Ferretería Central | XLSX con encabezados abreviados | CRC | `Medida`, `Material` |
+| 3 | `03-despensa-organica.csv` | Despensa Orgánica | CSV **Windows-1252** separado por `;` | CRC | `Peso`, `Vencimiento` |
+| 4 | `04-tecnohogar.xlsx` | TecnoHogar | XLSX con encabezados no estándar | USD | `Modelo`, `Garantía` |
+
+Cargados por el pipeline real: **8 productos y 8/8 imágenes por catálogo**, 0 warnings, 0 en
+cuarentena, atributos guardados y versiones activas. Verificado en las tiendas públicas:
+`/c/boutique-mar`, `/c/ferreteria-central`, `/c/despensa-organica`, `/c/tecnohogar` → 200 con 8
+imágenes firmadas cada una.
+
+Se agregan dos scripts reutilizables:
+
+- `apps/api/scripts/generate-catalogs.mjs` — vuelve a buscar fotos en Wikimedia, escribe los 4
+  archivos y el manifiesto.
+- `apps/api/scripts/import-demo-catalogs.mjs` — crea/actualiza los catálogos por API, analiza el
+  mapeo, importa y activa la versión.
+
+### Pantalla “Cargar catálogo”
+
+Nueva ruta **`/panel/catalogos/importar`** (accesible desde el botón **Cargar catálogo** en
+Catálogos):
+
+1. Elegir **Catálogo nuevo** (pone nombre y se crea) o **Catálogo existente** (reemplazar/fusionar).
+2. Subir archivo → **Analizar con IA** → editar mapeo/campos extra → importar.
+3. Antes de importar en modo **Reemplazar** el navegador **pregunta explícitamente** si se quiere
+   reemplazar el contenido (la versión anterior se archiva, no se borra).
+4. Sección **«¿Querés eliminar el catálogo anterior?»**: elegir catálogo + botón **Eliminar** con
+   confirmación; el backend rechaza con 409 si tiene pedidos abiertos.
+5. Al importar se puede **activar la versión** para que la tienda muestre el catálogo nuevo.
+
+### Descargador de imágenes endurecido
+
+El importador envía `User-Agent: VentasCatalogoImporter/1.0`, limpia `utm_*`, reintenta 429/5xx y
+errores de red con backoff (1 s / 3 s, `Retry-After` ≤ 10 s), limita a 3 descargas concurrentes y a
+20 s por imagen. Antes 3 catálogos perdían fotos por 403/429 de Wikimedia; ahora **32/32 imágenes**.
+
+
+
 ## 4. Decisiones tomadas
 
 1. **Códigos de error promovidos al contrato**: los 5 códigos de F1 se agregaron a
