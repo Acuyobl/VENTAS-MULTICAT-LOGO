@@ -1,4 +1,4 @@
-# Guion de demo — VentasCatálogo v0.2.9
+# Guion de demo — VentasCatálogo v0.3.0
 
 Demo de **10–12 minutos** que recorre las dos caras y el ciclo completo: catálogo → cotización →
 pedido → cobro → tienda → portal, más contenido, temas y catálogos reales. Todo corre local; no
@@ -35,16 +35,18 @@ Credenciales: `admin@ventascatalogo.local` / `Demo1234!` (MFA autocompletado en 
    Excel/CSV disponible; PDF, foto y WhatsApp «en camino».
 3. **Catálogos**: lista con los catálogos demo y de ejemplo; el contador de productos y el botón
    **Eliminar catálogo** en cada fila (pide confirmación; si hay pedidos abiertos responde 409).
-4. **Cargar catálogo**: elegir un archivo de [`catalogs/`](../catalogs/README.md) → el analizador
-   propone mapeo/campos extra → importar (Reemplazar pregunta antes; Fusionar conserva lo que no
-   venga) → activar la versión.
+4. **Cargar catálogo**: elegir un archivo de [`catalogs/`](../catalogs/README.md) o probar un
+   **PDF con texto / JSON / TSV / TXT** → el analizador propone mapeo/campos extra → importar
+   (Reemplazar pregunta antes; Fusionar conserva lo que no venga) → activar la versión.
+5. **Renombrar** un catálogo desde la fila (nombre y slug) y mostrar que la tienda pública cambia
+   de enlace; **Eliminar** pide confirmación y libera el slug.
 
 ## 2. Catálogo real y productos (2 min)
 
 1. **Productos** → elegir catálogo: la lista muestra **solo** ese catálogo, con tarjetas ordenadas
    (foto 4:3, nombre a 2 líneas, precio y stock).
-2. Abrir un producto → detalle con imagen cuadrada, métricas de precio/costo/stock, atributos
-   (`talla`, `tela`, `tipo`…) y formulario de edición.
+2. Abrir un producto → **modal de detalle** en la tienda y panel de edición en backoffice, con
+   imagen cuadrada, métricas de precio/costo/stock y atributos (`talla`, `tela`, `tipo`…).
 3. **Sublimania CR**: 3 camisas con fotos incrustadas extraídas del pedido real, precio sugerido y
    atributos; mostrar su tienda `/c/sublimania-cr`.
 
@@ -85,8 +87,8 @@ Credenciales: `admin@ventascatalogo.local` / `Demo1234!` (MFA autocompletado en 
 
 - **Promesa**: «Subí tu catálogo como sea y el agente lo deja vendible, publicable y cobrable».
   Hoy Excel/CSV (y hojas de pedido/data URI) están disponibles; PDF, foto y WhatsApp en camino.
-- **Calidad**: API 327 unit + 149 e2e, web 19; CI verde con cobertura (~1,06 MB); tags hasta
-  `v0.2.9`.
+- **Calidad**: API 336 unit + 153 e2e, web 19; CI verde con cobertura (~1,06 MB); tags hasta
+  `v0.3.0`.
 - **Pendiente**: Drive, PDF/OCR, foto/visión, WhatsApp de entrada, variantes, publicación real,
   onboarding/planes y credenciales reales.
 

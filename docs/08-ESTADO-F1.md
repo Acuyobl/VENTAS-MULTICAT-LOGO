@@ -710,20 +710,41 @@ Cambios preparados para salir de la demo local, validados con los gates completo
 
 Verificado: `pnpm typecheck`, `lint`, `test`, `build` y **149 e2e** en verde; sin migración nueva.
 
-## 3.29 Estado consolidado al 2026-10-29 (v0.2.9)
+## 3.29 Estado consolidado al 2026-10-29 (v0.3.0)
 
 | Dimensión | Estado |
 |---|---|
-| **Tags** | `v0.1.0` … `v0.2.9` (último: endurecimiento de producción) |
+| **Tags** | `v0.1.0` … `v0.3.0` (último: importador universal + rediseño UI) |
 | **Base de datos** | 10 migraciones aplicadas, sin drift |
-| **API** | 327 unit (58 archivos) + 149 e2e (28 archivos) |
+| **API** | 336 unit (58 archivos) + 153 e2e (30 archivos) |
 | **Web** | 19 pruebas; build de producción de Next 15 |
 | **CI** | verde con cobertura ~1,06 MB en el artefacto |
 | **Catálogos demo** | 5 en `catalogs/` cargados (Boutique Mar, Ferretería Central, Despensa Orgánica, TecnoHogar y Sublimania CR) |
-| **Catálogos en BD** | demo, despensa de altura, ferretería, prueba de codificación y los 5 de ejemplo; borrado con liberación de slug |
+| **Catálogos en BD** | demo, despensa de altura, ferretería, prueba de codificación y los de ejemplo; borrado con liberación de slug y **renombrado** |
 | **Usuarios demo** | `admin@`, `cliente@`, `mixto@`, `finanzas.demo@`, `aprobador.demo@` (`Demo1234!`) |
 | **Temas** | Clásica (serif/sidebar), Moderna (sans/barra superior), Compacta (mono/rail angosto) |
 | **Pendiente** | ver §6 |
+
+## 3.30 Importador universal y rediseño de UI (v0.3.0)
+
+**Entrada**: el importador dejó de ser solo CSV/XLSX y ahora adapta formas muy distintas sin tocar
+columnas:
+
+| Capacidad | Detalle |
+|---|---|
+| Formatos | CSV, TSV, TXT, JSON, XLSX, XLS, XLSM/XLSB, ODS y **PDF con texto** (extracción de streams) |
+| Estructuras | Multi-hoja (descarta portadas), tablas compuestas, hojas de pedido, archivos sin cabecera de una fila, delimitador `,` `;` `\|` o tabulador |
+| Enlaces imagen | Hoja auxiliar «Imagenes» vinculada por cliente/pedido, URLs http(s), data URI base64 y **maqueta SVG** de respaldo si la foto no se puede descargar |
+| Seguridad | Extensiones ejecutables/comprimidas bloqueadas con `UNSUPPORTED_FILE_TYPE`; 10 MB por archivo |
+| Catálogo | **Renombrar** nombre y slug desde la lista/detalle; borrar libera el slug; versión activa y cuarentena |
+| UI | Rediseño de paneles y tarjetas, estudio de contenido renovado, modal de detalle en la tienda y mejoras de accesibilidad/estados vacíos |
+
+Pruebas nuevas: `universal-import.e2e-spec.ts` (JSON, TSV, pipe, bloqueo de `.exe`),
+`catalog-rename.e2e-spec.ts` (nombre/slug, conflicto 409, slug inválido) y specs unitarios de parser
+para PDF/JSON/TSV/multi-hoja/tablas compuestas. **336 unit + 153 e2e** en verde.
+
+> El OCR de PDF escaneados y las fotos como archivo siguen pendientes: hoy el PDF debe traer texto
+> seleccionable.
 
 ## 4. Decisiones tomadas
 
@@ -770,11 +791,11 @@ curl -F "file=@tools/fixtures/catalogo-demo.csv;type=text/csv" `
 
 ## 6. Pendiente (al 2026-10-29)
 
-1. **Entradas de catálogo que faltan**: PDF/OCR (listas y facturas), foto/visión (cuadernos y
-   listas escritas), WhatsApp de entrada (archivo/foto por webhook) y Google Drive (OAuth). El
-   motor de mapeo adaptativo, data URI y hojas de pedido ya están.
-2. **Variantes reales** talla/color con stock/precio propios (hoy entran como atributos) y
-   multi-hoja/encabezado no estándar en XLSX.
+1. **Entradas que faltan**: OCR para PDF escaneados (hoy solo PDF con texto), foto/visión para
+   cuadernos y listas escritas, WhatsApp de entrada (archivo/foto por webhook) y Google Drive
+   (OAuth). El importador universal ya cubre Excel/CSV/TSV/TXT/JSON/XLS/ODS/PDF con texto,
+   multi-hoja, tablas compuestas y data URI.
+2. **Variantes reales** talla/color con stock/precio propios (hoy entran como atributos).
 3. **F2 restante**: conciliación programada/cierre de meses y reportes por catálogo.
 4. **F3 restante**: campañas de WhatsApp saliente, publicación real en redes y UI de consumo/cuota
    de IA (el guard ya existe).

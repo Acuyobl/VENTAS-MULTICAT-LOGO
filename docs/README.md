@@ -45,13 +45,13 @@ Además, [`CHANGELOG.md`](../CHANGELOG.md) resume los hitos desde `v0.1.0` hasta
 | Área | Estado |
 |---|---|
 | Base (F0) | ✅ Auth de dos audiencias, RBAC, MFA/TOTP, invitaciones, health, CI, bootstrap 75 s |
-| Catálogo | ✅ Versionado inmutable, importación CSV/XLSX + hojas de pedido, data URI, cuarentena, borrado con liberación de slug, 5 catálogos de ejemplo |
+| Catálogo | ✅ Versionado inmutable, **importador universal** (CSV/TSV/TXT/JSON/XLSX/XLS/ODS/PDF con texto, multi-hoja y tablas compuestas), data URI, maqueta SVG, cuarentena, renombrar y borrar con slug liberado, 5 catálogos de ejemplo |
 | Ventas | ✅ Cotizaciones con PDF, pedidos, tienda con carrito, checkout, portal, PWA |
 | Dinero | ✅ Link de pago, Stripe/sandbox, pagos manuales, reembolsos, recordatorios, reportes (CSV/PDF), conciliación, gastos y utilidad |
 | Contenido/IA | ✅ Posts con IA, 3 diseños de imagen, variación por plataforma/tono/objetivo, cuota mensual de tokens |
 | WhatsApp/chat | ✅ Entrante/saliente, bandeja staff y chat del cliente en el portal |
-| UX | ✅ 3 temas visuales (tipografía, densidad, shell y orden de menús), tarjetas de producto |
-| Calidad | ✅ API 327 unit + 149 e2e; web 19; CI verde con cobertura (~1,06 MB) |
+| UX | ✅ 3 temas visuales, tarjetas de producto, modal de detalle en tienda y estudio de contenido renovado |
+| Calidad | ✅ API 336 unit + 153 e2e; web 19; CI verde con cobertura (~1,06 MB) |
 | Producción | 🔶 Endurecimiento listo (Resend, secretos de pasarela, `STORAGE_PUBLIC_URL`, outbox); falta despliegue, onboarding/planes y credenciales reales |
 
 ## Decisiones que condicionan todo (resumen)
@@ -121,8 +121,9 @@ Para regenerar el grafo tras editar los documentos: `python tools/graphify_run.p
 
 ## Pendientes estratégicos
 
-1. **Entradas de catálogo**: PDF/OCR, foto/visión y WhatsApp de entrada (Google Drive requiere
-   credenciales OAuth de Google Cloud). El motor de mapeo adaptativo ya está listo.
+1. **Entradas de catálogo**: OCR de PDF escaneados, foto/visión y WhatsApp de entrada (Google Drive
+   requiere credenciales OAuth de Google Cloud). El importador universal ya cubre
+   Excel/CSV/TSV/TXT/JSON/ODS/PDF con texto, multi-hoja y tablas compuestas.
 2. **Variantes** talla/color con stock y precio propios; conciliación programada/cierre de mes;
    publicación real en redes.
 3. **Producción**: onboarding de organizaciones, planes/facturación, despliegue con HTTPS,

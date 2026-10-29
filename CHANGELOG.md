@@ -3,6 +3,24 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
+## [0.3.0] — 2026-10-29
+
+### Añadido
+- **Importador universal**: acepta CSV, TSV, TXT, JSON, XLSX, XLS, XLSM/XLSB, ODS y **PDF con
+  texto**, con delimitadores `,` `;` `|` o tabulador, archivos sin cabecera, **multi-hoja**,
+  **tablas compuestas** y hojas auxiliares de imágenes vinculadas por cliente/pedido. Los
+  ejecutables/comprimidos se rechazan con `UNSUPPORTED_FILE_TYPE`.
+- **Maqueta SVG de respaldo**: si una imagen no se puede descargar (URL rota, ruta relativa), el
+  producto recibe una maqueta visual generada en MinIO en vez de quedar sin foto.
+- **Renombrar catálogo**: PATCH de nombre/slug desde la lista y el detalle, con validación de slug,
+  conflicto 409 y actualización de la tienda pública.
+- **Rediseño de UI**: nuevo sistema visual, estudio de contenido renovado, modal de detalle de
+  producto en la tienda y mejoras en paneles/tarjetas/estados vacíos.
+
+### Pruebas
+- API: **336 unit** (58 archivos) y **153 e2e** (30 archivos; nuevos `universal-import` y
+  `catalog-rename`). Web: 19 pruebas. CI con cobertura.
+
 ## [0.2.9] — 2026-10-29
 
 ### Añadido

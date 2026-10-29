@@ -18,26 +18,28 @@ caras**: backoffice para administradores y colaboradores, y tienda/portal para l
 > **«Subí tu catálogo como sea (Excel, PDF, foto, WhatsApp) y el agente lo convierte en un catálogo
 > vendible, publicable y cobrable — sin que toques una columna.»**
 >
-> Es la frase que guía el rediseño. Hoy **Excel/CSV y hojas de pedido están disponibles**; PDF, foto
-> y WhatsApp se muestran como «en camino» hasta tener el flujo completo. Ver
+> Es la frase que guía el rediseño. Hoy **Excel/CSV, PDF con texto, JSON, TSV, TXT y hojas de pedido
+> están disponibles**; foto y WhatsApp se muestran como «en camino». Ver
 > [docs/11-POSICIONAMIENTO.md](docs/11-POSICIONAMIENTO.md).
 
-> **Estado actual — v0.2.9 (2026-10-29)**: F0 cerrado; F1 completo (catálogo versionado,
-> importación CSV/XLSX y hojas de pedido, productos, cotizaciones con PDF, pedidos, tienda,
-> carrito, portal y PWA); F2 funcional (pagos sandbox/Stripe, links de pago, pagos manuales,
-> reembolsos, recordatorios, reportes, conciliación, gastos y utilidad); F3 con contenido IA +
-> imágenes (3 diseños y variación por plataforma/tono/objetivo), WhatsApp entrante/saliente, chat
-> de staff y chat del cliente, y **3 temas visuales** configurables. Además: **importador
-> inteligente** (mapeo automático, campos extra, data URI, hojas de pedido), **5 catálogos de
-> ejemplo en `catalogs/`** (incluida una hoja de pedido real con fotos incrustadas), **borrado de
+> **Estado actual — v0.3.0 (2026-10-29)**: F0 cerrado; F1 completo (catálogo versionado,
+> **importador universal** CSV/TSV/TXT/JSON/XLSX/XLS/ODS/PDF con texto, multi-hoja y tablas
+> compuestas, renombrado de catálogo, imágenes con maqueta SVG de respaldo, productos, cotizaciones
+> con PDF, pedidos, tienda, carrito, portal y PWA); F2 funcional (pagos sandbox/Stripe, links de
+> pago, pagos manuales, reembolsos, recordatorios, reportes, conciliación, gastos y utilidad); F3 con
+> contenido IA + imágenes (3 diseños y variación por plataforma/tono/objetivo), WhatsApp
+> entrante/saliente, chat de staff y chat del cliente, **3 temas visuales** y **rediseño de UI**
+> (estudio de contenido, modal de producto en la tienda, tarjetas y paneles). Además: **5 catálogos
+> de ejemplo en `catalogs/`** (incluida una hoja de pedido real con fotos incrustadas), **borrado de
 > catálogo con liberación de slug**, reporte financiero en PDF y endurecimiento de producción
 > (cuota de IA, Resend, secretos de pasarela, `STORAGE_PUBLIC_URL`, outbox).
 >
-> **Calidad**: API **327 unit + 149 e2e**, web **19**; CI verde con cobertura (~1,06 MB).
+> **Calidad**: API **336 unit + 153 e2e**, web **19**; CI verde con cobertura (~1,06 MB).
 >
-> **Pendiente**: Google Drive, PDF/OCR, foto/visión y WhatsApp como **entrada** de catálogo,
-> variantes talla/color, conciliación programada, publicación real en redes, onboarding/planes/
-> facturación, credenciales reales de IA y pasarelas, blocklist `jti`/`sid` y umbrales de cobertura.
+> **Pendiente**: Google Drive, **OCR para PDF escaneados**, foto/visión y WhatsApp como **entrada**
+> de catálogo, variantes talla/color, conciliación programada, publicación real en redes, UI de
+> consumo de IA, onboarding/planes/facturación, credenciales reales de IA y pasarelas, blocklist
+> `jti`/`sid` y umbrales de cobertura.
 > Detalle en [`docs/08-ESTADO-F1.md`](docs/08-ESTADO-F1.md), [`docs/10-DEMO.md`](docs/10-DEMO.md),
 > [`docs/11-POSICIONAMIENTO.md`](docs/11-POSICIONAMIENTO.md) e hitos en
 > [`CHANGELOG.md`](CHANGELOG.md).

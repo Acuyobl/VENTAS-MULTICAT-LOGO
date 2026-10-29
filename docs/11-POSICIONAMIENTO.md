@@ -13,8 +13,9 @@ version: 0.2.9
 
 Es la promesa central del producto y el criterio para decidir qué construir y cómo se comunica.
 Todo lo que agreguemos debe acercar a esa frase o quedar explícitamente marcado como «en camino».
-Estado al 2026-10-29: **Excel/CSV, hojas de pedido y fotos por data URI disponibles**; PDF, foto
-como archivo, WhatsApp de entrada y Google Drive siguen «en camino».
+Estado al 2026-10-29 (v0.3.0): **Excel/CSV/TSV/TXT/JSON/ODS, hojas de pedido, PDF con texto y
+fotos por data URI disponibles**; OCR de PDF escaneados, foto como archivo, WhatsApp de entrada y
+Google Drive siguen «en camino».
 
 ## Por qué esta frase
 
