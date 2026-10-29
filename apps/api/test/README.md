@@ -7,10 +7,10 @@ producto (subida a MinIO, URLs firmadas e importación con imágenes), ventas
 (clientes, cotizaciones con PDF y conversión a pedido), la cara B (checkout
 invitado con token público, reclamo de cuenta y portal de pedidos).
 
-- **Unit:** 325 tests en 58 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
+- **Unit:** 327 tests en 58 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
   infraestructura: los servicios externos (ioredis, MinIO) se sustituyen por
   dobles.
-- **E2E:** 147 tests en 27 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
+- **E2E:** 149 tests en 28 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
   una instancia real de Nest (`Test.createTestingModule({ imports: [AppModule] })`)
   en el mismo proceso. No abren puerto fijo ni dependen del `pnpm dev` de la API.
 
@@ -148,6 +148,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `test/app-theme.e2e-spec.ts`                  | `GET/PATCH /organizations/settings` con `appTheme` (`CLASICO` default → `MODERNO`), PATCH combinado, `NEON` → 422, audit `organization.settings_updated`; `GET /public/app-settings` público con `Cache-Control`, resuelve por `?orgSlug=` (tema de otra org), 404 si no existe y 403 sin `settings:manage`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Tema visual de la app            |
 | `test/content-variation.e2e-spec.ts`          | misma foto/producto con 3 combinaciones (Instagram/CERCANO/VENTAS, TikTok/DIVERTIDO/LANZAMIENTO, WhatsApp/PREMIUM/RECORDATORIO): 3 SVG con hashes distintos, `data-platform/tone/goal` correctos, insignias (OFERTA/NUEVO/ÚLTIMOS DÍAS), foto embebida y título/CTA/body distintos; regenerar con `design=EDITORIAL` cambia el SVG manteniendo plataforma/tono/objetivo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Contenido variado                |
 | `test/order-sheet-import.e2e-spec.ts`         | CSV con las 13 columnas reales de Sublimania (3 camisas, una con `Imagen` data URI PNG) y solo preview automático: mapping `CAMISA`→name, `COSTO`→price/cost, 3 productos con 0 cuarentena, SKU sintético `IMP-…`, precios > 0, atributos TALLA/TELA/TIPO, 1 imagen data URI subida a MinIO, activación y catálogo público con 3 productos                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Hojas de pedido                  |
+| `test/catalog-delete-slug.e2e-spec.ts`        | crear catálogo A con slug → DELETE 204: slug renombrado `*-eliminado-<sufijo>` (≤80), audit before/after; crear B con el MISMO slug → 201 y aparece en la lista; público del slug viejo y del renombrado → 404; segundo DELETE → 404; con pedido abierto → 409 sin borrar ni renombrar                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Borrar catálogo                  |
 
 Criterio §4.1.1 (`lint` + `typecheck` + `test` en verde) se comprueba con
 `pnpm lint`, `pnpm typecheck` y los dos comandos de test de este README. El
@@ -261,6 +262,17 @@ unitarios de `HealthService`.
   `AUTH_WRONG_AUDIENCE`.
 - El checkout reutiliza el patrón de snapshots de ventas y la secuencia
   `PED-YYYY-NNNNNN`; los warnings de imágenes no aplican aquí.
+
+## Hallazgos de borrado con slug liberado (F1)
+
+- `CatalogsService.delete` renombra el slug antes del soft delete con
+  `deletedCatalogSlug`: `<slug>-eliminado-<sufijo>` (timestamp base36 + 4 chars
+  del UUID), solo `[a-z0-9-]`, ≤80 y con el base recortado si hace falta. Así el
+  slug original queda libre para volver a crear el mismo catálogo.
+- Se mantienen 204, audit `catalog.deleted` (now incluye el slug nuevo en
+  `after.slug`), 404 cross-org/inexistente y 409 `catalog_has_open_orders` **sin
+  tocar el slug** en ese caso. Segundo DELETE → 404 y el catálogo público del
+  slug viejo (y del renombrado) responde 404.
 
 ## Hallazgos de hojas de pedido e imágenes data URI (F3)
 

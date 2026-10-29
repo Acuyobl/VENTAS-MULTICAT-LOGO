@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { tryApiFetch } from '@/lib/api';
+import { getSession } from '@/lib/session';
 import { formatDate } from '@/lib/format';
 import type { CatalogSummary } from '@/lib/types';
+import { DeleteCatalogButton } from '@/components/backoffice/delete-catalog-button';
 
 export const metadata: Metadata = {
   title: 'Catálogos',
@@ -11,8 +13,12 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function CatalogsPage() {
-  const catalogs = await tryApiFetch<{ items: CatalogSummary[] }>('/catalogs');
+  const [catalogs, session] = await Promise.all([
+    tryApiFetch<{ items: CatalogSummary[] }>('/catalogs'),
+    getSession(),
+  ]);
   const items = catalogs?.items ?? [];
+  const canWrite = session?.permissions.includes('catalog:write') ?? false;
 
   return (
     <div>
@@ -73,6 +79,11 @@ export default async function CatalogsPage() {
                       >
                         Ver tienda ↗
                       </a>
+                      <DeleteCatalogButton
+                        catalogId={catalog.id}
+                        catalogName={catalog.name}
+                        canWrite={canWrite}
+                      />
                     </span>
                   </span>
                   <span className="catalog-row__count">

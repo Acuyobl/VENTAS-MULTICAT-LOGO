@@ -3,7 +3,19 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
-## [0.2.7] — 2026-10-28
+## [0.2.8] — 2026-10-28
+
+### Corregido
+- **Borrar catálogo**: además de estar en el detalle y en la carga, ahora hay un botón **Eliminar
+  catálogo** visible en **cada fila** del listado `/panel/catalogos`.
+- Al eliminar se **libera el slug**: se renombra a `<slug>-eliminado-<sufijo>`, así se puede volver a
+  crear un catálogo con el mismo nombre/slug (204; público viejo 404; recrear 201; DELETE repetido
+  404). Se mantiene el bloqueo **409** si hay pedidos abiertos.
+
+### Pruebas
+- API: **327 unit** (58 archivos) y **149 e2e** (28 archivos). Web: 19 pruebas. CI con cobertura.
+
+
 
 ### Cambiado
 - **Norte del producto**: «Subí tu catálogo como sea (Excel, PDF, foto, WhatsApp) y el agente lo

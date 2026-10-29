@@ -140,12 +140,16 @@ export class CatalogsRepository {
     });
   }
 
-  /** Soft delete + desactiva/archiva la versión activa para que el público dé 404. */
-  async softDeleteCatalog(catalogId: string, activeVersionId: string | null): Promise<void> {
+  /** Soft delete + slug liberado + archiva la versión activa (público 404). */
+  async softDeleteCatalog(
+    catalogId: string,
+    activeVersionId: string | null,
+    deletedSlug: string,
+  ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await tx.catalog.update({
         where: { id: catalogId },
-        data: { deletedAt: new Date(), activeVersionId: null },
+        data: { deletedAt: new Date(), activeVersionId: null, slug: deletedSlug },
       });
       if (activeVersionId) {
         await tx.catalogVersion.updateMany({

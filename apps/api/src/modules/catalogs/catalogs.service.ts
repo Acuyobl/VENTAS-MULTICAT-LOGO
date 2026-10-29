@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import type {
   AuthenticatedUser,
   CatalogCreateInput,
@@ -135,7 +136,8 @@ export class CatalogsService {
         openOrders,
       });
     }
-    await this.repo.softDeleteCatalog(catalog.id, catalog.activeVersionId);
+    const deletedSlug = deletedCatalogSlug(catalog.slug);
+    await this.repo.softDeleteCatalog(catalog.id, catalog.activeVersionId, deletedSlug);
     await this.audit.write({
       organizationId: user.organizationId,
       actorUserId: user.id,
@@ -147,7 +149,11 @@ export class CatalogsService {
         slug: catalog.slug,
         activeVersionId: catalog.activeVersionId,
       },
-      after: { deletedAt: new Date().toISOString(), activeVersionId: null },
+      after: {
+        deletedAt: new Date().toISOString(),
+        activeVersionId: null,
+        slug: deletedSlug,
+      },
       ip: meta.ip,
       userAgent: meta.userAgent,
       traceId: meta.traceId,
@@ -166,4 +172,25 @@ export function slugifyName(name: string): string {
       .replace(/^-+|-+$/g, '')
       .slice(0, 80) || 'catalogo'
   );
+}
+
+/**
+ * Slug del catálogo borrado: libera el original para poder recrearlo y deja
+ * rastro estable (`<slug>-eliminado-<sufijo>`, ≤80, solo [a-z0-9-]).
+ */
+export function deletedCatalogSlug(originalSlug: string, suffix?: string): string {
+  const marker = '-eliminado-';
+  const rawSuffix = (suffix ?? `${Date.now().toString(36)}${randomUUID().slice(0, 4)}`)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .slice(0, 12);
+  const safeSuffix = rawSuffix || 'x';
+  const base = originalSlug
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, Math.max(1, 80 - marker.length - safeSuffix.length))
+    .replace(/-+$/g, '');
+  return `${base || 'catalogo'}${marker}${safeSuffix}`;
 }

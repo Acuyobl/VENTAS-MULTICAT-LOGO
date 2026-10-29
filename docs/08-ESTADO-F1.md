@@ -536,10 +536,14 @@ con **unread 1** y preview correcto; página `/mi-cuenta/chat` 200.
 
 `DELETE /catalogs/:id` (`catalog:write`): soft delete, desactiva `activeVersionId`, archiva la versión
 ACTIVE, audita `catalog.deleted`; bloquea con **409 `catalog_has_open_orders`** si hay pedidos por
-cobrar/abonados/pagados; 404 cross-org. Desaparece del listado y el catálogo público da 404. Botón
-«Eliminar catálogo» con confirmación en el detalle.
+cobrar/abonados/pagados; 404 cross-org. Al borrar, el slug se renombra a
+`<slug>-eliminado-<sufijo>` para **liberar el slug original**: se puede volver a crear un catálogo
+nuevo con el mismo nombre/slug (el slug viejo y el renombrado dan 404). El botón «Eliminar catálogo»
+con confirmación está en el listado (`/panel/catalogos`), en el detalle y en la pantalla de carga.
 
-Verificado: catálogo de prueba → **204** y ya no aparece; `catalogo-demo` con pedidos abiertos → **409**.
+Verificado: catálogo de prueba → **204**, público viejo **404**, recrear el mismo slug → **201**;
+segundo DELETE → **404**; `catalogo-demo` con pedidos abiertos → **409**. El listado muestra 10
+botones de eliminar para 10 catálogos.
 
 ## 3.23 Reporte financiero en PDF y E2E del DoD de F1
 
