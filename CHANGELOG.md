@@ -3,7 +3,20 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
-## [0.2.1] — 2026-10-28
+## [0.2.2] — 2026-10-28
+
+### Corregido
+- **Contenido con IA**: cambiar **plataforma, tono u objetivo** no cambiaba el resultado. Ahora:
+  - Texto: títulos, ganchos, CTA y hashtags varían por combinación (WhatsApp sin hashtags).
+  - Imagen: insignia de plataforma con color, insignia de objetivo
+    (OFERTA/NUEVO/ÚLTIMOS DÍAS/APRENDÉ), paleta por tono y variante distinta; se mantiene la foto
+    del producto y los atributos `data-platform`/`data-tone`/`data-goal`.
+  - El prompt incluye metadatos de plataforma/tono/objetivo y regenerar con otro diseño los conserva.
+
+### Pruebas
+- API: **309 unit** (56 archivos) y **145 e2e** (26 archivos). Web: 19 pruebas. CI con cobertura.
+
+
 
 ### Añadido
 - **3 temas visuales de toda la app** seleccionables por el administrador en Ajustes:

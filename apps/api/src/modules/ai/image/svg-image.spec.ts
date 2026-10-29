@@ -123,7 +123,7 @@ describe('buildMockSocialSvg · diseños configurables', () => {
   });
 
   it('PROMO usa badge OFERTA, banda diagonal y píldora', () => {
-    const svg = buildMockSocialSvg({ ...base, design: 'PROMO', photoDataUri });
+    const svg = buildMockSocialSvg({ ...base, design: 'PROMO', photoDataUri, tone: 'DIVERTIDO' });
     expect(svg).toContain('OFERTA');
     expect(svg).toContain('rotate(-12');
     expect(svg).toContain('rx="46"');

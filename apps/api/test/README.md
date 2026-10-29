@@ -7,10 +7,10 @@ producto (subida a MinIO, URLs firmadas e importación con imágenes), ventas
 (clientes, cotizaciones con PDF y conversión a pedido), la cara B (checkout
 invitado con token público, reclamo de cuenta y portal de pedidos).
 
-- **Unit:** 299 tests en 54 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
+- **Unit:** 309 tests en 56 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
   infraestructura: los servicios externos (ioredis, MinIO) se sustituyen por
   dobles.
-- **E2E:** 143 tests en 25 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
+- **E2E:** 145 tests en 26 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
   una instancia real de Nest (`Test.createTestingModule({ imports: [AppModule] })`)
   en el mismo proceso. No abren puerto fijo ni dependen del `pnpm dev` de la API.
 
@@ -112,6 +112,8 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `src/modules/catalogs/catalogs.service.spec.ts`                      | soft delete: 409 `catalog_has_open_orders` sin borrar, soft delete + archivado de versión activa + audit cuando no hay pedidos, y 404                                                                                                                                                                                                     | Borrar catálogo         |
 | `src/modules/chat/chat.service.spec.ts`                              | `senderName` del chat del portal: cliente → su nombre, staff → nombre del usuario, sistema → VentasCatálogo                                                                                                                                                                                                                               | Chat del cliente        |
 | `src/modules/organizations/org-settings.service.spec.ts`             | `normalizeAppTheme` (3 temas + fallback `CLASICO`) y contratos: enum válido, PATCH solo/combinado, `NEON` inválido y `orgSettingsSchema` exige `appTheme`                                                                                                                                                                                 | Tema visual             |
+| `src/modules/ai/content-variation.spec.ts`                           | `MockAiProvider` varía título/body/CTA/hashtags/visualSuggestion por plataforma+tono+objetivo (4 tonos × 4 objetivos × 5 plataformas), determinista; `buildSocialPrompt` agrega `Metadatos:` y `buildImagePrompt` incluye Plataforma/Tono/Objetivo y estilo del tono                                                                      | Contenido variado       |
+| `src/modules/ai/image/svg-variation.spec.ts`                         | SVG con `data-platform`/`data-tone`/`data-goal`, insignias por plataforma y objetivo (OFERTA/NUEVO/ÚLTIMOS DÍAS/APRENDÉ), paleta por tono en los 3 diseños, determinismo y previews del catálogo                                                                                                                                          | Contenido variado       |
 
 ### E2E
 
@@ -142,6 +144,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `test/catalog-delete-report-pdf.e2e-spec.ts`  | `DELETE /catalogs/:id` → 204, desaparece de `GET /catalogs`, público 404, versión archivada y audit `catalog.deleted`; con pedido abierto → 409 `catalog_has_open_orders`; cross-org 404 y vendedor 403; `GET /reports/finance/pdf` → `application/pdf` con `attachment; filename="reporte-financiero-…"` y audit `report.exported` (`format:pdf`), rango inválido 422 y 403 sin `finance:read`                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Borrar catálogo / PDF financiero |
 | `test/full-flow.e2e-spec.ts`                  | DoD F1 en una org efímera: catálogo → importar CSV (2 productos) → activar versión → cliente → cotización (2 unidades) → `send` con PDF `%PDF-` → `accept` → `convert` a pedido `PED-…` con totales iguales → `fulfill`; limpieza completa en afterAll                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | DoD F1 completo                  |
 | `test/app-theme.e2e-spec.ts`                  | `GET/PATCH /organizations/settings` con `appTheme` (`CLASICO` default → `MODERNO`), PATCH combinado, `NEON` → 422, audit `organization.settings_updated`; `GET /public/app-settings` público con `Cache-Control`, resuelve por `?orgSlug=` (tema de otra org), 404 si no existe y 403 sin `settings:manage`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Tema visual de la app            |
+| `test/content-variation.e2e-spec.ts`          | misma foto/producto con 3 combinaciones (Instagram/CERCANO/VENTAS, TikTok/DIVERTIDO/LANZAMIENTO, WhatsApp/PREMIUM/RECORDATORIO): 3 SVG con hashes distintos, `data-platform/tone/goal` correctos, insignias (OFERTA/NUEVO/ÚLTIMOS DÍAS), foto embebida y título/CTA/body distintos; regenerar con `design=EDITORIAL` cambia el SVG manteniendo plataforma/tono/objetivo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Contenido variado                |
 
 Criterio §4.1.1 (`lint` + `typecheck` + `test` en verde) se comprueba con
 `pnpm lint`, `pnpm typecheck` y los dos comandos de test de este README. El
@@ -255,6 +258,26 @@ unitarios de `HealthService`.
   `AUTH_WRONG_AUDIENCE`.
 - El checkout reutiliza el patrón de snapshots de ventas y la secuencia
   `PED-YYYY-NNNNNN`; los warnings de imágenes no aplican aquí.
+
+## Hallazgos de contenido variado por plataforma/tono/objetivo (F3)
+
+- `MockAiProvider` parsea la metadata (`Metadatos: plataforma=…; tono=…; objetivo=…`,
+  con fallback tolerante a las líneas del prompt v3) y devuelve un JSON distinto por
+  combinación: títulos y ganchos por tono, línea por objetivo, CTA por objetivo,
+  hashtags por plataforma (WhatsApp sin hashtags) y `visualSuggestion` por tono.
+  Es determinista (semilla estable con los tres campos + producto).
+- `buildSocialPrompt` agrega explícitamente la metadata de los tres campos para que
+  el mock (y cualquier proveedor) no dependa del mapeo interno a etiquetas del
+  prompt v3 (`WHATSAPP` se mapeaba a `instagram` y `CERCANO`/`PROFESIONAL` a
+  `profesional`).
+- `buildImagePrompt` incluye `Plataforma`, `Tono`, `Objetivo` y el estilo visual del
+  tono; el mock SVG recibe los tres campos, los expone como `data-platform`,
+  `data-tone`, `data-goal` y los incluye en el `variant` (FNV-1a) junto a diseño,
+  post y producto: cambiar cualquiera de los tres cambia el SVG/hash.
+- SVG: insignia de plataforma con su color (Instagram/Facebook/TikTok/WhatsApp/
+  LinkedIn), insignia de objetivo (OFERTA/NUEVO/ÚLTIMOS DÍAS/APRENDÉ) y paleta por
+  tono (cálido/azul-verde/coral-amarillo/negro-dorado) aplicada en los 3 diseños;
+  la foto sigue embebida y sin foto se mantiene el fallback con degradado.
 
 ## Hallazgos de tema visual (F3)
 

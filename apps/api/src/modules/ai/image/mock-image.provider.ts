@@ -27,6 +27,9 @@ export class MockImageProvider implements ImageProvider {
         featured?.id ?? 'sin-producto',
         featured?.imageKey ?? 'sin-foto',
         design,
+        input.post.platform,
+        input.post.tone,
+        input.post.goal,
       ].join('|'),
     );
 
@@ -39,6 +42,10 @@ export class MockImageProvider implements ImageProvider {
       photoDataUri,
       variant,
       design,
+      platform: input.post.platform as
+        'INSTAGRAM' | 'FACEBOOK' | 'TIKTOK' | 'WHATSAPP' | 'LINKEDIN',
+      tone: input.post.tone as 'CERCANO' | 'PROFESIONAL' | 'DIVERTIDO' | 'PREMIUM',
+      goal: input.post.goal as 'VENTAS' | 'LANZAMIENTO' | 'RECORDATORIO' | 'EDUCATIVO',
     });
     return {
       buffer: Buffer.from(svg, 'utf8'),

@@ -23,7 +23,7 @@ describe('MockAiProvider', () => {
     const second = await provider.complete(request);
 
     expect(first.provider).toBe('mock');
-    expect(first.model).toBe('mock-social-v1');
+    expect(first.model).toBe('mock-social-v2');
     expect(first.text).toBe(second.text);
     expect(first.usage.tokensIn).toBeGreaterThan(0);
     expect(first.usage.tokensOut).toBeGreaterThan(0);

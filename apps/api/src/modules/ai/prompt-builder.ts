@@ -75,9 +75,13 @@ export function buildSocialPrompt(context: SocialPromptContext): BuiltSocialProm
     ? `Instrucciones extra del negocio: ${context.extraInstructions}`
     : '';
 
+  const metadata = `Metadatos: plataforma=${context.platform}; tono=${context.tone}; objetivo=${context.goal}`;
+
   return {
     system: `${socialPostPrompt.system} Respondé solo con el objeto JSON, sin markdown ni explicaciones.`,
-    user: [base, `Disponibilidad: ${stockLines.join(' · ')}`, extra].filter(Boolean).join('\n'),
+    user: [base, `Disponibilidad: ${stockLines.join(' · ')}`, metadata, extra]
+      .filter(Boolean)
+      .join('\n'),
     templateKey: 'social-post',
     version: 3,
   };

@@ -27,7 +27,7 @@ administradores y colaboradores, y tienda/portal para los clientes.
 > codificaciones (UTF-8/Windows-1252) con guardia contra texto corrupto**, **PWA de la tienda,
 > chat del cliente en el portal, borrado de catálogo, reporte financiero en PDF y E2E del DoD de
 > F1**, **3 temas visuales de toda la app configurables en Ajustes (tipografía, tamaños, densidad,
-> shell y orden de menús)**, con más de 460 pruebas automáticas. Pendiente: Drive, variantes,
+> shell y orden de menús)**, con más de 470 pruebas automáticas. Pendiente: Drive, variantes,
 > PDF/OCR, conciliación programada, campañas de WhatsApp, publicación real en redes, cuota de IA y
 > credenciales reales. Detalle en
 > [`docs/07-ESTADO-IMPLEMENTACION.md`](docs/07-ESTADO-IMPLEMENTACION.md),

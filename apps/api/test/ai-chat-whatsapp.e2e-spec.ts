@@ -185,7 +185,7 @@ describe('IA de contenido, WhatsApp entrante y chat (e2e)', () => {
       goal: 'VENTAS',
       status: 'DRAFT',
       aiProvider: 'mock',
-      aiModel: 'mock-social-v1',
+      aiModel: 'mock-social-v2',
     });
     expect(response.body.title.length).toBeGreaterThan(0);
     expect(response.body.body.length).toBeGreaterThan(0);

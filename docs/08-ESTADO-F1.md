@@ -586,6 +586,32 @@ restaurado a CLASICO para la demo
 
 
 
+## 3.25 Contenido: plataforma, tono y objetivo cambian texto e imagen
+
+**Problema:** al cambiar plataforma/tono/objetivo en `/panel/contenido` se generaba el mismo texto y la
+misma imagen. **Causa:** el proveedor `mock` de texto ignoraba esos campos y el SVG solo variaba
+detalles mínimos sin insignias por plataforma/objetivo ni paleta por tono.
+
+| Pieza | Cambio |
+|---|---|
+| Texto (mock v2) | `buildSocialPrompt` agrega `Metadatos: plataforma=…; tono=…; objetivo=…`; el provider genera título/gancho por tono, línea y **CTA por objetivo**, **hashtags por plataforma** (WhatsApp sin hashtags) y `visualSuggestion` por tono. Determinista |
+| Prompt de imagen | Incluye plataforma, tono y objetivo + estilo visual del tono |
+| SVG | `data-platform`/`data-tone`/`data-goal`, **insignia de plataforma** con color propio, **insignia de objetivo** (OFERTA/NUEVO/ÚLTIMOS DÍAS/APRENDÉ) y **paleta por tono** (cálido, azul/verde, coral/amarillo, negro/dorado) en los 3 diseños; la foto sigue embebida |
+| Variante | El hash incluye plataforma+tono+objetivo+diseño+post+producto, así cambia el SVG |
+
+Verificación ejecutada con el **mismo producto** y tres combinaciones:
+
+```text
+INSTAGRAM/CERCANO/VENTAS     → título «Un clásico para tu día a día…» · CTA «Escribinos…»
+TIKTOK/DIVERTIDO/LANZAMIENTO → título «Modo …: activado» · CTA «Conocé lo nuevo…»
+WHATSAPP/PREMIUM/RECORDATORIO→ título «La elegancia de … · últimos días» · CTA «Últimos días…»
+3 SVG → hashes distintos (c26ce3…/978b09…/69cfcc…) · variantes 838/3798/8997
+data-platform/tone/goal correctos en cada uno · foto del producto embebida (~259 KB)
+regenerar con design=EDITORIAL → conserva WHATSAPP/PREMIUM/RECORDATORIO
+```
+
+
+
 ## 4. Decisiones tomadas
 
 1. **Códigos de error promovidos al contrato**: los 5 códigos de F1 se agregaron a

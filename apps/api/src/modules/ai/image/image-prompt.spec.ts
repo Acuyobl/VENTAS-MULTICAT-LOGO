@@ -7,7 +7,9 @@ const post = {
   title: 'Café de altura para tu semana',
   cta: 'Escribinos por WhatsApp',
   visualSuggestion: 'Fondo crema con taza humeante',
-  platform: 'INSTAGRAM',
+  platform: 'INSTAGRAM' as const,
+  tone: 'CERCANO' as const,
+  goal: 'VENTAS' as const,
 };
 
 const product = {
