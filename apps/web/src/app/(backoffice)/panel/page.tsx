@@ -35,13 +35,14 @@ export default async function PanelPage() {
     <div>
       <header className="page-head">
         <div>
-          <span className="eyebrow">Fundaciones · F0</span>
+          <span className="eyebrow">El catálogo como llegue</span>
           <h1 className="display">
-            Todo en <em>orden</em>.
+            Subí tu catálogo <em>como sea</em>.
           </h1>
           <p>
-            Este es el cuarto de máquinas de {user?.organizationName}. Desde acá se cuida el
-            catálogo, se invita al equipo y se revisan las sesiones abiertas.
+            Excel, PDF, foto o WhatsApp: el agente lo convierte en un catálogo vendible, publicable
+            y cobrable — sin que toques una columna. Hoy entran Excel y CSV; PDF, foto y WhatsApp
+            vienen en camino.
           </p>
         </div>
         <div className="page-head__aside">
@@ -49,6 +50,38 @@ export default async function PanelPage() {
           <span>productos publicados</span>
         </div>
       </header>
+
+      <section className="ingest-grid" aria-label="Formas de cargar un catálogo">
+        <Link className="ingest-card ingest-card--ready" href="/panel/catalogos/importar">
+          <span className="eyebrow">Excel / CSV</span>
+          <strong>Subilo y listo</strong>
+          <p>CSV, XLSX y hojas de pedido. El agente propone mapeo, campos extra y precio.</p>
+          <span className="badge badge--ok">Disponible</span>
+        </Link>
+        <article className="ingest-card">
+          <span className="eyebrow">PDF</span>
+          <strong>Factura o tabla</strong>
+          <p>Extracción de tablas con IA para listas de precios y catálogos impresos.</p>
+          <span className="badge">En camino</span>
+        </article>
+        <article className="ingest-card">
+          <span className="eyebrow">Foto</span>
+          <strong>Lista escrita</strong>
+          <p>OCR y visión para leer precios, medidas y nombres desde una foto del cuaderno.</p>
+          <span className="badge">En camino</span>
+        </article>
+        <article className="ingest-card">
+          <span className="eyebrow">WhatsApp</span>
+          <strong>Mandalo por chat</strong>
+          <p>Recibí el archivo o la foto por WhatsApp y el agente lo deja cargado.</p>
+          <span className="badge">En camino</span>
+        </article>
+      </section>
+
+      <p className="mono faint" style={{ margin: '-0.4rem 0 1.2rem', fontSize: '0.72rem' }}>
+        La promesa completa: subí tu catálogo como sea y el agente lo deja vendible, publicable y
+        cobrable, sin tocar una columna.
+      </p>
 
       <section className="stat-grid" aria-label="Indicadores">
         <div className="stat rise" style={{ '--i': 0 } as CSSProperties}>

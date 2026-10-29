@@ -10,10 +10,17 @@ fecha: 2026-10-28
 [![CI](https://github.com/Acuyobl/VENTAS-MULTICAT-LOGO/actions/workflows/ci.yml/badge.svg)](https://github.com/Acuyobl/VENTAS-MULTICAT-LOGO/actions/workflows/ci.yml)
 [![Repo](https://img.shields.io/badge/repo-Acuyobl%2FVENTAS--MULTICAT--LOGO-2f6b4f)](https://github.com/Acuyobl/VENTAS-MULTICAT-LOGO)
 
-Aplicación de ventas multicatálogo con IA: importa catálogos desde Google Drive, vende, cobra,
-lleva finanzas, atiende por WhatsApp y chat, y genera contenido para redes sociales con IA.
-Cada catálogo es una unidad de negocio aislada. El producto tiene **dos caras**: backoffice para
-administradores y colaboradores, y tienda/portal para los clientes.
+Aplicación de ventas multicatálogo con IA: importa catálogos desde Excel/CSV (y próximamente Drive,
+PDF, foto y WhatsApp), vende, cobra, lleva finanzas, atiende por WhatsApp y chat, y genera contenido
+para redes sociales con IA. Cada catálogo es una unidad de negocio aislada. El producto tiene **dos
+caras**: backoffice para administradores y colaboradores, y tienda/portal para los clientes.
+
+> **«Subí tu catálogo como sea (Excel, PDF, foto, WhatsApp) y el agente lo convierte en un catálogo
+> vendible, publicable y cobrable — sin que toques una columna.»**
+>
+> Es la frase que guía el rediseño. Hoy **Excel/CSV y hojas de pedido están disponibles**; PDF, foto
+> y WhatsApp se muestran como «en camino» hasta tener el flujo completo. Ver
+> [docs/11-POSICIONAMIENTO.md](docs/11-POSICIONAMIENTO.md).
 
 > Estado actual: **F0 cerrado, F1 completo salvo Drive/PWA, F2 cerrado en lo funcional y F3 con
 > contenido, WhatsApp y chat** — monorepo, auth de dos audiencias, RBAC, web biparte, versionado de

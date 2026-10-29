@@ -2926,3 +2926,53 @@ html[data-theme='COMPACTO'] .store__main {
   gap: 0.25rem;
   padding: 0.7rem 0.8rem;
 }
+
+/* Entradas del catálogo: promesa «como sea» */
+.ingest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1.2rem 0 0.8rem;
+}
+
+.ingest-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper-2);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.ingest-card--ready {
+  border-color: var(--ok);
+}
+
+.ingest-card--ready:hover {
+  border-color: var(--coral);
+  background: var(--paper);
+}
+
+.ingest-card strong {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.ingest-card p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.ingest-card .badge {
+  align-self: flex-start;
+  margin-top: auto;
+  padding-top: 0.2rem;
+}

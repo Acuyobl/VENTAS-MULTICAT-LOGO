@@ -23,21 +23,22 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           Ventas<span>Catálogo</span>
         </a>
         <div className="auth__quote">
-          <span className="eyebrow">Backoffice · aud=staff</span>
+          <span className="eyebrow">El catálogo como llegue</span>
           <h1 className="display">
-            La trastienda
+            Subí tu catálogo
             <br />
-            también <em>respira</em>.
+            <em>como sea</em>.
           </h1>
           <p>
-            Catálogos, equipo, sesiones y permisos en un solo lugar. Acá se decide qué se
-            publica, quién entra y qué ve cada quién.
+            Excel, PDF, foto o WhatsApp: el agente lo convierte en un catálogo vendible, publicable
+            y cobrable — sin que toques una columna.
           </p>
         </div>
         <div className="auth__meta">
-          <span>Argon2id</span>
-          <span>Refresh rotation</span>
-          <span>TOTP obligatorio para admins</span>
+          <span>Excel/CSV · listo</span>
+          <span>PDF · en camino</span>
+          <span>Foto · en camino</span>
+          <span>WhatsApp · en camino</span>
         </div>
       </aside>
 

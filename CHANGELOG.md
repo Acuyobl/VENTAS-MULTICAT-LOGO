@@ -3,6 +3,19 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
+## [0.2.7] — 2026-10-28
+
+### Cambiado
+- **Norte del producto**: «Subí tu catálogo como sea (Excel, PDF, foto, WhatsApp) y el agente lo
+  convierte en un catálogo vendible, publicable y cobrable — sin que toques una columna.»
+  Aplicado al **login**, al **resumen del panel** (4 tarjetas de entrada) y a **Cargar catálogo**,
+  con estados honestos: Excel/CSV **Disponible**; PDF, foto y WhatsApp **En camino**.
+- Nuevo [docs/11-POSICIONAMIENTO.md](docs/11-POSICIONAMIENTO.md) con la anatomía de la promesa,
+  reglas de comunicación y hoja de ruta para cumplirla completa.
+
+### Pruebas
+- API: **325 unit** y **147 e2e**. Web: 19 pruebas. CI con cobertura.
+
 ## [0.2.6] — 2026-10-28
 
 ### Corregido
