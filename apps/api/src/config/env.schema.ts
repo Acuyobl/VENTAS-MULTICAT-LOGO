@@ -51,6 +51,7 @@ export const envSchema = z
     MINIO_BUCKET_DOCS: z.string().default('vc-docs'),
     MINIO_BUCKET_PUBLIC: z.string().default('vc-public'),
     MINIO_PRESIGN_TTL: z.coerce.number().int().positive().default(900),
+    STORAGE_PUBLIC_URL: z.string().optional().default(''),
     EMAIL_PROVIDER: z.enum(['smtp', 'resend']).default('smtp'),
     SMTP_HOST: z.string().default('localhost'),
     SMTP_PORT: portFromString.default(1025),

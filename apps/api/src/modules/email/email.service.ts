@@ -45,6 +45,42 @@ export class EmailService {
   }
 
   async send(options: SendMailOptions): Promise<boolean> {
+    const provider = this.config.get<string>('EMAIL_PROVIDER', 'smtp');
+
+    if (provider === 'resend') {
+      const resendKey = this.config.get<string>('RESEND_API_KEY');
+      if (!resendKey) {
+        this.logger.warn({ to: options.to }, 'resend_api_key_missing');
+        return false;
+      }
+      try {
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${resendKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: this.from,
+            to: [options.to],
+            subject: options.subject,
+            html: options.html,
+            text: options.text,
+          }),
+          signal: AbortSignal.timeout(10_000),
+        });
+        if (!response.ok) {
+          const error = await response.text().catch(() => '');
+          this.logger.error({ status: response.status, error }, 'resend_send_failed');
+          return false;
+        }
+        return true;
+      } catch (err) {
+        this.logger.error({ err, to: options.to }, 'resend_network_failed');
+        return false;
+      }
+    }
+
     if (!this.transporter) {
       this.logger.warn(
         { to: options.to, subject: options.subject },

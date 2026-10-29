@@ -12,7 +12,6 @@ import type { PipeTransform } from '@nestjs/common';
 import { Audience } from '../../common/decorators/audience.decorator';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 
 /** El ajuste inválido se responde 422 (no 400) por contrato de la UI de Ajustes. */
 class OrgSettingsUpdatePipe implements PipeTransform {

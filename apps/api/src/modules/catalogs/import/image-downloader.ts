@@ -137,7 +137,7 @@ async function waitBeforeRetry(
 
 async function readImage(
   response: Response,
-  url: string,
+  _url: string,
 ): Promise<{ buffer: Buffer; contentType: string }> {
   const contentType = normalizeContentType(response.headers.get('content-type'));
   if (!isAllowedImageContentType(contentType)) {

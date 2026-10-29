@@ -24,7 +24,7 @@ export class StripeGateway implements PaymentGateway {
   constructor(private readonly config: ConfigService) {}
 
   async createLink(input: CreatePaymentLinkInput): Promise<CreatedPaymentLink> {
-    const secretKey = this.config.get<string>('STRIPE_SECRET_KEY', '');
+    const secretKey = input.secretKey || this.config.get<string>('STRIPE_SECRET_KEY', '');
     if (!secretKey) {
       throw new AppException('INTEGRATION_NOT_CONFIGURED', 409, {
         provider: this.provider,

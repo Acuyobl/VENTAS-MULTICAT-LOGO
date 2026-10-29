@@ -14,6 +14,7 @@ interface CloudApiPayload {
   entry?: Array<{
     changes?: Array<{
       value?: {
+        metadata?: { phone_number_id?: string; display_phone_number?: string };
         contacts?: Array<{ profile?: { name?: string }; wa_id?: string }>;
         messages?: CloudApiMessage[];
       };

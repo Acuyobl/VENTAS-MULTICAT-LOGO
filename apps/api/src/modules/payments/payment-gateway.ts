@@ -12,6 +12,8 @@ export interface CreatePaymentLinkInput {
   currency: Currency;
   token: string;
   expiresAt: Date;
+  organizationId?: string;
+  secretKey?: string;
 }
 
 export interface CreatedPaymentLink {

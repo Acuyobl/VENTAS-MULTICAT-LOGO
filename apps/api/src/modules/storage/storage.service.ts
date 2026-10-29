@@ -101,13 +101,29 @@ export class StorageService implements OnModuleInit {
     }
   }
 
+  private formatPublicUrl(url: string): string {
+    const publicBase = this.config.get<string>('STORAGE_PUBLIC_URL', '').trim();
+    if (!publicBase) return url;
+    try {
+      const parsed = new URL(url);
+      const target = new URL(publicBase);
+      parsed.protocol = target.protocol;
+      parsed.hostname = target.hostname;
+      parsed.port = target.port;
+      return parsed.toString();
+    } catch {
+      return url;
+    }
+  }
+
   /** URL firmada de descarga (bucket privado) con TTL en segundos. */
   async presignGetObject(
     key: string,
     ttlSeconds = DEFAULT_PRODUCT_IMAGE_URL_TTL_SECONDS,
   ): Promise<string> {
     try {
-      return await this.client.presignedGetObject(this.productsBucket, key, ttlSeconds);
+      const presigned = await this.client.presignedGetObject(this.productsBucket, key, ttlSeconds);
+      return this.formatPublicUrl(presigned);
     } catch (error) {
       throw this.storageException('presign_get_object', key, error);
     }
@@ -150,7 +166,8 @@ export class StorageService implements OnModuleInit {
   /** URL firmada de descarga de un documento de `vc-docs`. */
   async presignDocument(key: string, ttlSeconds = 300): Promise<string> {
     try {
-      return await this.client.presignedGetObject(this.docsBucket, key, ttlSeconds);
+      const presigned = await this.client.presignedGetObject(this.docsBucket, key, ttlSeconds);
+      return this.formatPublicUrl(presigned);
     } catch (error) {
       throw this.storageException('presign_document', key, error);
     }

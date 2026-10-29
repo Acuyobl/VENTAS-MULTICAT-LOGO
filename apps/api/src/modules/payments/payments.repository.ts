@@ -5,6 +5,7 @@ import type {
   Order,
   OrderItem,
   Payment,
+  PaymentGatewayConfig,
   PaymentLink,
   PaymentLinkStatus,
   PaymentWebhookEvent,
@@ -308,6 +309,17 @@ export class PaymentsRepository {
         data: { paymentId: payment.id, processedAt: new Date() },
       });
       return { payment, order: updated };
+    });
+  }
+
+  async findGatewayConfig(
+    organizationId: string,
+    provider: PaymentProvider,
+  ): Promise<PaymentGatewayConfig | null> {
+    return this.prisma.paymentGatewayConfig.findUnique({
+      where: {
+        organizationId_provider: { organizationId, provider },
+      },
     });
   }
 }

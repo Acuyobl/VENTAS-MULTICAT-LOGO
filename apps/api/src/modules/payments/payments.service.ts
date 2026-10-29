@@ -12,7 +12,7 @@ import {
   type SandboxConfirmResponse,
 } from '@ventascatalogo/contracts';
 import type { OrderStatus } from '@ventascatalogo/contracts';
-import type { Payment, PaymentLink } from '@prisma/client';
+import type { PaymentLink } from '@prisma/client';
 import { PaymentsRepository, type OrderForPayment } from './payments.repository';
 import { PaymentGatewayRegistry, providerFromKey } from './payment-gateway';
 import {
@@ -22,7 +22,7 @@ import {
 } from './payment-calculations';
 import { toPaymentLinkResponse, toPaymentListResponse, toPaymentSummary } from './payments.mappers';
 import { toStorefrontOrder } from '../storefront/storefront.mappers';
-import { randomToken } from '../../common/utils/crypto';
+import { decryptSecret, randomToken } from '../../common/utils/crypto';
 import { AppException } from '../../common/errors/app-exception';
 import { AuditService } from '../audit/audit.service';
 import type { AuditMeta } from '../../common/audit/audit.types';
@@ -90,6 +90,17 @@ export class PaymentsService {
     const expiresAt = new Date(Date.now() + ttlMinutes * MINUTE_MS);
     const token = randomToken(24);
 
+    let secretKey: string | undefined;
+    const gatewayConfig = await this.repo.findGatewayConfig(order.organizationId, provider);
+    if (gatewayConfig?.enabled && gatewayConfig.secretEnc) {
+      const encryptionKey = this.config.get<string>('ENCRYPTION_KEY', '');
+      try {
+        secretKey = decryptSecret(gatewayConfig.secretEnc, encryptionKey);
+      } catch (err) {
+        this.logger.warn({ err, org: order.organizationId }, 'gateway_secret_decrypt_failed');
+      }
+    }
+
     const created = await gateway.createLink({
       orderId: order.id,
       orderNumber: order.number,
@@ -97,6 +108,8 @@ export class PaymentsService {
       currency: order.currency,
       token,
       expiresAt,
+      organizationId: order.organizationId,
+      secretKey,
     });
 
     const link = await this.repo.createLink({
@@ -218,7 +231,6 @@ export class PaymentsService {
     this.assertLinkUsable(link);
 
     const order = link.order;
-    const baseProgress = computePaymentProgress(order.totalMinor, order.paidMinor);
     const nextPaid = order.paidMinor + link.amountMinor;
     const progress = computePaymentProgress(order.totalMinor, nextPaid);
 

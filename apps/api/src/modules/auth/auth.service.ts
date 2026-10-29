@@ -30,6 +30,10 @@ export interface AuthResult {
   audience?: Audience;
 }
 
+/** Hash válido de Argon2id para ejecutar verificación en tiempo constante ante usuarios inexistentes. */
+const DUMMY_ARGON2_HASH =
+  '$argon2id$v=19$m=65536,t=3,p=4$anBkdW1teXNhbHQxMjM0NTY$a2/c994p21+x0VnZ4tO1eQ5jC8mN4k8x8g7gY1/dE2s';
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -49,6 +53,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { email } });
 
     if (!user || user.deletedAt || user.status !== 'ACTIVE' || !user.passwordHash) {
+      await verify(DUMMY_ARGON2_HASH, input.password).catch(() => false);
       throw new AppException('UNAUTHORIZED', 401, { reason: 'invalid_credentials' });
     }
 
@@ -116,11 +121,7 @@ export class AuthService {
     return this.completeLogin(userContext, input.deviceName, meta);
   }
 
-  async refresh(
-    rawRefreshToken: string,
-    audience: Audience,
-    meta: AuthMeta,
-  ): Promise<AuthResult> {
+  async refresh(rawRefreshToken: string, audience: Audience, meta: AuthMeta): Promise<AuthResult> {
     const { user, tokens } = await this.sessions.rotate(rawRefreshToken, audience, {
       ip: meta.ip,
       userAgent: meta.userAgent,
@@ -167,11 +168,7 @@ export class AuthService {
     return enrollment;
   }
 
-  async verifyMfa(
-    mfaToken: string,
-    code: string,
-    meta: AuthMeta,
-  ): Promise<AuthResult> {
+  async verifyMfa(mfaToken: string, code: string, meta: AuthMeta): Promise<AuthResult> {
     const payload = await this.tokens.verifyMfaToken(mfaToken);
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user || user.status !== 'ACTIVE') throw new AppException('UNAUTHORIZED', 401);
@@ -255,8 +252,7 @@ export class AuthService {
       where: { id: user.id },
       data: {
         failedLoginCount: nextCount,
-        lockedUntil:
-          nextCount >= maxAttempts ? new Date(Date.now() + lockMinutes * 60_000) : null,
+        lockedUntil: nextCount >= maxAttempts ? new Date(Date.now() + lockMinutes * 60_000) : null,
       },
     });
     this.logger.warn({ userId: user.id, attempts: nextCount }, 'login_failed');

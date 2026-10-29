@@ -64,6 +64,21 @@ export class SocialPostsRepository {
     });
   }
 
+  /** Suma los tokens consumidos en el mes corriente por organización para control de cuota. */
+  async sumMonthlyTokens(organizationId: string, since: Date): Promise<number> {
+    const aggregate = await this.prisma.socialPost.aggregate({
+      where: {
+        organizationId,
+        createdAt: { gte: since },
+      },
+      _sum: {
+        tokensIn: true,
+        tokensOut: true,
+      },
+    });
+    return (aggregate._sum.tokensIn ?? 0) + (aggregate._sum.tokensOut ?? 0);
+  }
+
   find(organizationId: string, id: string): Promise<SocialPost | null> {
     return this.prisma.socialPost.findFirst({
       where: { id, organizationId, deletedAt: null },

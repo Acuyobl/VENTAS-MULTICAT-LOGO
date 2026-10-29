@@ -73,6 +73,23 @@ export class SocialPostsService {
       extraInstructions: input.extraInstructions,
     });
 
+    const monthlyQuota = this.config.get<number>('AI_MONTHLY_QUOTA_TOKENS', 2_000_000);
+    if (monthlyQuota > 0) {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const consumedTokens = await this.repo.sumMonthlyTokens(user.organizationId, startOfMonth);
+
+      if (consumedTokens >= monthlyQuota) {
+        throw new AppException('RATE_LIMITED', 429, {
+          reason: 'ai_monthly_quota_exceeded',
+          consumedTokens,
+          monthlyQuota,
+        });
+      }
+    }
+
     const provider = this.providerFactory.createProvider();
     let completion;
     try {

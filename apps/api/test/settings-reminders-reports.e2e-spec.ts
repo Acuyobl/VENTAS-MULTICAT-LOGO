@@ -60,10 +60,7 @@ describe('Ajustes, autoaprobación, recordatorios y reportes (e2e)', () => {
     return agent;
   }
 
-  let orderSequence = 0;
-
   async function createOrder(customer: { fullName: string; email?: string; phone?: string }) {
-    orderSequence += 1;
     const response = await request(server)
       .post(`${api}/storefront/checkout`)
       .send({

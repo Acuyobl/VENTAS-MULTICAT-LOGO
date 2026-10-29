@@ -66,15 +66,6 @@ export function inferColumnType(
 
   const ratio = (predicate: (value: string) => boolean) =>
     nonEmpty.filter(predicate).length / nonEmpty.length;
-  const hint = (
-    value: string,
-    type: ColumnType,
-    hintRe: RegExp,
-    predicate: (value: string) => boolean,
-  ): { type: ColumnType; confidence: number } =>
-    hintRe.test(header)
-      ? { type, confidence: Math.max(0.6, ratio(predicate)) }
-      : { type, confidence: ratio(predicate) };
 
   const imageRatio = ratio(looksLikeImage);
   if (imageRatio >= 0.8) return { type: 'IMAGE', confidence: imageRatio };

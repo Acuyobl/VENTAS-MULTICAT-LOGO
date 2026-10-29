@@ -3,7 +3,6 @@ import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
 import { PrismaService } from '../src/prisma/prisma.service';
 import {
-  createCatalogFixture,
   createStaffFixture,
   deleteCatalogFixture,
   deleteUserFixture,

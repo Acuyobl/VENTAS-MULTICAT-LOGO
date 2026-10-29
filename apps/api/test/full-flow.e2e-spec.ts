@@ -4,7 +4,6 @@ import type { INestApplication } from '@nestjs/common';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { StorageService } from '../src/modules/storage/storage.service';
 import {
-  createCatalogFixture,
   createStaffFixture,
   deleteCatalogFixture,
   deleteUserFixture,
