@@ -118,6 +118,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         </section>
       ) : initialPage ? (
         <ProductsBrowser
+          key={selected.id}
           catalogId={selected.id}
           versions={versions}
           initialPage={initialPage}

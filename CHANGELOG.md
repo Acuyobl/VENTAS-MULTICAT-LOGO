@@ -3,7 +3,18 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
-## [0.2.3] — 2026-10-28
+## [0.2.4] — 2026-10-28
+
+### Corregido
+- **Productos por catálogo**: al cambiar de catálogo en `/panel/productos?catalogo=…`, el listado
+  conservaba los productos del catálogo anterior (el componente cliente mantenía su estado inicial).
+  Ahora el listado se remonta por catálogo y muestra **solo los productos del catálogo elegido**,
+  con sus filtros y versión reiniciados.
+
+### Pruebas
+- API: **313 unit** y **145 e2e**. Web: 19 pruebas. CI con cobertura.
+
+
 
 ### Añadido
 - **Carpeta `catalogs/`** en la raíz con **4 catálogos de ejemplo** en formatos distintos (CSV UTF-8,
