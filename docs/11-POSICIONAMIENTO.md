@@ -2,7 +2,8 @@
 title: Posicionamiento — «Subí tu catálogo como sea»
 tipo: estrategia-producto
 estado: north-star
-fecha: 2026-10-28
+fecha: 2026-10-29
+version: 0.2.9
 ---
 
 # La frase que guía el rediseño
@@ -12,6 +13,8 @@ fecha: 2026-10-28
 
 Es la promesa central del producto y el criterio para decidir qué construir y cómo se comunica.
 Todo lo que agreguemos debe acercar a esa frase o quedar explícitamente marcado como «en camino».
+Estado al 2026-10-29: **Excel/CSV, hojas de pedido y fotos por data URI disponibles**; PDF, foto
+como archivo, WhatsApp de entrada y Google Drive siguen «en camino».
 
 ## Por qué esta frase
 

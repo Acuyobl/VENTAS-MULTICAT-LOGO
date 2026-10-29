@@ -180,3 +180,18 @@ Recordá reiniciar la API y **recompilar la web** al cambiar el flag (Next lo in
 **F1 — Catálogo y ventas** (`docs/04` §4.2): OAuth de Google Drive, pipeline de importación
 (Sheets/XLSX/CSV/PDF), versionado `draft → validated → active`, catálogo público con carrito,
 cotizaciones y pedidos con PDF. Antes de empezar: cerrar los 6 puntos de §5.
+
+## 8. Actualización — 2026-10-29 (implementación v0.2.9)
+
+Esta bitácora queda como **histórica de F0**; el estado vivo está en
+[08-ESTADO-F1.md](08-ESTADO-F1.md) §3.29 y §6.
+
+Desde F0 se completaron: F1 (catálogo/importación/ventas/tienda/portal/PWA), F2 funcional
+(cobros, reembolsos, recordatorios, reportes, conciliación, gastos), F3 (contenido IA, WhatsApp,
+chat staff + cliente, temas visuales), 5 catálogos de ejemplo en `catalogs/`, borrado de catálogo
+con liberación de slug y endurecimiento de producción (cuota IA, Resend, secretos de pasarela,
+`STORAGE_PUBLIC_URL`, outbox).
+
+**Calidad actual**: API 327 unit + 149 e2e; web 19; CI verde con cobertura (~1,06 MB); tags hasta
+`v0.2.9`. Los pendientes históricos de §5.3–§5.6 (dinero/`CHECK`, `jti`/`sid`, Swagger y cobertura)
+siguen abiertos y figuran en el estado consolidado.

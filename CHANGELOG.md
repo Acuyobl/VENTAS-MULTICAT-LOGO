@@ -3,6 +3,28 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
+## [0.2.9] — 2026-10-29
+
+### Añadido
+- **Endurecimiento de producción**:
+  - **Cuota mensual de IA** (`AI_MONTHLY_QUOTA_TOKENS`, default 2.000.000): bloquea la generación
+    con **429 `RATE_LIMITED`** (`reason=ai_monthly_quota_exceeded`) y reporta tokens consumidos.
+  - **Email real con Resend** (`EMAIL_PROVIDER=resend` + `RESEND_API_KEY`) con timeout y fallback
+    silencioso.
+  - **Anti-enumeración de usuarios**: verificación Argon2id dummy en logins con email inexistente.
+  - **Secretos de pasarela por organización**: descifrado con `ENCRYPTION_KEY` y preferencia sobre
+    la clave global de Stripe.
+  - **`STORAGE_PUBLIC_URL`** para reescribir las URLs firmadas de MinIO detrás de proxy/CDN.
+  - **Outbox confiable**: `fetchPending`, `markPublished` y `markFailed` con backoff exponencial y
+    límite de 5 intentos.
+
+### Documentación
+- README, índice de docs, estado F0 (nota histórica), estado F1/F2/F3 (nuevas §3.28 y §3.29),
+  bootstrap, guion de demo v0.2.9, posicionamiento y changelog actualizados al estado real.
+
+### Pruebas
+- API: **327 unit** (58 archivos) y **149 e2e** (28 archivos). Web: 19 pruebas. CI con cobertura.
+
 ## [0.2.8] — 2026-10-28
 
 ### Corregido

@@ -2,16 +2,20 @@
 title: Paquete documental de VentasCatálogo
 tipo: indice
 estado: aprobado
-version: 1.0
-fecha: 2026-10-28
+version: 1.1
+fecha: 2026-10-29
 idioma: es-CR
 ---
 
 # VentasCatálogo — paquete documental
 
-Aplicación de ventas multicatálogo con IA: importa catálogos desde Google Drive, vende, cobra,
-lleva finanzas, atiende por WhatsApp y chat, y genera contenido para redes sociales con IA.
-Cada catálogo es una unidad de negocio aislada.
+Aplicación de ventas multicatálogo con IA: importa catálogos desde Excel/CSV y hojas de pedido (y
+próximamente Drive, PDF, foto y WhatsApp), vende, cobra, lleva finanzas, atiende por WhatsApp y
+chat, y genera contenido para redes sociales con IA. Cada catálogo es una unidad de negocio aislada.
+
+**Implementación actual: v0.2.9 (2026-10-29).** F0 cerrado; F1 completo; F2 funcional; F3 con
+contenido, WhatsApp, chat, temas visuales y catálogos de ejemplo. Ver [08-ESTADO-F1.md](08-ESTADO-F1.md)
+y [../CHANGELOG.md](../CHANGELOG.md).
 
 Estos documentos son la fuente de verdad para construir el producto. Están pensados para leerse
 en orden, pero cada uno sirve por separado.
@@ -27,13 +31,28 @@ en orden, pero cada uno sirve por separado.
 | 04 | [Guía de implementación](04-GUIA-IMPLEMENTACION.md) | Cómo construirlo: estructura, bootstrap, `.env`, Docker, 15 semanas por fase, patrones de código, Prisma, IA, Drive, testing, CI/CD, operación | 4.516 | 4–6 h |
 | 05 | [Nuevas ideas](05-IDEAS.md) | 31 ideas priorizadas con scoring I/E, roadmap de 12 meses, 10 descartadas, 3 experimentos y guardrails | 1.165 | 60 min |
 | 06 | [Costos y precios](06-COSTOS-Y-PRECIOS.md) | Cuánto cuesta construirlo (3 escenarios × 3 alcances), año 1, unit economics, escalera de precios, break-even, LTV/CAC y plan de venta masiva | 1.442 | 60 min |
-| 07 | [Estado de implementación](07-ESTADO-IMPLEMENTACION.md) | Bitácora de F0: qué está construido y verificado, desviaciones del entorno, defectos corregidos y pendientes antes de F1 | 140 | 10 min |
-| 08 | [Estado F1](08-ESTADO-F1.md) | Incremento de catálogo: versionado, importación CSV/XLSX con cuarentena, productos por versión, imágenes, ventas, PDF y cara B | 230 | 15 min |
-| 09 | [Bootstrap medido](09-BOOTSTRAP.md) | Criterio 8 de F0: tiempos reales del bootstrap, camino manual y riesgos del entorno | 60 | 5 min |
-| 10 | [Guion de demo](10-DEMO.md) | Recorrido de 8–10 minutos por las dos caras, con plan B | 80 | 5 min |
+| 07 | [Estado de implementación](07-ESTADO-IMPLEMENTACION.md) | Bitácora de F0: lo construido y verificado, desviaciones del entorno y pendientes históricos | 140 | 10 min |
+| 08 | [Estado F1](08-ESTADO-F1.md) | Bitácora completa: versionado, importación inteligente, ventas, cobros, contenido, WhatsApp, chat, temas, catálogos, endurecimiento y pendientes | 750 | 30 min |
+| 09 | [Bootstrap medido](09-BOOTSTRAP.md) | Criterio 8 de F0: tiempos reales del bootstrap, camino manual y riesgos del entorno | 72 | 5 min |
+| 10 | [Guion de demo](10-DEMO.md) | Recorrido actualizado a v0.2.9: dos caras, temas, chat, catálogos de ejemplo y plan B | 90 | 5 min |
+| 11 | [Posicionamiento](11-POSICIONAMIENTO.md) | Frase norte «Subí tu catálogo como sea», anatomía de la promesa y hoja de ruta | 70 | 10 min |
 
-Además, [`CHANGELOG.md`](../CHANGELOG.md) resume el hito `v0.1.0` y `graphify-out/` contiene el
-grafo de conocimiento del corpus (ver más abajo).
+Además, [`CHANGELOG.md`](../CHANGELOG.md) resume los hitos desde `v0.1.0` hasta `v0.2.9`, y
+[`catalogs/`](../catalogs/README.md) contiene los 5 catálogos de ejemplo cargables.
+
+## Estado actual (v0.2.9 · 2026-10-29)
+
+| Área | Estado |
+|---|---|
+| Base (F0) | ✅ Auth de dos audiencias, RBAC, MFA/TOTP, invitaciones, health, CI, bootstrap 75 s |
+| Catálogo | ✅ Versionado inmutable, importación CSV/XLSX + hojas de pedido, data URI, cuarentena, borrado con liberación de slug, 5 catálogos de ejemplo |
+| Ventas | ✅ Cotizaciones con PDF, pedidos, tienda con carrito, checkout, portal, PWA |
+| Dinero | ✅ Link de pago, Stripe/sandbox, pagos manuales, reembolsos, recordatorios, reportes (CSV/PDF), conciliación, gastos y utilidad |
+| Contenido/IA | ✅ Posts con IA, 3 diseños de imagen, variación por plataforma/tono/objetivo, cuota mensual de tokens |
+| WhatsApp/chat | ✅ Entrante/saliente, bandeja staff y chat del cliente en el portal |
+| UX | ✅ 3 temas visuales (tipografía, densidad, shell y orden de menús), tarjetas de producto |
+| Calidad | ✅ API 327 unit + 149 e2e; web 19; CI verde con cobertura (~1,06 MB) |
+| Producción | 🔶 Endurecimiento listo (Resend, secretos de pasarela, `STORAGE_PUBLIC_URL`, outbox); falta despliegue, onboarding/planes y credenciales reales |
 
 ## Decisiones que condicionan todo (resumen)
 
@@ -100,10 +119,16 @@ $py = "$env:APPDATA\uv\tools\graphifyy\Scripts\python.exe"
 
 Para regenerar el grafo tras editar los documentos: `python tools/graphify_run.py --help`.
 
-## Qué falta para arrancar
+## Pendientes estratégicos
 
-1. Confirmar dotación del equipo (1,5 dev vs 2 devs) y congelar el plan de 15 o 14 semanas.
-2. Crear las credenciales externas: Google Cloud (Drive), DeepSeek, Stripe y/o MercadoPago,
-   WhatsApp Business Cloud API, SMTP. La tabla completa está en 04 §3.2.
-3. Aprobar las 7 preguntas abiertas de 01 §11 (6 y 7 ya tienen decisión de fase).
-4. Ejecutar el bootstrap de 04 §3 y cerrar F0 contra su criterio de verificación (04 §4.1).
+1. **Entradas de catálogo**: PDF/OCR, foto/visión y WhatsApp de entrada (Google Drive requiere
+   credenciales OAuth de Google Cloud). El motor de mapeo adaptativo ya está listo.
+2. **Variantes** talla/color con stock y precio propios; conciliación programada/cierre de mes;
+   publicación real en redes.
+3. **Producción**: onboarding de organizaciones, planes/facturación, despliegue con HTTPS,
+   observabilidad y credenciales reales de IA (DeepSeek/OpenAI) y pasarelas.
+4. **Endurecimiento fino**: `jti`/`sid` blocklist, aviso de `path-to-regexp`, umbrales de cobertura
+   y alineación del `CHECK` de totales de `docs/03`.
+
+La implementación detallada, decisiones y evidencia están en [08-ESTADO-F1.md](08-ESTADO-F1.md);
+la promesa de producto y su hoja de ruta, en [11-POSICIONAMIENTO.md](11-POSICIONAMIENTO.md).

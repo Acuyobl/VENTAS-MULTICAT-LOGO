@@ -22,25 +22,24 @@ caras**: backoffice para administradores y colaboradores, y tienda/portal para l
 > y WhatsApp se muestran como «en camino» hasta tener el flujo completo. Ver
 > [docs/11-POSICIONAMIENTO.md](docs/11-POSICIONAMIENTO.md).
 
-> Estado actual: **F0 cerrado, F1 completo salvo Drive/PWA, F2 cerrado en lo funcional y F3 con
-> contenido, WhatsApp y chat** — monorepo, auth de dos audiencias, RBAC, web biparte, versionado de
-> catálogo, importación CSV/XLSX, imágenes, cotizaciones con PDF, pedidos, tienda con carrito,
-> checkout de invitado, portal, **cobros (link de pago, Stripe/sandbox, webhook, pagos manuales),
-> reembolsos con segregación configurable, recordatorios, reportes, conciliación, gastos, utilidad,
-> exportación CSV y pasarelas por organización**, más **importador inteligente con IA (analiza
-> cualquier archivo, propone el mapeo, guarda campos extra y permite reemplazar o fusionar el
-> catálogo)**, **IA de contenido con imágenes basadas en la foto real del producto y 3 diseños
-> configurables en Ajustes**, **WhatsApp entrante/saliente y chat**, **importación tolerante a
-> codificaciones (UTF-8/Windows-1252) con guardia contra texto corrupto**, **PWA de la tienda,
-> chat del cliente en el portal, borrado de catálogo, reporte financiero en PDF y E2E del DoD de
-> F1**, **3 temas visuales de toda la app configurables en Ajustes (tipografía, tamaños, densidad,
-> shell y orden de menús)**, **5 catálogos de ejemplo en `catalogs/` en formatos distintos (incluida
-> una hoja de pedido real con fotos incrustadas) y pantalla “Cargar catálogo” con reemplazo/fusión y
-> borrado confirmado**, con más de 490 pruebas automáticas. Pendiente: Drive, variantes, PDF/OCR,
-> conciliación programada, campañas de WhatsApp, publicación real en redes, cuota de IA y
-> credenciales reales. Detalle en
-> [`docs/07-ESTADO-IMPLEMENTACION.md`](docs/07-ESTADO-IMPLEMENTACION.md),
-> [`docs/08-ESTADO-F1.md`](docs/08-ESTADO-F1.md) e hitos en
+> **Estado actual — v0.2.9 (2026-10-29)**: F0 cerrado; F1 completo (catálogo versionado,
+> importación CSV/XLSX y hojas de pedido, productos, cotizaciones con PDF, pedidos, tienda,
+> carrito, portal y PWA); F2 funcional (pagos sandbox/Stripe, links de pago, pagos manuales,
+> reembolsos, recordatorios, reportes, conciliación, gastos y utilidad); F3 con contenido IA +
+> imágenes (3 diseños y variación por plataforma/tono/objetivo), WhatsApp entrante/saliente, chat
+> de staff y chat del cliente, y **3 temas visuales** configurables. Además: **importador
+> inteligente** (mapeo automático, campos extra, data URI, hojas de pedido), **5 catálogos de
+> ejemplo en `catalogs/`** (incluida una hoja de pedido real con fotos incrustadas), **borrado de
+> catálogo con liberación de slug**, reporte financiero en PDF y endurecimiento de producción
+> (cuota de IA, Resend, secretos de pasarela, `STORAGE_PUBLIC_URL`, outbox).
+>
+> **Calidad**: API **327 unit + 149 e2e**, web **19**; CI verde con cobertura (~1,06 MB).
+>
+> **Pendiente**: Google Drive, PDF/OCR, foto/visión y WhatsApp como **entrada** de catálogo,
+> variantes talla/color, conciliación programada, publicación real en redes, onboarding/planes/
+> facturación, credenciales reales de IA y pasarelas, blocklist `jti`/`sid` y umbrales de cobertura.
+> Detalle en [`docs/08-ESTADO-F1.md`](docs/08-ESTADO-F1.md), [`docs/10-DEMO.md`](docs/10-DEMO.md),
+> [`docs/11-POSICIONAMIENTO.md`](docs/11-POSICIONAMIENTO.md) e hitos en
 > [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Qué hay en esta carpeta
@@ -53,8 +52,12 @@ caras**: backoffice para administradores y colaboradores, y tienda/portal para l
 | [`docs/`](docs/README.md) | **Empieza aquí**: análisis, especificación, guía de implementación, ideas y brief |
 | [`docs/04-GUIA-IMPLEMENTACION.md`](docs/04-GUIA-IMPLEMENTACION.md) | Bootstrap, plan de 15 semanas, patrones de código, CI/CD y operación |
 | [`docs/06-COSTOS-Y-PRECIOS.md`](docs/06-COSTOS-Y-PRECIOS.md) | Inversión de implementación (3 escenarios), año 1, precios, break-even y venta masiva |
-| [`docs/07-ESTADO-IMPLEMENTACION.md`](docs/07-ESTADO-IMPLEMENTACION.md) | Bitácora de F0: qué está hecho, qué se verificó, defectos corregidos y pendientes |
-| [`docs/08-ESTADO-F1.md`](docs/08-ESTADO-F1.md) | Incremento F1: versionado, importación CSV/XLSX, productos por versión y UI |
+| [`docs/07-ESTADO-IMPLEMENTACION.md`](docs/07-ESTADO-IMPLEMENTACION.md) | Bitácora de F0 (histórica) + actualización 2026-10-29 |
+| [`docs/08-ESTADO-F1.md`](docs/08-ESTADO-F1.md) | Estado completo de F1/F2/F3: features, decisiones, endurecimiento y pendientes |
+| [`docs/09-BOOTSTRAP.md`](docs/09-BOOTSTRAP.md) | Bootstrap medido (75,1 s en caliente) y riesgos del entorno |
+| [`docs/10-DEMO.md`](docs/10-DEMO.md) | Guion de demo actualizado a v0.2.9 (dos caras, temas, chat, catálogos) |
+| [`docs/11-POSICIONAMIENTO.md`](docs/11-POSICIONAMIENTO.md) | Frase norte «Subí tu catálogo como sea» y hoja de ruta para cumplirla |
+| [`catalogs/`](catalogs/README.md) | 5 catálogos de ejemplo en CSV/XLSX (incluye hoja de pedido real con fotos) |
 | [`tools/fixtures/`](tools/fixtures/catalogo-demo.csv) | Fixture de importación (42 filas: 37 válidas, 3 duplicadas, 2 sin precio) |
 | [`infra/`](infra/postgres/init/01-extensions.sql) | Inicialización de Postgres (extensiones) y artefactos de despliegue |
 | [`graphify-out/`](graphify-out/RESUMEN-GRAPHIFY.md) | Grafo de conocimiento del corpus: `graph.json`, informe, visualización HTML y consultas |
@@ -77,9 +80,18 @@ caras**: backoffice para administradores y colaboradores, y tienda/portal para l
 docker compose up -d                 # Postgres, Redis, MinIO y Mailpit
 pnpm install
 pnpm db:migrate                      # aplica migraciones de Prisma
-pnpm db:seed                         # 8 roles, 3 usuarios demo y catálogo de 12 productos
+pnpm db:seed                         # 8 roles, usuarios demo y catálogo demo con 37 productos
 pnpm --filter @ventascatalogo/api dev    # API en :3001 (Swagger en /api/docs)
-pnpm --filter @ventascatalogo/web dev    # web en :3000
+pnpm --filter @ventascatalogo/web dev    # web en :3000 (en esta máquina :3010 con build de producción)
+```
+
+Catálogos de ejemplo: [`catalogs/`](catalogs/README.md) trae 5 archivos (CSV UTF-8, CSV
+Windows-1252, XLSX con encabezados raros y una hoja de pedido real con fotos). Se cargan desde
+`/panel/catalogos` → **Cargar catálogo**, o con:
+
+```powershell
+pnpm --filter @ventascatalogo/api exec node scripts/import-demo-catalogs.mjs   # requiere VC_COOKIE
+pnpm --filter @ventascatalogo/api exec node scripts/import-sublimania.mjs       # catálogo real
 ```
 
 Usuarios demo con `Demo1234!`: `admin@ventascatalogo.local` (org_admin, MFA obligatorio),
@@ -89,10 +101,11 @@ En esta máquina el Postgres se publica en **55432** y la web de verificación u
 
 ## Siguiente paso
 
-1. Cerrar los pendientes de F0 (`docs/07-ESTADO-IMPLEMENTACION.md` §5): pruebas, CI, `/health/ready`
-   con Redis caído, demo y tag `v0.1.0`.
-2. Arrancar F1 según `docs/04-GUIA-IMPLEMENTACION.md` §4.2: OAuth de Google Drive, importación,
-   versionado, catálogo público con carrito, cotizaciones y pedidos.
+1. **Entradas de catálogo**: PDF/OCR, foto/visión y WhatsApp de entrada (el motor de mapeo ya está).
+2. **Google Drive** con credenciales OAuth de Google Cloud.
+3. **Variantes** talla/color, conciliación programada y publicación real en redes.
+4. **Producción**: onboarding/planes/facturación, despliegue con HTTPS/observabilidad y credenciales
+   reales de IA/pasarelas.
 
 ## Consultar el grafo de conocimiento
 

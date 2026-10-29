@@ -1,17 +1,18 @@
 ---
-title: Estado de implementación — F1 (incremento catálogo e importación)
+title: Estado de implementación — catálogo, ventas y producto
 tipo: bitacora
-estado: en-curso
-fase: F1
-version: 0.2.0
-fecha: 2026-10-28
+estado: implementado-con-pendientes
+fase: F1–F3
+version: 0.2.9
+fecha: 2026-10-29
 idioma: es-CR
 ---
 
-# Estado de implementación — F1
+# Estado de implementación — F1/F2/F3
 
-Bitácora del primer incremento de F1 (`docs/04-GUIA-IMPLEMENTACION.md` §4.2). El resto de F1
-(sales, PDF, tienda con carrito, portal y PWA) queda planificado abajo.
+Bitácora del primer incremento de F1 (`docs/04-GUIA-IMPLEMENTACION.md` §4.2) **y de los incrementos
+posteriores** (ventas, cobros, contenido, WhatsApp/chat, temas visuales, catálogos de ejemplo y
+endurecimiento). El estado consolidado al 2026-10-29 está en §3.29; lo pendiente, en §6.
 
 ## 1. Qué quedó entregado
 
@@ -693,6 +694,37 @@ Conversión y carga:
 
 
 
+## 3.28 Endurecimiento de producción (v0.2.9)
+
+Cambios preparados para salir de la demo local, validados con los gates completos:
+
+| Mejora | Detalle |
+|---|---|
+| **Cuota mensual de IA** | `AI_MONTHLY_QUOTA_TOKENS` (default 2.000.000) se valida antes de generar contenido; al superarse responde **429 `RATE_LIMITED`** con `reason='ai_monthly_quota_exceeded'`, tokens consumidos y cuota. Suma tokens de los posts del mes por organización |
+| **Email real (Resend)** | `EMAIL_PROVIDER=resend` + `RESEND_API_KEY`: envío HTTPS a la API de Resend con timeout de 10 s; si falta la clave o falla, registra y devuelve `false` sin romper el flujo |
+| **Anti-enumeración de usuarios** | Login con email inexistente verifica un hash Argon2id dummy para mantener tiempo constante |
+| **Secretos de pasarela por organización** | `PaymentsService` descifra `payment_gateway_config.secret_enc` con `ENCRYPTION_KEY` y lo pasa al gateway (Stripe prioriza la clave de la organización sobre `STRIPE_SECRET_KEY`) |
+| **Storage público** | `STORAGE_PUBLIC_URL` reescribe el host de las URLs firmadas de MinIO para exponerlas detrás de proxy/CDN |
+| **Outbox confiable** | `fetchPending`, `markPublished` y `markFailed` con backoff exponencial (5s…1h) y límite de 5 intentos; `FAILED` al agotarse |
+| **Limpieza** | Se quitaron imports/ramas sin uso en tests y módulos; `WhatsApp inbound` declara `metadata` del Cloud API |
+
+Verificado: `pnpm typecheck`, `lint`, `test`, `build` y **149 e2e** en verde; sin migración nueva.
+
+## 3.29 Estado consolidado al 2026-10-29 (v0.2.9)
+
+| Dimensión | Estado |
+|---|---|
+| **Tags** | `v0.1.0` … `v0.2.9` (último: endurecimiento de producción) |
+| **Base de datos** | 10 migraciones aplicadas, sin drift |
+| **API** | 327 unit (58 archivos) + 149 e2e (28 archivos) |
+| **Web** | 19 pruebas; build de producción de Next 15 |
+| **CI** | verde con cobertura ~1,06 MB en el artefacto |
+| **Catálogos demo** | 5 en `catalogs/` cargados (Boutique Mar, Ferretería Central, Despensa Orgánica, TecnoHogar y Sublimania CR) |
+| **Catálogos en BD** | demo, despensa de altura, ferretería, prueba de codificación y los 5 de ejemplo; borrado con liberación de slug |
+| **Usuarios demo** | `admin@`, `cliente@`, `mixto@`, `finanzas.demo@`, `aprobador.demo@` (`Demo1234!`) |
+| **Temas** | Clásica (serif/sidebar), Moderna (sans/barra superior), Compacta (mono/rail angosto) |
+| **Pendiente** | ver §6 |
+
 ## 4. Decisiones tomadas
 
 1. **Códigos de error promovidos al contrato**: los 5 códigos de F1 se agregaron a
@@ -736,15 +768,18 @@ curl -F "file=@tools/fixtures/catalogo-demo.csv;type=text/csv" `
 # 3. En el navegador: http://app.localhost:3000/panel/catalogos → "Versiones e importar"
 ```
 
-## 6. Pendiente
+## 6. Pendiente (al 2026-10-29)
 
-1. **Google Drive** (F1.1/F1.2): crear cliente OAuth en Google Cloud con scope `drive.readonly` y
-   `access_type=offline`; el importador inteligente se reutiliza tal cual.
-2. **Importador**: variantes (talla/color) y archivos PDF/OCR.
+1. **Entradas de catálogo que faltan**: PDF/OCR (listas y facturas), foto/visión (cuadernos y
+   listas escritas), WhatsApp de entrada (archivo/foto por webhook) y Google Drive (OAuth). El
+   motor de mapeo adaptativo, data URI y hojas de pedido ya están.
+2. **Variantes reales** talla/color con stock/precio propios (hoy entran como atributos) y
+   multi-hoja/encabezado no estándar en XLSX.
 3. **F2 restante**: conciliación programada/cierre de meses y reportes por catálogo.
-4. **F3 restante**: campañas de WhatsApp saliente, publicación real en redes, cuota/costo de IA por
-   organización y credenciales de `OPENAI_API_KEY`/`DEEPSEEK_API_KEY`.
-5. Alinear el `CHECK` de totales de `docs/03` con la convención de dinero (pendiente de F0).
-6. Endurecimiento: `jti`/`sid` blocklist, aviso de `path-to-regexp` en Swagger y límite de intentos
-   en webhooks.
-7. **Cobertura ≥70 %** en `catalogs` y `sales` (el E2E del DoD ya está).
+4. **F3 restante**: campañas de WhatsApp saliente, publicación real en redes y UI de consumo/cuota
+   de IA (el guard ya existe).
+5. **Producción**: onboarding de organizaciones, planes/facturación, despliegue con HTTPS y
+   observabilidad, credenciales reales de `DEEPSEEK_API_KEY`/`OPENAI_API_KEY`, Stripe y WhatsApp.
+6. **Endurecimiento fino**: blocklist `jti`/`sid`, aviso de `path-to-regexp` en Swagger y límite de
+   intentos en webhooks.
+7. **Calidad**: cobertura ≥70 % en `catalogs` y `sales`; alinear el `CHECK` de totales de `docs/03`.
