@@ -3,7 +3,20 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
-## [0.2.5] — 2026-10-28
+## [0.2.6] — 2026-10-28
+
+### Corregido
+- **Tarjetas de `/panel/productos`**: las clases del markup estaban duplicadas
+  (`bo-bo-product-tile__media`/`bo-bo-product-tile__body`) y no aplicaban el CSS, por lo que la
+  imagen y el texto se recortaban. Ahora la tarjeta es flex en columna, imagen 4:3 con `object-fit:
+  cover`, nombre a dos líneas, categoría con elipsis y precio alineado al pie.
+- **Detalle del producto**: mismas clases duplicadas en `bo-bo-product-detail__media/__image`; la
+  foto vuelve a ser cuadrada y ordenada.
+
+### Pruebas
+- API: **325 unit** y **147 e2e**. Web: 19 pruebas. CI con cobertura.
+
+
 
 ### Añadido
 - **Catálogo real de SUBLIMANIA CR**: el XLSX era una hoja de pedidos con fotos incrustadas.

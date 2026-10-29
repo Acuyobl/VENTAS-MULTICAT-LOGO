@@ -127,8 +127,8 @@ export function ProductDetailPanel({ product, canWrite }: ProductDetailPanelProp
 
   return (
     <div className="bo-product-detail">
-      <section className="bo-bo-product-detail__media">
-        <div className="bo-bo-product-detail__image">
+      <section className="bo-product-detail__media">
+        <div className="bo-product-detail__image">
           {imageUrl ? (
             <img src={imageUrl} alt={`Imagen de ${product.name}`} />
           ) : (

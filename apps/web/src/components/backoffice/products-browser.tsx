@@ -144,7 +144,7 @@ export function ProductsBrowser({ catalogId, versions, initialPage }: ProductsBr
                 key={product.id}
                 href={`/panel/productos/${product.id}`}
               >
-                <span className="bo-bo-product-tile__media">
+                <span className="bo-product-tile__media">
                   {product.imageUrl ? (
                     <img
                       src={product.imageUrl}
@@ -156,13 +156,13 @@ export function ProductsBrowser({ catalogId, versions, initialPage }: ProductsBr
                     <span className="mono faint">Sin imagen</span>
                   )}
                 </span>
-                <span className="bo-bo-product-tile__body">
+                <span className="bo-product-tile__body">
                   <span className="badge">{product.category ?? 'General'}</span>
                   <strong>{product.name}</strong>
                   <span className="mono faint" style={{ fontSize: '0.7rem' }}>
                     {product.sku} · {product.brand ?? 'Sin marca'}
                   </span>
-                  <span className="bo-bo-product-tile__price">
+                  <span className="bo-product-tile__price">
                     {formatMoney(product.priceMinor, product.currency)}
                   </span>
                   <span className="mono faint" style={{ fontSize: '0.7rem' }}>

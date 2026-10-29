@@ -2540,28 +2540,35 @@ svg {
 /* Galería de productos del backoffice */
 .bo-product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 1px;
-  background: var(--line);
-  border-top: 1px solid var(--line);
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
 }
 
 .bo-product-tile {
-  display: grid;
-  grid-template-rows: auto 1fr;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   background: var(--paper-2);
   color: inherit;
   text-decoration: none;
-  transition: background 160ms ease;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
 }
 
 .bo-product-tile:hover {
+  border-color: var(--line-strong);
   background: var(--paper);
 }
 
 .bo-product-tile__media {
   display: grid;
   place-items: center;
+  width: 100%;
   aspect-ratio: 4 / 3;
   overflow: hidden;
   background: var(--paper);
@@ -2575,15 +2582,36 @@ svg {
 }
 
 .bo-product-tile__body {
-  display: grid;
-  gap: 0.25rem;
-  padding: 0.8rem 0.9rem;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.85rem 0.95rem 1rem;
+}
+
+.bo-product-tile__body strong {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.95rem;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.bo-product-tile__body .badge {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bo-product-tile__price {
-  margin-top: 0.2rem;
+  margin-top: auto;
+  padding-top: 0.45rem;
   font-family: var(--font-mono);
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
 .bo-product-detail {
