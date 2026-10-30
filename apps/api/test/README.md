@@ -7,10 +7,10 @@ producto (subida a MinIO, URLs firmadas e importación con imágenes), ventas
 (clientes, cotizaciones con PDF y conversión a pedido), la cara B (checkout
 invitado con token público, reclamo de cuenta y portal de pedidos).
 
-- **Unit:** 354 tests en 59 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
+- **Unit:** 360 tests en 60 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
   infraestructura: los servicios externos (ioredis, MinIO) se sustituyen por
   dobles.
-- **E2E:** 157 tests en 31 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
+- **E2E:** 158 tests en 32 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
   una instancia real de Nest (`Test.createTestingModule({ imports: [AppModule] })`)
   en el mismo proceso. No abren puerto fijo ni dependen del `pnpm dev` de la API.
 
@@ -73,6 +73,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `src/modules/catalogs/import/image-source.spec.ts`                   | detecta y decodifica data URIs `image/jpeg                                                                                                                                                                                                                                                                                                | png                     | webp` en base64 (con saltos de línea), rechaza mime no permitido, base64 inválido/vacío y >5 MB | Hojas de pedido |
 | `src/modules/catalogs/import/adaptive/order-sheet.spec.ts`           | hoja real (CLIENTE/TALLA/CAMISA/…/COSTO): propone `name=CAMISA`, `price=cost=COSTO` con warning, fallback de nombre nunca elige CLIENTE, cabeceras normales intactas y `resolveImportImages` sube data URI / deja warning si falla                                                                                                        | Hojas de pedido         |
 | `src/modules/catalogs/import/ocr/ocr.spec.ts`                        | mock OCR (texto default/`OCR_MOCK_TEXT`, vacío/10 MB), magic bytes PNG/JPG/WebP, `parseOcrText` (nombre+precio), extracción de JPEG `/DCTDecode` de PDF escaneado, OCR de páginas y tesseract.js con módulo mockeado (`spa+eng`, logger silencioso, caché de worker, error/timeout → null sin descargar)                                  | OCR / importador        |
+| `src/modules/catalogs/import/xlsx-images.spec.ts`                    | `jszip`: extrae las 3 PNG ancladas en C2:C4 del fixture, data URI con magic PNG, hoja sin dibujos/corrupta → mapa vacío, detección de columna Imagen y del composite (3 filas con data URI real, no `<svg>`)                                                                                                                              | XLSX imágenes           |
 | `src/modules/catalogs/import/import-images.spec.ts`                  | URL válida → descarga + subida + key con id de producto; fallo de descarga/subida → warning `IMAGE_DOWNLOAD_FAILED` sin bloquear la fila; valor relativo → `IMAGE_UNRESOLVED` sin key; sin imagen → sin warning; ids únicos por producto                                                                                                  | Imágenes de importación |
 | `src/modules/sales/numbering.spec.ts`                                | formato `COT-YYYY-NNNNNN`/`PED-YYYY-NNNNNN`, sin truncar secuencias, rechazo de año/secuencia inválidos, parseo, año comercial en zona Costa Rica y claves de advisory lock                                                                                                                                                               | Ventas F1 (numeración)  |
 | `src/modules/sales/quote-calculator.spec.ts`                         | totales con `calculateTotals` (₡11.300×2 → 20.000/2.600/22.600), descuento por línea antes del IVA, IVA agregado, `PRODUCT_OUT_OF_STOCK` con `available`, `PRODUCT_INACTIVE`, `PRODUCT_NOT_IN_ACTIVE_VERSION`, backorder y descuento mayor que la línea                                                                                   | Ventas F1 (totales)     |
@@ -151,6 +152,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `test/order-sheet-import.e2e-spec.ts`         | CSV con las 13 columnas reales de Sublimania (3 camisas, una con `Imagen` data URI PNG) y solo preview automático: mapping `CAMISA`→name, `COSTO`→price/cost, 3 productos con 0 cuarentena, SKU sintético `IMP-…`, precios > 0, atributos TALLA/TELA/TIPO, 1 imagen data URI subida a MinIO, activación y catálogo público con 3 productos                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Hojas de pedido                  |
 | `test/catalog-delete-slug.e2e-spec.ts`        | crear catálogo A con slug → DELETE 204: slug renombrado `*-eliminado-<sufijo>` (≤80), audit before/after; crear B con el MISMO slug → 201 y aparece en la lista; público del slug viejo y del renombrado → 404; segundo DELETE → 404; con pedido abierto → 409 sin borrar ni renombrar                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Borrar catálogo                  |
 | `test/ocr-import.e2e-spec.ts`                 | con `OCR_PROVIDER=mock` y `OCR_MOCK_TEXT` en el test: preview de PNG → mapping nombre/precio/SKU y warning de OCR; import PNG/JPG → 2 productos (`Camisa OCR`, `Pantalón OCR`) 0 cuarentena; PDF escaneado (JPEG `/DCTDecode`, sin texto) → OCR y 2 productos; `.exe` → 400 `UNSUPPORTED_FILE_TYPE`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | OCR / importador                 |
+| `test/xlsx-embedded-images.e2e-spec.ts`       | importar `tools/fixtures/pedido-con-imagenes.xlsx` por API → 3 productos 0 cuarentena, `imageKey` `.png`, bytes en MinIO con magic PNG, distintos y **no** `<svg`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | XLSX imágenes                    |
 
 Criterio §4.1.1 (`lint` + `typecheck` + `test` en verde) se comprueba con
 `pnpm lint`, `pnpm typecheck` y los dos comandos de test de este README. El
@@ -264,6 +266,26 @@ unitarios de `HealthService`.
   `AUTH_WRONG_AUDIENCE`.
 - El checkout reutiliza el patrón de snapshots de ventas y la secuencia
   `PED-YYYY-NNNNNN`; los warnings de imágenes no aplican aquí.
+
+## Hallazgos de imágenes incrustadas en XLSX (F3)
+
+- Dependencia `jszip` en `apps/api`; `xlsx-images.ts` descomprime el libro y
+  resuelve `xl/workbook.xml` + rels → `worksheets/sheetN.xml` → drawings →
+  `xl/media/*`, devolviendo `Map<hoja, Map<fila0based, SheetImage[]>>` con
+  `{dataUri, mime, row, col}`. Tolera XLSX sin dibujos, `.xls`/zip ralo o
+  corrupto: devuelve mapa vacío y solo loguea debug.
+- `parseWithImages` (`parseImportFileWithEmbeddedImages`) extrae las imágenes
+  antes del parseo y `parseWorkbookSheets` enriquece cada matriz con el data URI
+  real en la columna Imagen (o columna del anchor) por fila absoluta, antes del
+  composite por cliente. En el composite, `imageMap` ahora guarda **listas** por
+  cliente: consume en orden y reutiliza la última cuando hay más productos que
+  fotos (GRUPO DE DÉCIMO: 5 productos, 1 imagen); ASADA 3 productos/3 imágenes.
+  Las celdas con nombre de archivo ya no se usan como imagen; solo URLs/data URI.
+- Estado con el archivo real `Pedido_15-10-2026_SUBLIMANIA_CR.xlsx` (solo
+  lectura, no versionado): 15 anchors (14 filas, una con 2 imágenes) → 15 data
+  URIs JPEG; el parser devuelve 22 productos con imagen asignada por lista y
+  ninguna ruta de archivo. Con el fixture versionado `pedido-con-imagenes.xlsx`
+  la importación real sube 3 PNG distintos (verificado en MinIO, sin SVG).
 
 ## Hallazgos de OCR para fotos y PDF escaneados (F3)
 

@@ -3,6 +3,21 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
+## [0.3.2] — 2026-10-29
+
+### Corregido
+- **Fotos incrustadas de Excel**: al importar un XLSX con imágenes ancladas (p. ej. el pedido real
+  de SUBLIMANIA), el parser solo veía el **nombre del archivo** de la hoja «Imagenes» y generaba
+  maquetas SVG. Ahora descomprime el libro (`jszip`), resuelve drawings/rels/media y usa las
+  **fotos reales** como data URI; soporta clientes repetidos (varias imágenes por cliente) y
+  reutiliza la imagen cuando hay más productos que fotos.
+- Verificado con `Pedido_15-10-2026_SUBLIMANIA_CR.xlsx`: **22 productos, 22 fotos JPEG reales**,
+  panel y tienda sirviendo `image/jpeg` (antes 22 SVG de fallback).
+
+### Pruebas
+- API: **360 unit** (60 archivos) y **158 e2e** (32 archivos; nuevo `xlsx-embedded-images`).
+  Web: 19 pruebas.
+
 ## [0.3.1] — 2026-10-29
 
 ### Añadido

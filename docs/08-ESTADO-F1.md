@@ -710,17 +710,17 @@ Cambios preparados para salir de la demo local, validados con los gates completo
 
 Verificado: `pnpm typecheck`, `lint`, `test`, `build` y **149 e2e** en verde; sin migración nueva.
 
-## 3.29 Estado consolidado al 2026-10-29 (v0.3.1)
+## 3.29 Estado consolidado al 2026-10-29 (v0.3.2)
 
 | Dimensión | Estado |
 |---|---|
-| **Tags** | `v0.1.0` … `v0.3.1` (último: OCR de fotos y PDF escaneados) |
+| **Tags** | `v0.1.0` … `v0.3.2` (último: fotos incrustadas de Excel) |
 | **Base de datos** | 10 migraciones aplicadas, sin drift |
-| **API** | 354 unit (59 archivos) + 157 e2e (31 archivos) |
+| **API** | 360 unit (60 archivos) + 158 e2e (32 archivos) |
 | **Web** | 19 pruebas; build de producción de Next 15 |
 | **CI** | verde con cobertura ~1,1 MB en el artefacto |
 | **Catálogos demo** | 5 en `catalogs/` cargados + ejemplos OCR (`06-lista-ocr.png`, `07-lista-ocr-escaneada.pdf`) |
-| **Catálogos en BD** | demo, despensa de altura, ferretería, prueba de codificación, los de ejemplo y «Sublimania OCR»; borrado/renombrado |
+| **Catálogos en BD** | demo, despensa de altura, ferretería, prueba de codificación, los de ejemplo, «Pedido 15/27 SUBLIMANIA CR» (fotos reales) y «Sublimania OCR» |
 | **Usuarios demo** | `admin@`, `cliente@`, `mixto@`, `finanzas.demo@`, `aprobador.demo@` (`Demo1234!`) |
 | **Temas** | Clásica (serif/sidebar), Moderna (sans/barra superior), Compacta (mono/rail angosto) |
 | **Pendiente** | ver §6 |
@@ -764,6 +764,28 @@ catalogs/06-lista-ocr.png (foto de lista)
     Miel orgánica 4500 · Taza cerámica 3200; encabezado en cuarentena (precio 0)
 catalogs/07-lista-ocr-escaneada.pdf (PDF sin texto)
   → 1 imagen DCTDecode OCR-eada → los mismos 4 productos y precios
+```
+
+## 3.32 Fotos incrustadas de Excel (v0.3.2)
+
+Un XLSX puede traer las fotos **ancladas** dentro del libro (típico de proveedores y pedidos). El
+parser anterior solo veía el **nombre del archivo** de la hoja auxiliar y generaba la maqueta SVG.
+Ahora `xlsx-images.ts` descomprime el libro con `jszip`, resuelve `workbook.xml` → worksheets →
+drawings → rels → `xl/media/*`, y convierte cada imagen anclada en **data URI** antes del parseo.
+
+- Soporta anchors de Excel (`xdr:`) y de openpyxl, filas con varias imágenes y clientes repetidos.
+- `processCompositeTables` guarda listas por cliente: consume en orden y reutiliza la última imagen
+  cuando hay más productos que fotos.
+- Archivos sin imágenes o zip corrupto devuelven mapa vacío (nunca rompen la importación).
+- Fixture versionado: `tools/fixtures/pedido-con-imagenes.xlsx` (3 productos, 3 PNG reales).
+
+Verificación real con `Pedido_15-10-2026_SUBLIMANIA_CR.xlsx`:
+
+```text
+15 imágenes ancladas → 15 data URI JPEG
+22 productos · 22 con imagen · 0 cuarentena
+panel: 40 URLs firmadas · primera imagen HTTP 200 image/jpeg
+tienda /c/pedido-15-10-2026-sublimania-cr: 44 URLs firmadas
 ```
 
 ## 4. Decisiones tomadas

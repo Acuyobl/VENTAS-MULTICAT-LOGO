@@ -10,6 +10,7 @@ import {
 } from './parse-import-file';
 import { resolveHeaderMapping } from './normalize-header';
 import { validateImportRows } from './row-validator';
+import { parseImportFileWithEmbeddedImages } from './parse-with-images';
 
 const FIXTURE_PATH = resolve(process.cwd(), '../../tools/fixtures/catalogo-demo.csv');
 
@@ -253,16 +254,16 @@ describe('importador universal · formatos adaptativos', () => {
       ',,,20000',
       'Total,,saldo ,debo',
       'Pedido ID,Cliente,Imagen',
-      '378,KENDALL ACUÑA,pedido_378.jpeg',
-      '379,MAGALY BARBOZA,pedido_379.jpeg',
+      '378,KENDALL ACUÑA,https://cdn.example.com/pedido_378.jpeg',
+      '379,MAGALY BARBOZA,https://cdn.example.com/pedido_379.jpeg',
     ].join('\n');
 
     const parsed = parseImportFile(Buffer.from(csvContent, 'utf-8'), 'csv');
 
     expect(parsed.headers).toContain('Imagen');
     expect(parsed.rows).toHaveLength(2);
-    expect(parsed.rows[0]?.Imagen).toBe('pedido_378.jpeg');
-    expect(parsed.rows[1]?.Imagen).toBe('pedido_379.jpeg');
+    expect(parsed.rows[0]?.Imagen).toBe('https://cdn.example.com/pedido_378.jpeg');
+    expect(parsed.rows[1]?.Imagen).toBe('https://cdn.example.com/pedido_379.jpeg');
     expect(parsed.rows[0]?.CAMISA).toBe('CAMISA BLACK CLOVER');
   });
 
@@ -280,8 +281,8 @@ describe('importador universal · formatos adaptativos', () => {
 
     const imgSheet = XLSX.utils.aoa_to_sheet([
       ['Pedido ID', 'Cliente', 'Imagen'],
-      ['378', 'KENDALL ACUÑA', 'pedido_378.jpeg'],
-      ['379', 'MAGALY BARBOZA', 'pedido_379.jpeg'],
+      ['378', 'KENDALL ACUÑA', 'https://cdn.example.com/pedido_378.jpeg'],
+      ['379', 'MAGALY BARBOZA', 'https://cdn.example.com/pedido_379.jpeg'],
     ]);
     XLSX.utils.book_append_sheet(wb, imgSheet, 'Imagenes');
 
@@ -290,25 +291,24 @@ describe('importador universal · formatos adaptativos', () => {
 
     expect(parsed.headers).toContain('Imagen');
     expect(parsed.rows).toHaveLength(2);
-    expect(parsed.rows[0]?.Imagen).toBe('pedido_378.jpeg');
-    expect(parsed.rows[1]?.Imagen).toBe('pedido_379.jpeg');
+    expect(parsed.rows[0]?.Imagen).toBe('https://cdn.example.com/pedido_378.jpeg');
+    expect(parsed.rows[1]?.Imagen).toBe('https://cdn.example.com/pedido_379.jpeg');
     expect(parsed.sheetSelection).toContain('vinculada con fotos de "Imagenes"');
   });
 
-  it('parsea correctamente el archivo real Pedido_15-10-2026_SUBLIMANIA_CR.xlsx', () => {
-    const realPath =
-      'C:/Users/Usuario/.gemini/antigravity/brain/8ef4ed41-cdc6-4d74-9e67-352b89fb81e9/.user_uploaded/media_1793286968976_095aa1a6.xlsx';
-    if (!existsSync(realPath)) return;
+  it('parsea el archivo real Pedido_15-10-2026_SUBLIMANIA_CR.xlsx con imágenes embebidas', async () => {
+    const candidates = [
+      'C:/Users/Usuario/Downloads/Pedido_15-10-2026_SUBLIMANIA_CR.xlsx',
+      'C:/Users/Usuario/.gemini/antigravity/brain/8ef4ed41-cdc6-4d74-9e67-352b89fb81e9/.user_uploaded/media_1793286968976_095aa1a6.xlsx',
+    ];
+    const realPath = candidates.find((candidate) => existsSync(candidate));
+    if (!realPath) return;
     const buf = readFileSync(realPath);
-    const parsed = parseImportFile(buf, 'xlsx');
+    const parsed = await parseImportFileWithEmbeddedImages(buf, 'xlsx');
     expect(parsed.headers).toContain('Imagen');
     expect(parsed.rows).toHaveLength(22);
-    expect(parsed.rows[0]?.Imagen).toBe(
-      'pedido_378_88282395-c558-4912-869e-82d2c120001d.jpeg',
-    );
-    expect(parsed.rows[21]?.Imagen).toBe(
-      'pedido_392_facd6090-4afd-4969-8962-ef715347df2d.jpg',
-    );
+    expect(String(parsed.rows[0]?.Imagen)).toMatch(/^data:image\/(jpeg|png);base64,/);
+    expect(String(parsed.rows[21]?.Imagen)).toMatch(/^data:image\/(jpeg|png);base64,/);
 
     const { mapping } = resolveHeaderMapping(parsed.headers);
     expect(mapping.image).toBe('Imagen');
@@ -319,8 +319,6 @@ describe('importador universal · formatos adaptativos', () => {
     expect(validation.totalRows).toBe(22);
     expect(validation.quarantineRows).toBe(0);
     expect(validation.products).toHaveLength(22);
-    expect(validation.products[0]?.imageRef).toBe(
-      'pedido_378_88282395-c558-4912-869e-82d2c120001d.jpeg',
-    );
+    expect(String(validation.products[0]?.imageRef)).toMatch(/^data:image\//);
   });
 });

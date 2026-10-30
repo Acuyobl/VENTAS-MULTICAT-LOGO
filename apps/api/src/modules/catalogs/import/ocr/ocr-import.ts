@@ -5,6 +5,7 @@ import {
   type ImportFileExtension,
   type ParsedImportFile,
 } from '../parse-import-file';
+import { parseImportFileWithEmbeddedImages } from '../parse-with-images';
 import { OCR_PDF_MIN_TEXT_CHARS, parseOcrText, type OcrProvider } from './ocr-provider';
 import { parseScannedPdfWithOcr } from './pdf-ocr';
 
@@ -49,5 +50,5 @@ export async function parseImportFileWithOcr(input: ParseWithOcrInput): Promise<
     return parseImportFile(buffer, 'pdf', delimiter);
   }
 
-  return parseImportFile(buffer, extension, delimiter);
+  return parseImportFileWithEmbeddedImages(buffer, extension, delimiter);
 }

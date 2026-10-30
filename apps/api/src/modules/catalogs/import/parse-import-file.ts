@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import * as zlib from 'node:zlib';
 import { normalizeHeader } from './normalize-header';
+import { findImageColumnIndex, type SheetImage, type SheetImages } from './xlsx-images';
 
 export interface SheetSummary {
   name: string;
@@ -421,7 +422,31 @@ function generateDefaultHeaders(colCount: number): string[] {
  * Detecta y combina tablas compuestas en un mismo archivo o entre pestañas (ej. Sección principal de
  * productos seguida de filas de totales y una sub-tabla con mapeo de imágenes o fotos).
  */
-export function processCompositeTables(matrix: unknown[][]): unknown[][] {
+/**
+ * Reemplaza la celda de imagen por el data URI real de una imagen anclada en esa
+ * fila (el XLSX suele dejar solo el nombre del archivo en la celda).
+ */
+function enrichMatrixWithImages(
+  matrix: unknown[][],
+  absoluteRows: readonly number[],
+  images: Map<number, SheetImage[]> | undefined,
+): void {
+  if (!images || images.size === 0) return;
+  const headerImageCol = findImageColumnIndex(matrix[0] ?? []);
+  for (let index = 0; index < matrix.length; index += 1) {
+    const rowImages = images.get(absoluteRows[index] ?? index);
+    if (!rowImages || rowImages.length === 0) continue;
+    const targetCol = headerImageCol >= 0 ? headerImageCol : (rowImages[0]?.col ?? 0);
+    const row = matrix[index];
+    if (!row) continue;
+    while (row.length <= targetCol) row.push('');
+    row[targetCol] = rowImages[0]?.dataUri ?? row[targetCol];
+  }
+}
+export function processCompositeTables(
+  matrix: unknown[][],
+  options: { imagesByRow?: Map<number, SheetImage[]> } = {},
+): unknown[][] {
   if (matrix.length < 3) return matrix;
 
   let secondaryHeaderIdx = -1;
@@ -487,16 +512,26 @@ export function processCompositeTables(matrix: unknown[][]): unknown[][] {
 
   if (primaryJoinColIdx === -1 || secondaryJoinColIdx === -1) return matrix;
 
-  const imageMap = new Map<string, string>();
+  // Lista de imágenes por clave: anchors reales del XLSX (puede haber varias
+  // imágenes por cliente) y, si no hay, la celda (URL/data URI ya enriquecida).
+  const imageMap = new Map<string, string[]>();
   for (let i = secondaryHeaderIdx + 1; i < matrix.length; i += 1) {
     const sRow = matrix[i];
     if (!Array.isArray(sRow)) continue;
     const key = normalizeHeader(String(sRow[secondaryJoinColIdx] ?? ''));
-    const img = String(sRow[imageColIdx] ?? '').trim();
-    if (key && img && !imageMap.has(key)) {
-      imageMap.set(key, img);
-    }
+    if (!key) continue;
+    const anchored = (options.imagesByRow?.get(i) ?? []).map((image) => image.dataUri);
+    const cellImage = String(sRow[imageColIdx] ?? '').trim();
+    const list =
+      anchored.length > 0
+        ? anchored
+        : cellImage && /^(https?:|data:image\/)/i.test(cellImage)
+          ? [cellImage]
+          : [];
+    if (list.length === 0) continue;
+    imageMap.set(key, [...(imageMap.get(key) ?? []), ...list]);
   }
+  const imageCursors = new Map<string, number>();
 
   const resultMatrix: unknown[][] = [];
   const newHeader = [...primaryHeader];
@@ -540,7 +575,12 @@ export function processCompositeTables(matrix: unknown[][]): unknown[][] {
 
     const joinKey = normalizeHeader(String(rowCopy[primaryJoinColIdx] ?? ''));
     if (joinKey && imageMap.has(joinKey)) {
-      rowCopy[mainImageIdx] = imageMap.get(joinKey);
+      const list = imageMap.get(joinKey) ?? [];
+      const cursor = imageCursors.get(joinKey) ?? 0;
+      // Consumir en orden y reutilizar la última imagen cuando hay más filas
+      // que imágenes (p. ej. GRUPO DE DÉCIMO: 5 productos, 1 imagen).
+      rowCopy[mainImageIdx] = list[Math.min(cursor, list.length - 1)];
+      imageCursors.set(joinKey, cursor + 1);
     }
 
     resultMatrix.push(rowCopy);
@@ -550,13 +590,17 @@ export function processCompositeTables(matrix: unknown[][]): unknown[][] {
 }
 
 /** Analiza todas las pestañas de un libro de Excel y selecciona o combina las hojas con productos. */
-export function parseWorkbookSheets(workbook: XLSX.WorkBook): {
+export function parseWorkbookSheets(
+  workbook: XLSX.WorkBook,
+  sheetImages?: SheetImages,
+): {
   matrix: unknown[][];
   sheets: SheetSummary[];
   sheetSelection: string;
 } {
   const summaries: SheetSummary[] = [];
   const sheetMatrices = new Map<string, unknown[][]>();
+  const sheetAbsRows = new Map<string, number[]>();
 
   const positiveKeywords =
     /(producto|articulo|artículo|catalogo|catálogo|item|precio|lista|inventario|stock|venta|tarifa|ropa|calzado|hombre|mujer|niñ|oferta|general|datos|hoja|sheet)/i;
@@ -570,11 +614,19 @@ export function parseWorkbookSheets(workbook: XLSX.WorkBook): {
       header: 1,
       defval: '',
       raw: false,
-      blankrows: false,
+      blankrows: true,
     });
-    const matrix = rawMatrix.filter(
-      (r) => Array.isArray(r) && r.some((c) => String(c ?? '').trim().length > 0),
-    );
+    const entries = rawMatrix
+      .map((cells, absoluteRow) => ({ cells, absoluteRow }))
+      .filter(
+        (entry) =>
+          Array.isArray(entry.cells) &&
+          entry.cells.some((cell) => String(cell ?? '').trim().length > 0),
+      );
+    const matrix = entries.map((entry) => entry.cells);
+    const absoluteRows = entries.map((entry) => entry.absoluteRow);
+    sheetAbsRows.set(name, absoluteRows);
+    enrichMatrixWithImages(matrix, absoluteRows, sheetImages?.get(name));
     if (matrix.length === 0) {
       summaries.push({ name, rowCount: 0, columnCount: 0, hasHeaders: false, score: -100 });
       continue;
@@ -713,8 +765,20 @@ export function parseWorkbookSheets(workbook: XLSX.WorkBook): {
 
   if (imageSheet) {
     const imgMatrix = sheetMatrices.get(imageSheet.name)!;
+    const imgAbsoluteRows = sheetAbsRows.get(imageSheet.name) ?? [];
+    const sheetAnchoredImages = sheetImages?.get(imageSheet.name);
+    const imagesByRow = new Map<number, SheetImage[]>();
+    if (sheetAnchoredImages) {
+      for (let index = 0; index < imgMatrix.length; index += 1) {
+        const images = sheetAnchoredImages.get(imgAbsoluteRows[index] ?? index);
+        if (images && images.length > 0) {
+          // Índice compuesto: la matriz principal va primero en el composite.
+          imagesByRow.set(primaryMatrix.length + index, images);
+        }
+      }
+    }
     const compositeMatrix = [...primaryMatrix, ...imgMatrix];
-    primaryMatrix = processCompositeTables(compositeMatrix);
+    primaryMatrix = processCompositeTables(compositeMatrix, { imagesByRow });
     return {
       matrix: primaryMatrix,
       sheets: summaries,
@@ -737,6 +801,7 @@ export function parseImportFile(
   buffer: Buffer,
   extension: ImportFileExtension,
   delimiter?: string,
+  sheetImages?: SheetImages,
 ): ParsedImportFile {
   if (buffer.length === 0) {
     throw new ImportParseError('invalid_file', 'El archivo está vacío.');
@@ -803,7 +868,7 @@ export function parseImportFile(
   if (!matrix) {
     try {
       const workbook = XLSX.read(buffer, { type: 'buffer' });
-      const sheetResult = parseWorkbookSheets(workbook);
+      const sheetResult = parseWorkbookSheets(workbook, sheetImages);
       if (sheetResult.matrix.length > 0) {
         matrix = sheetResult.matrix;
         detectedSheets = sheetResult.sheets;

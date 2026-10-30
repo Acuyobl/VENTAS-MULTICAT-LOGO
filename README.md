@@ -22,17 +22,18 @@ caras**: backoffice para administradores y colaboradores, y tienda/portal para l
 > fotos (OCR) y hojas de pedido están disponibles**; WhatsApp como entrada se muestra «en camino».
 > Ver [docs/11-POSICIONAMIENTO.md](docs/11-POSICIONAMIENTO.md).
 
-> **Estado actual — v0.3.1 (2026-10-29)**: F0 cerrado; F1 completo (catálogo versionado,
+> **Estado actual — v0.3.2 (2026-10-29)**: F0 cerrado; F1 completo (catálogo versionado,
 > **importador universal** CSV/TSV/TXT/JSON/XLSX/XLS/ODS/PDF, **OCR de fotos y PDF escaneados**,
-> multi-hoja, tablas compuestas, renombrado, imágenes con maqueta SVG, ventas, tienda, portal y
-> PWA); F2 funcional (pagos sandbox/Stripe, links de pago, pagos manuales, reembolsos,
-> recordatorios, reportes, conciliación, gastos y utilidad); F3 con contenido IA + imágenes (3
-> diseños y variación por plataforma/tono/objetivo), WhatsApp entrante/saliente, chat de staff y
-> chat del cliente, **3 temas visuales** y **rediseño de UI**. Además: **5 catálogos de ejemplo en
-> `catalogs/`**, **borrado con liberación de slug**, reporte financiero en PDF y endurecimiento de
-> producción (cuota de IA, Resend, secretos de pasarela, `STORAGE_PUBLIC_URL`, outbox).
+> **fotos incrustadas de Excel extraídas y vinculadas**, multi-hoja, tablas compuestas, renombrado,
+> imágenes con maqueta SVG de respaldo, ventas, tienda, portal y PWA); F2 funcional (pagos
+> sandbox/Stripe, links de pago, pagos manuales, reembolsos, recordatorios, reportes, conciliación,
+> gastos y utilidad); F3 con contenido IA + imágenes (3 diseños y variación por
+> plataforma/tono/objetivo), WhatsApp entrante/saliente, chat de staff y chat del cliente, **3 temas
+> visuales** y **rediseño de UI**. Además: **5 catálogos de ejemplo en `catalogs/`**, **borrado con
+> liberación de slug**, reporte financiero en PDF y endurecimiento de producción (cuota de IA,
+> Resend, secretos de pasarela, `STORAGE_PUBLIC_URL`, outbox).
 >
-> **Calidad**: API **354 unit + 157 e2e**, web **19**; CI verde con cobertura (~1,1 MB).
+> **Calidad**: API **360 unit + 158 e2e**, web **19**; CI verde con cobertura (~1,1 MB).
 >
 > **Pendiente**: Google Drive, WhatsApp como **entrada** de catálogo, variantes talla/color,
 > conciliación programada, publicación real en redes, UI de consumo de IA, onboarding/planes/
