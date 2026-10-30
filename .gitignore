@@ -48,3 +48,6 @@ apps/api/prisma/*.db
 # OCR: modelos descargados por tesseract.js
 *.traineddata
 .tesseract-cache/
+
+# PDFs de ejemplo (se descargan con examples/pdfs/download.ps1)
+examples/pdfs/*.pdf
