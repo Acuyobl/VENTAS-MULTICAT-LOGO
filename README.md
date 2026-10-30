@@ -29,9 +29,10 @@ caras**: backoffice para administradores y colaboradores, y tienda/portal para l
 > sandbox/Stripe, links de pago, pagos manuales, reembolsos, recordatorios, reportes, conciliación,
 > gastos y utilidad); F3 con contenido IA + imágenes (3 diseños y variación por
 > plataforma/tono/objetivo), WhatsApp entrante/saliente, chat de staff y chat del cliente, **3 temas
-> visuales** y **rediseño de UI**. Además: **5 catálogos de ejemplo en `catalogs/`**, **borrado con
-> liberación de slug**, reporte financiero en PDF y endurecimiento de producción (cuota de IA,
-> Resend, secretos de pasarela, `STORAGE_PUBLIC_URL`, outbox).
+> visuales** y **rediseño de UI**. Además: **7 catálogos de ejemplo en `catalogs/`** (incluidos
+> **2 grandes de 50 productos con fotos reales**), **borrado con liberación de slug**, reporte
+> financiero en PDF y endurecimiento de producción (cuota de IA, Resend, secretos de pasarela,
+> `STORAGE_PUBLIC_URL`, outbox).
 >
 > **Calidad**: API **360 unit + 158 e2e**, web **19**; CI verde con cobertura (~1,1 MB).
 >

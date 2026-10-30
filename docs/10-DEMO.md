@@ -1,4 +1,4 @@
-# Guion de demo — VentasCatálogo v0.3.2
+# Guion de demo — VentasCatálogo v0.3.3
 
 Demo de **10–12 minutos** que recorre las dos caras y el ciclo completo: catálogo → cotización →
 pedido → cobro → tienda → portal, más contenido, temas y catálogos reales. Todo corre local; no

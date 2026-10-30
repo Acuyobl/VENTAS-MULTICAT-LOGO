@@ -3,6 +3,17 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
+## [0.3.3] — 2026-10-30
+
+### Añadido
+- **2 catálogos grandes con fotos reales** (50 productos cada uno):
+  - `catalogs/08-hogar-y-cocina.csv` — Hogar y Cocina (50 productos, 50 imágenes JPG/PNG).
+  - `catalogs/09-tecnologia-y-oficina.csv` — Tecnología y Oficina (50 productos, 50 imágenes).
+  - Imágenes reales de Wikimedia Commons; categorías, marcas, precios, costos, stock y campos
+    extra (`Material`, `Color`, `Medida`).
+- Scripts `generate-large-catalogs.mjs` e `import-large-catalogs.mjs`; ambos catálogos cargados y
+  activos con **0 cuarentena y 0 warnings**.
+
 ## [0.3.2] — 2026-10-29
 
 ### Corregido

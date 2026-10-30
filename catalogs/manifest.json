@@ -50,6 +50,26 @@
       "currency": "CRC",
       "products": 3,
       "images": 3
+    },
+    {
+      "slug": "hogar-y-cocina-grande",
+      "name": "Hogar y Cocina — catálogo grande",
+      "description": "50 productos de hogar y cocina con fotos reales de Wikimedia Commons.",
+      "file": "08-hogar-y-cocina.csv",
+      "format": "csv-urls",
+      "currency": "CRC",
+      "products": 50,
+      "images": 50
+    },
+    {
+      "slug": "tecnologia-y-oficina-grande",
+      "name": "Tecnología y Oficina — catálogo grande",
+      "description": "50 productos de tecnología y oficina con fotos reales de Wikimedia Commons.",
+      "file": "09-tecnologia-y-oficina.csv",
+      "format": "csv-urls",
+      "currency": "CRC",
+      "products": 50,
+      "images": 50
     }
   ]
 }

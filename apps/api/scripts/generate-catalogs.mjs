@@ -228,6 +228,32 @@ async function main() {
     });
   }
 
+  if (existsSync(resolve(outDir, '08-hogar-y-cocina.csv'))) {
+    manifest.push({
+      slug: 'hogar-y-cocina-grande',
+      name: 'Hogar y Cocina — catálogo grande',
+      description: '50 productos de hogar y cocina con fotos reales de Wikimedia Commons.',
+      file: '08-hogar-y-cocina.csv',
+      format: 'csv-urls',
+      currency: 'CRC',
+      products: 50,
+      images: 50,
+    });
+  }
+
+  if (existsSync(resolve(outDir, '09-tecnologia-y-oficina.csv'))) {
+    manifest.push({
+      slug: 'tecnologia-y-oficina-grande',
+      name: 'Tecnología y Oficina — catálogo grande',
+      description: '50 productos de tecnología y oficina con fotos reales de Wikimedia Commons.',
+      file: '09-tecnologia-y-oficina.csv',
+      format: 'csv-urls',
+      currency: 'CRC',
+      products: 50,
+      images: 50,
+    });
+  }
+
   writeFileSync(
     resolve(outDir, 'manifest.json'),
     JSON.stringify({ generatedAt: new Date().toISOString(), catalogs: manifest }, null, 2) + '\n',
@@ -268,7 +294,10 @@ async function main() {
     '',
     'El script vuelve a buscar imágenes, reescribe los archivos y actualiza `manifest.json`.',
   ].join('\n');
-  writeFileSync(resolve(outDir, 'README.md'), readme + '\n', 'utf8');
+  // El README canónico se mantiene a mano; el script solo lo crea si no existe.
+  if (!existsSync(resolve(outDir, 'README.md'))) {
+    writeFileSync(resolve(outDir, 'README.md'), readme + '\n', 'utf8');
+  }
 
   console.log('\nListo:', JSON.stringify(manifest, null, 2));
 }

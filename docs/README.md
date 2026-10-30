@@ -45,7 +45,7 @@ Además, [`CHANGELOG.md`](../CHANGELOG.md) resume los hitos desde `v0.1.0` hasta
 | Área | Estado |
 |---|---|
 | Base (F0) | ✅ Auth de dos audiencias, RBAC, MFA/TOTP, invitaciones, health, CI, bootstrap 75 s |
-| Catálogo | ✅ Versionado inmutable, **importador universal** (CSV/TSV/TXT/JSON/XLSX/XLS/ODS/PDF, **fotos con OCR** y **fotos incrustadas de Excel**), multi-hoja, tablas compuestas, data URI, maqueta SVG, cuarentena, renombrar y borrar con slug liberado, 5 catálogos de ejemplo |
+| Catálogo | ✅ Versionado inmutable, **importador universal** (CSV/TSV/TXT/JSON/XLSX/XLS/ODS/PDF, **fotos con OCR** y **fotos incrustadas de Excel**), multi-hoja, tablas compuestas, data URI, maqueta SVG, cuarentena, renombrar y borrar con slug liberado, **7 catálogos de ejemplo** (2 grandes de 50 productos con fotos reales) |
 | Ventas | ✅ Cotizaciones con PDF, pedidos, tienda con carrito, checkout, portal, PWA |
 | Dinero | ✅ Link de pago, Stripe/sandbox, pagos manuales, reembolsos, recordatorios, reportes (CSV/PDF), conciliación, gastos y utilidad |
 | Contenido/IA | ✅ Posts con IA, 3 diseños de imagen, variación por plataforma/tono/objetivo, cuota mensual de tokens |

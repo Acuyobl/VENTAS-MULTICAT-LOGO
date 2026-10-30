@@ -719,7 +719,7 @@ Verificado: `pnpm typecheck`, `lint`, `test`, `build` y **149 e2e** en verde; si
 | **API** | 360 unit (60 archivos) + 158 e2e (32 archivos) |
 | **Web** | 19 pruebas; build de producción de Next 15 |
 | **CI** | verde con cobertura ~1,1 MB en el artefacto |
-| **Catálogos demo** | 5 en `catalogs/` cargados + ejemplos OCR (`06-lista-ocr.png`, `07-lista-ocr-escaneada.pdf`) |
+| **Catálogos demo** | 7 en `catalogs/`: 5 variados + **2 grandes de 50 productos con fotos reales** + ejemplos OCR (`06-lista-ocr.png`, `07-lista-ocr-escaneada.pdf`) |
 | **Catálogos en BD** | demo, despensa de altura, ferretería, prueba de codificación, los de ejemplo, «Pedido 15/27 SUBLIMANIA CR» (fotos reales) y «Sublimania OCR» |
 | **Usuarios demo** | `admin@`, `cliente@`, `mixto@`, `finanzas.demo@`, `aprobador.demo@` (`Demo1234!`) |
 | **Temas** | Clásica (serif/sidebar), Moderna (sans/barra superior), Compacta (mono/rail angosto) |
@@ -787,6 +787,24 @@ Verificación real con `Pedido_15-10-2026_SUBLIMANIA_CR.xlsx`:
 panel: 40 URLs firmadas · primera imagen HTTP 200 image/jpeg
 tienda /c/pedido-15-10-2026-sublimania-cr: 44 URLs firmadas
 ```
+
+## 3.33 Catálogos grandes con fotos reales (v0.3.3)
+
+Dos catálogos de **50 productos cada uno**, pensados para probar grillas, descargas de imágenes y
+rendimiento:
+
+| Archivo | Catálogo | Productos | Imágenes |
+|---|---|---:|---:|
+| `catalogs/08-hogar-y-cocina.csv` | Hogar y Cocina | 50 | 50 reales |
+| `catalogs/09-tecnologia-y-oficina.csv` | Tecnología y Oficina | 50 | 50 reales |
+
+- Imágenes de Wikimedia Commons validadas durante la generación; campos extra `Material`, `Color`,
+  `Medida`; precios/costos/stock realistas.
+- Generación con `apps/api/scripts/generate-large-catalogs.mjs`; carga con
+  `apps/api/scripts/import-large-catalogs.mjs` (crea los catálogos, importa y activa).
+- Verificado: **50/50 productos y 50/50 imágenes JPG/PNG en cada catálogo**, 0 cuarentena,
+  0 warnings; API pública 200, tienda 200 con 100 URLs firmadas por catálogo y panel con imágenes
+  `image/jpeg`.
 
 ## 4. Decisiones tomadas
 
