@@ -36,6 +36,7 @@ en orden, pero cada uno sirve por separado.
 | 09 | [Bootstrap medido](09-BOOTSTRAP.md) | Criterio 8 de F0: tiempos reales del bootstrap, camino manual y riesgos del entorno | 72 | 5 min |
 | 10 | [Guion de demo](10-DEMO.md) | Recorrido actualizado a v0.2.9: dos caras, temas, chat, catálogos de ejemplo y plan B | 90 | 5 min |
 | 11 | [Posicionamiento](11-POSICIONAMIENTO.md) | Frase norte «Subí tu catálogo como sea», anatomía de la promesa y hoja de ruta | 70 | 10 min |
+| 12 | [Pendientes por pasos](12-PENDIENTES.md) | Backlog priorizado (P0/P1/P2) con pasos, aceptación, esfuerzo y bloqueos de credenciales | 150 | 15 min |
 
 Además, [`CHANGELOG.md`](../CHANGELOG.md) resume los hitos desde `v0.1.0` hasta `v0.2.9`, y
 [`catalogs/`](../catalogs/README.md) contiene los 5 catálogos de ejemplo cargables.

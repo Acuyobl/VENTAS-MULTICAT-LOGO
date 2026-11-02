@@ -58,6 +58,7 @@ caras**: backoffice para administradores y colaboradores, y tienda/portal para l
 | [`docs/09-BOOTSTRAP.md`](docs/09-BOOTSTRAP.md) | Bootstrap medido (75,1 s en caliente) y riesgos del entorno |
 | [`docs/10-DEMO.md`](docs/10-DEMO.md) | Guion de demo actualizado a v0.2.9 (dos caras, temas, chat, catálogos) |
 | [`docs/11-POSICIONAMIENTO.md`](docs/11-POSICIONAMIENTO.md) | Frase norte «Subí tu catálogo como sea» y hoja de ruta para cumplirla |
+| [`docs/12-PENDIENTES.md`](docs/12-PENDIENTES.md) | Qué falta, en pasos priorizados (P0/P1/P2), con aceptación y bloqueos |
 | [`catalogs/`](catalogs/README.md) | 5 catálogos de ejemplo en CSV/XLSX (incluye hoja de pedido real con fotos) |
 | [`tools/fixtures/`](tools/fixtures/catalogo-demo.csv) | Fixture de importación (42 filas: 37 válidas, 3 duplicadas, 2 sin precio) |
 | [`infra/`](infra/postgres/init/01-extensions.sql) | Inicialización de Postgres (extensiones) y artefactos de despliegue |
