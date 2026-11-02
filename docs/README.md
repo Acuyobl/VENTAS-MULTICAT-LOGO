@@ -50,9 +50,9 @@ Además, [`CHANGELOG.md`](../CHANGELOG.md) resume los hitos desde `v0.1.0` hasta
 | Ventas | ✅ Cotizaciones con PDF, pedidos, tienda con carrito, checkout, portal, PWA |
 | Dinero | ✅ Link de pago, Stripe/sandbox, pagos manuales, reembolsos, recordatorios, reportes (CSV/PDF), conciliación, gastos y utilidad |
 | Contenido/IA | ✅ Posts con IA, 3 diseños de imagen, variación por plataforma/tono/objetivo, cuota mensual de tokens |
-| WhatsApp/chat | ✅ Entrante/saliente, bandeja staff y chat del cliente en el portal |
+| WhatsApp/chat | ✅ Entrante/saliente, **archivos/fotos por WhatsApp con adjunto e importación al catálogo**, bandeja staff y chat del cliente en el portal |
 | UX | ✅ 3 temas visuales, tarjetas de producto, modal de detalle en tienda y estudio de contenido renovado |
-| Calidad | ✅ API 360 unit + 158 e2e; web 19; CI verde con cobertura (~1,1 MB) |
+| Calidad | ✅ API 374 unit + 162 e2e; web 19; CI verde con cobertura (~1,1 MB) |
 | Producción | 🔶 Endurecimiento listo (Resend, secretos de pasarela, `STORAGE_PUBLIC_URL`, outbox); falta despliegue, onboarding/planes y credenciales reales |
 
 ## Decisiones que condicionan todo (resumen)

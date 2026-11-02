@@ -4,9 +4,10 @@ import { CustomerChatController } from './customer-chat.controller';
 import { ChatRepository } from './chat.repository';
 import { ChatService } from './chat.service';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
+import { CatalogsModule } from '../catalogs/catalogs.module';
 
 @Module({
-  imports: [WhatsappModule],
+  imports: [WhatsappModule, CatalogsModule],
   controllers: [ChatController, CustomerChatController],
   providers: [ChatRepository, ChatService],
 })

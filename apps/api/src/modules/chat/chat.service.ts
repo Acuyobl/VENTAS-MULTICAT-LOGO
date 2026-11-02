@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import type {
   AuthenticatedUser,
+  ChatAttachment,
   ChatMessage as ChatMessageDto,
+  ChatMessageImportResponse,
   ChatMessageListResponse,
   ConversationListResponse,
   CustomerChat,
@@ -12,6 +14,10 @@ import { AppException } from '../../common/errors/app-exception';
 import { AuditService } from '../audit/audit.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 import type { AuditMeta } from '../../common/audit/audit.types';
+import { StorageService } from '../storage/storage.service';
+import { AdaptiveImportService } from '../catalogs/adaptive-import.service';
+import { ImportsService } from '../catalogs/imports.service';
+import { mediaMimeType } from '../whatsapp/whatsapp-media';
 
 @Injectable()
 export class ChatService {
@@ -19,6 +25,9 @@ export class ChatService {
     private readonly repo: ChatRepository,
     private readonly audit: AuditService,
     private readonly whatsapp: WhatsappService,
+    private readonly storage: StorageService,
+    private readonly adaptive: AdaptiveImportService,
+    private readonly imports: ImportsService,
   ) {}
 
   async listConversations(
@@ -120,6 +129,91 @@ export class ChatService {
     });
     return { conversation, customerName };
   }
+  /** Adjunto del chat: URL firmada 300 s, nombre y mime (staff, org-scoped). */
+  async getAttachment(organizationId: string, messageId: string): Promise<ChatAttachment> {
+    const message = await this.repo.findMessageForOrganization(organizationId, messageId);
+    if (!message?.attachmentKey) {
+      throw new AppException('NOT_FOUND', 404, { resource: 'attachment' });
+    }
+    const extension = message.attachmentKey.split('.').pop()?.toLowerCase() ?? null;
+    return {
+      url: await this.storage.presignDocument(message.attachmentKey, 300),
+      fileName: message.attachmentKey.split('/').pop() ?? null,
+      mimeType: mediaMimeType(extension),
+    };
+  }
+
+  /**
+   * Importa el adjunto (CSV/XLSX/PDF/foto) al catálogo de la conversación usando
+   * el preview adaptativo + el importador universal. NO activa la versión.
+   */
+  async importAttachment(
+    user: AuthenticatedUser,
+    messageId: string,
+    mode: 'REPLACE' | 'MERGE' | undefined,
+    meta: AuditMeta,
+  ): Promise<ChatMessageImportResponse> {
+    const message = await this.repo.findMessageForOrganization(user.organizationId, messageId);
+    if (!message) throw new AppException('NOT_FOUND', 404, { resource: 'message' });
+    if (!message.attachmentKey) {
+      throw new AppException('VALIDATION_FAILED', 409, { reason: 'no_attachment' });
+    }
+
+    const buffer = await this.storage.getObjectBuffer(
+      this.storage.docsBucketName,
+      message.attachmentKey,
+    );
+    if (!buffer) throw new AppException('NOT_FOUND', 404, { resource: 'attachment' });
+
+    const extension = message.attachmentKey.split('.').pop()?.toLowerCase() ?? 'txt';
+    const mimeType = mediaMimeType(extension) ?? 'application/octet-stream';
+    const file = {
+      fieldname: 'file',
+      originalname: `chat-${messageId}.${extension}`,
+      encoding: '7bit',
+      mimetype: mimeType,
+      size: buffer.length,
+      buffer,
+      destination: '',
+      filename: '',
+      path: '',
+    } as Express.Multer.File;
+
+    const catalogId = message.conversation.catalogId;
+    const catalog = await this.repo.findCatalogForImport(user.organizationId, catalogId);
+    const currency = catalog?.activeVersion?.currency ?? 'CRC';
+
+    const preview = await this.adaptive.preview({
+      user,
+      catalogId,
+      file,
+      body: {},
+      meta,
+    });
+    const result = await this.imports.importFile({
+      user,
+      catalogId,
+      file,
+      body: {
+        currency,
+        taxRateBp: 1300,
+        taxIncluded: true,
+        mapping: JSON.stringify(preview.proposal.mapping),
+        extraFields: JSON.stringify(preview.proposal.extraFields),
+        mode: mode ?? 'REPLACE',
+      },
+      meta,
+    });
+
+    return {
+      catalogId,
+      catalogVersionId: result.catalogVersionId,
+      importedRows: result.importedRows,
+      quarantineRows: result.quarantineRows,
+      warnings: result.issues.filter((issue) => issue.severity === 'warning').length,
+    };
+  }
+
   async sendStaffMessage(
     user: AuthenticatedUser,
     conversationId: string,
@@ -212,6 +306,7 @@ export function toChatMessage(message: ChatMessage): ChatMessageDto {
     senderType: message.senderType as ChatMessageDto['senderType'],
     senderName: null,
     body: message.body,
+    hasAttachment: Boolean(message.attachmentKey),
     readAt: message.readAt?.toISOString() ?? null,
     createdAt: message.createdAt.toISOString(),
   };

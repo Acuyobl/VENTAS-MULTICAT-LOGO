@@ -14,6 +14,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "check:integrations": "node tools/check-integrations.mjs",
     "test:e2e": "turbo run test:e2e",
     "db:generate": "pnpm --filter @ventascatalogo/api prisma:generate",
     "db:migrate": "pnpm --filter @ventascatalogo/api prisma:migrate",

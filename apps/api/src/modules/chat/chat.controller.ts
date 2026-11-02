@@ -3,8 +3,10 @@ import { z } from 'zod';
 import {
   chatMessageCreateSchema,
   type AuthenticatedUser,
+  type ChatAttachment,
   type ChatMessage,
   type ChatMessageCreateInput,
+  type ChatMessageImportResponse,
   type ChatMessageListResponse,
   type ConversationListResponse,
 } from '@ventascatalogo/contracts';
@@ -19,6 +21,7 @@ const idSchema = z.string().uuid();
 const statusQuerySchema = z.object({
   status: z.enum(['OPEN', 'CLOSED', 'PENDING']).optional(),
 });
+const chatImportSchema = z.object({ mode: z.enum(['REPLACE', 'MERGE']).optional() }).strict();
 
 @Controller('chat')
 @Audience('staff')
@@ -32,6 +35,27 @@ export class ChatController {
     @Query(new ZodValidationPipe(statusQuerySchema)) query: { status?: string },
   ): Promise<ConversationListResponse> {
     return this.chat.listConversations(user.organizationId, query.status);
+  }
+
+  @Get('messages/:messageId/attachment')
+  @RequirePermissions('chat:write')
+  getAttachment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('messageId', new ZodValidationPipe(idSchema)) messageId: string,
+  ): Promise<ChatAttachment> {
+    return this.chat.getAttachment(user.organizationId, messageId);
+  }
+
+  @Post('messages/:messageId/import')
+  @HttpCode(201)
+  @RequirePermissions('catalog:write')
+  importAttachment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('messageId', new ZodValidationPipe(idSchema)) messageId: string,
+    @Body(new ZodValidationPipe(chatImportSchema)) body: z.infer<typeof chatImportSchema>,
+    @Req() req: RequestWithTrace,
+  ): Promise<ChatMessageImportResponse> {
+    return this.chat.importAttachment(user, messageId, body.mode, salesMetaFrom(req));
   }
 
   @Get('conversations/:id/messages')

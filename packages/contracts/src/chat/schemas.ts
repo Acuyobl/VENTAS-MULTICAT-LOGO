@@ -33,11 +33,30 @@ export const chatMessageSchema = z.object({
   senderType: chatMessageSenderSchema,
   senderName: z.string().nullable(),
   body: z.string(),
+  hasAttachment: z.boolean(),
   readAt: z.string().nullable(),
   createdAt: z.string(),
 });
 
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
+
+export const chatAttachmentSchema = z.object({
+  url: z.string(),
+  fileName: z.string().nullable(),
+  mimeType: z.string().nullable(),
+});
+
+export type ChatAttachment = z.infer<typeof chatAttachmentSchema>;
+
+export const chatMessageImportResponseSchema = z.object({
+  catalogId: z.string().uuid(),
+  catalogVersionId: z.string().uuid(),
+  importedRows: z.number().int(),
+  quarantineRows: z.number().int(),
+  warnings: z.number().int(),
+});
+
+export type ChatMessageImportResponse = z.infer<typeof chatMessageImportResponseSchema>;
 
 export const chatMessageCreateSchema = z
   .object({

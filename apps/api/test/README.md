@@ -7,10 +7,10 @@ producto (subida a MinIO, URLs firmadas e importación con imágenes), ventas
 (clientes, cotizaciones con PDF y conversión a pedido), la cara B (checkout
 invitado con token público, reclamo de cuenta y portal de pedidos).
 
-- **Unit:** 360 tests en 60 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
+- **Unit:** 374 tests en 62 archivos (`src/**/*.spec.ts`), con Vitest. No requieren
   infraestructura: los servicios externos (ioredis, MinIO) se sustituyen por
   dobles.
-- **E2E:** 158 tests en 32 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
+- **E2E:** 162 tests en 33 archivos (`test/**/*.e2e-spec.ts`), con Supertest contra
   una instancia real de Nest (`Test.createTestingModule({ imports: [AppModule] })`)
   en el mismo proceso. No abren puerto fijo ni dependen del `pnpm dev` de la API.
 
@@ -74,6 +74,8 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `src/modules/catalogs/import/adaptive/order-sheet.spec.ts`           | hoja real (CLIENTE/TALLA/CAMISA/…/COSTO): propone `name=CAMISA`, `price=cost=COSTO` con warning, fallback de nombre nunca elige CLIENTE, cabeceras normales intactas y `resolveImportImages` sube data URI / deja warning si falla                                                                                                        | Hojas de pedido         |
 | `src/modules/catalogs/import/ocr/ocr.spec.ts`                        | mock OCR (texto default/`OCR_MOCK_TEXT`, vacío/10 MB), magic bytes PNG/JPG/WebP, `parseOcrText` (nombre+precio), extracción de JPEG `/DCTDecode` de PDF escaneado, OCR de páginas y tesseract.js con módulo mockeado (`spa+eng`, logger silencioso, caché de worker, error/timeout → null sin descargar)                                  | OCR / importador        |
 | `src/modules/catalogs/import/xlsx-images.spec.ts`                    | `jszip`: extrae las 3 PNG ancladas en C2:C4 del fixture, data URI con magic PNG, hoja sin dibujos/corrupta → mapa vacío, detección de columna Imagen y del composite (3 filas con data URI real, no `<svg>`)                                                                                                                              | XLSX imágenes           |
+| `src/modules/whatsapp/whatsapp-media.spec.ts`                        | parseo imagen/documento, extensión segura (traversal/whitelist), key saneada, descarga Graph con bearer (metadata→archivo), tope 10 MB por `file_size` y stream, MIME no permitido, error Graph/red → null sin lanzar                                                                                                                     | WhatsApp media          |
+| `src/modules/whatsapp/whatsapp-inbound.service.spec.ts`              | webhook con downloader falso: documento/imagen con caption → mensaje CUSTOMER con `attachmentKey` y `putDocument`, fallo → mensaje sin adjunto, texto sigue funcionando                                                                                                                                                                   | WhatsApp media          |
 | `src/modules/catalogs/import/import-images.spec.ts`                  | URL válida → descarga + subida + key con id de producto; fallo de descarga/subida → warning `IMAGE_DOWNLOAD_FAILED` sin bloquear la fila; valor relativo → `IMAGE_UNRESOLVED` sin key; sin imagen → sin warning; ids únicos por producto                                                                                                  | Imágenes de importación |
 | `src/modules/sales/numbering.spec.ts`                                | formato `COT-YYYY-NNNNNN`/`PED-YYYY-NNNNNN`, sin truncar secuencias, rechazo de año/secuencia inválidos, parseo, año comercial en zona Costa Rica y claves de advisory lock                                                                                                                                                               | Ventas F1 (numeración)  |
 | `src/modules/sales/quote-calculator.spec.ts`                         | totales con `calculateTotals` (₡11.300×2 → 20.000/2.600/22.600), descuento por línea antes del IVA, IVA agregado, `PRODUCT_OUT_OF_STOCK` con `available`, `PRODUCT_INACTIVE`, `PRODUCT_NOT_IN_ACTIVE_VERSION`, backorder y descuento mayor que la línea                                                                                   | Ventas F1 (totales)     |
@@ -153,6 +155,7 @@ los flujos probados no envían correo, así que no hay dependencia de Mailpit.
 | `test/catalog-delete-slug.e2e-spec.ts`        | crear catálogo A con slug → DELETE 204: slug renombrado `*-eliminado-<sufijo>` (≤80), audit before/after; crear B con el MISMO slug → 201 y aparece en la lista; público del slug viejo y del renombrado → 404; segundo DELETE → 404; con pedido abierto → 409 sin borrar ni renombrar                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Borrar catálogo                  |
 | `test/ocr-import.e2e-spec.ts`                 | con `OCR_PROVIDER=mock` y `OCR_MOCK_TEXT` en el test: preview de PNG → mapping nombre/precio/SKU y warning de OCR; import PNG/JPG → 2 productos (`Camisa OCR`, `Pantalón OCR`) 0 cuarentena; PDF escaneado (JPEG `/DCTDecode`, sin texto) → OCR y 2 productos; `.exe` → 400 `UNSUPPORTED_FILE_TYPE`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | OCR / importador                 |
 | `test/xlsx-embedded-images.e2e-spec.ts`       | importar `tools/fixtures/pedido-con-imagenes.xlsx` por API → 3 productos 0 cuarentena, `imageKey` `.png`, bytes en MinIO con magic PNG, distintos y **no** `<svg`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | XLSX imágenes                    |
+| `test/whatsapp-media-import.e2e-spec.ts`      | conversación + mensaje con `attachmentKey` y CSV en `vc-docs`: `GET /chat/messages/:id/attachment` → 200 con URL firmada/nombre/mime y descarga 200; `POST /chat/messages/:id/import` (catalog_admin) → 201 con 2 filas/productos en versión DRAFT/VALIDATED sin activar; sin adjunto → attachment 404 e import 409 `no_attachment`; customer → 403 audiencia, agente sin `catalog:write` → 403 y cross-org → 404                                                                                                                                                                                                                                                                                                                                                                                                                                            | WhatsApp media                   |
 
 Criterio §4.1.1 (`lint` + `typecheck` + `test` en verde) se comprueba con
 `pnpm lint`, `pnpm typecheck` y los dos comandos de test de este README. El
@@ -266,6 +269,29 @@ unitarios de `HealthService`.
   `AUTH_WRONG_AUDIENCE`.
 - El checkout reutiliza el patrón de snapshots de ventas y la secuencia
   `PED-YYYY-NNNNNN`; los warnings de imágenes no aplican aquí.
+
+## Hallazgos de WhatsApp como entrada de catálogo (F3)
+
+- `whatsapp-media.ts`: `parseInboundMedia` para `image`/`document`; descarga
+  Graph API (`WHATSAPP_API_VERSION` default v21.0) en dos pasos metadata→archivo
+  con bearer, timeout 20 s, tope 10 MB (`WHATSAPP_MEDIA_MAX_BYTES`), MIME
+  permitidos (PDF/CSV/XLSX/XLS/TSV/TXT/JSON/JPEG/PNG/WebP) y extensión segura
+  (basename + whitelist; nunca traversal). Fallo → `null` (el webhook no se rompe).
+- `WhatsappInboundService.process` guarda el buffer en `vc-docs` como
+  `whatsapp/{orgId}/{messageId}.{ext}` y crea el `ChatMessage` CUSTOMER con
+  `attachmentKey` y `body = caption || "📎 <archivo>"`; si falla descarga/tipo/
+  tamaño crea un mensaje de texto avisando, sin adjunto, y sigue contando.
+- `GET /chat/messages/:id/attachment` (staff `chat:write`, org-scoped) devuelve
+  `{url,fileName,mimeType}` con URL firmada 300 s. `POST /chat/messages/:id/import`
+  (`catalog:write`, body `{mode?}`) valida adjunto (409 `no_attachment`), corre
+  `AdaptiveImportService.preview` + `ImportsService.importFile` con la moneda del
+  catálogo, `taxRateBp 1300`, `taxIncluded=true`, mapping/extraFields propuestos y
+  **no activa** la versión; responde `{catalogId,catalogVersionId,importedRows,
+quarantineRows,warnings}`. `chatMessageSchema.hasAttachment` se mapea en
+  `toChatMessage`/`toCustomerChatMessage`.
+- `.env.example` documenta `WHATSAPP_API_VERSION` y `WHATSAPP_MEDIA_MAX_BYTES`.
+  Por diseño se usa `chat:write` (no existe `chat:read` en el seed) y el import
+  exige `catalog:write`, por lo que el rol agente de chat solo descarga.
 
 ## Hallazgos de imágenes incrustadas en XLSX (F3)
 

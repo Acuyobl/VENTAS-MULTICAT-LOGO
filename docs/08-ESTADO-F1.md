@@ -710,19 +710,20 @@ Cambios preparados para salir de la demo local, validados con los gates completo
 
 Verificado: `pnpm typecheck`, `lint`, `test`, `build` y **149 e2e** en verde; sin migración nueva.
 
-## 3.29 Estado consolidado al 2026-10-29 (v0.3.2)
+## 3.29 Estado consolidado al 2026-11-02 (v0.3.4)
 
 | Dimensión | Estado |
 |---|---|
-| **Tags** | `v0.1.0` … `v0.3.2` (último: fotos incrustadas de Excel) |
+| **Tags** | `v0.1.0` … `v0.3.4` (último: WhatsApp con adjuntos e importación) |
 | **Base de datos** | 10 migraciones aplicadas, sin drift |
-| **API** | 360 unit (60 archivos) + 158 e2e (32 archivos) |
+| **API** | 374 unit (62 archivos) + 162 e2e (33 archivos) |
 | **Web** | 19 pruebas; build de producción de Next 15 |
 | **CI** | verde con cobertura ~1,1 MB en el artefacto |
 | **Catálogos demo** | 7 en `catalogs/`: 5 variados + **2 grandes de 50 productos con fotos reales** + ejemplos OCR (`06-lista-ocr.png`, `07-lista-ocr-escaneada.pdf`) |
-| **Catálogos en BD** | demo, despensa de altura, ferretería, prueba de codificación, los de ejemplo, «Pedido 15/27 SUBLIMANIA CR» (fotos reales) y «Sublimania OCR» |
+| **Catálogos en BD** | demo, despensa de altura, ferretería, prueba de codificación, los de ejemplo, «Pedido 15/27 SUBLIMANIA CR» (fotos reales), «Sublimania OCR» y los 2 grandes |
 | **Usuarios demo** | `admin@`, `cliente@`, `mixto@`, `finanzas.demo@`, `aprobador.demo@` (`Demo1234!`) |
 | **Temas** | Clásica (serif/sidebar), Moderna (sans/barra superior), Compacta (mono/rail angosto) |
+| **Integraciones** | `pnpm check:integrations`: 2/12 credenciales listas (resto con mocks/sandbox) |
 | **Pendiente** | ver §6 |
 
 ## 3.30 Importador universal y rediseño de UI (v0.3.0)
@@ -806,6 +807,21 @@ rendimiento:
   0 warnings; API pública 200, tienda 200 con 100 URLs firmadas por catálogo y panel con imágenes
   `image/jpeg`.
 
+## 3.34 WhatsApp como entrada: adjuntos e importación (v0.3.4)
+
+| Pieza | Detalle |
+|---|---|
+| Media entrante | El webhook acepta `image` y `document`; descarga de Graph API en dos pasos, bearer, timeout 20 s, tope 10 MB y MIME permitidos (PDF/CSV/XLSX/XLS/TSV/TXT/JSON/JPEG/PNG/WebP) |
+| Almacenamiento | Guarda en `vc-docs` como `whatsapp/{orgId}/{messageId}.{ext}` y crea el `ChatMessage` CUSTOMER con `attachmentKey`, caption o «📎 archivo» |
+| Descarga | `GET /chat/messages/:id/attachment` → URL firmada 300 s + nombre + MIME |
+| Importación | `POST /chat/messages/:id/import` → preview adaptativo + `importFile` al catálogo de la conversación, moneda del catálogo, mapping propuesto; **no activa** la versión. Responde filas, cuarentena y warnings |
+| UI | En `/panel/chat`, los mensajes con adjunto muestran **Descargar adjunto** e **Importar al catálogo** (este último solo con `catalog:write`) |
+| Credenciales | `pnpm check:integrations` verifica las claves; sin token de WhatsApp el webhook sigue procesando texto y los tests usan un downloader falso |
+
+Verificado: unit del parser/descarga y del inbound con adjunto/fallo; e2e de attachment (200 + descarga),
+import (201 con productos en una versión **no activada**), 409 sin adjunto, 403 de audiencia/permiso y
+404 cross-org.
+
 ## 4. Decisiones tomadas
 
 1. **Códigos de error promovidos al contrato**: los 5 códigos de F1 se agregaron a
@@ -849,17 +865,16 @@ curl -F "file=@tools/fixtures/catalogo-demo.csv;type=text/csv" `
 # 3. En el navegador: http://app.localhost:3000/panel/catalogos → "Versiones e importar"
 ```
 
-## 6. Pendiente (al 2026-10-29)
+## 6. Pendiente (al 2026-11-02)
 
-1. **Entradas que faltan**: WhatsApp de entrada (archivo/foto por webhook) y Google Drive (OAuth).
-   Excel/CSV/TSV/TXT/JSON/XLS/ODS/PDF (texto o escaneado), **fotos con OCR**, multi-hoja, tablas
-   compuestas y data URI ya están.
+1. **Entrada que falta**: Google Drive (OAuth). WhatsApp ya acepta archivos/fotos y permite
+   importarlos desde el chat; Excel/CSV/TSV/TXT/JSON/XLS/ODS/PDF y OCR están completos.
 2. **Variantes reales** talla/color con stock/precio propios (hoy entran como atributos).
 3. **F2 restante**: conciliación programada/cierre de meses y reportes por catálogo.
 4. **F3 restante**: campañas de WhatsApp saliente, publicación real en redes y UI de consumo/cuota
    de IA (el guard ya existe).
 5. **Producción**: onboarding de organizaciones, planes/facturación, despliegue con HTTPS y
-   observabilidad, credenciales reales de `DEEPSEEK_API_KEY`/`OPENAI_API_KEY`, Stripe y WhatsApp.
+   observabilidad, credenciales reales de IA/pasarelas/WhatsApp.
 6. **Endurecimiento fino**: blocklist `jti`/`sid`, aviso de `path-to-regexp` en Swagger y límite de
    intentos en webhooks.
 7. **Calidad**: cobertura ≥70 % en `catalogs` y `sales`; alinear el `CHECK` de totales de `docs/03`.

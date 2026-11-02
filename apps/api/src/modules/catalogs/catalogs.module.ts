@@ -32,6 +32,6 @@ import { OcrService } from './import/ocr/ocr.service';
     AdaptiveImportService,
     OcrService,
   ],
-  exports: [CatalogsRepository, CatalogsService],
+  exports: [CatalogsRepository, CatalogsService, AdaptiveImportService, ImportsService],
 })
 export class CatalogsModule {}

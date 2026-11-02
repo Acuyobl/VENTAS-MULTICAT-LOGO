@@ -2,22 +2,28 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
+  ChatAttachment,
   ChatMessage,
+  ChatMessageImportResponse,
   ChatMessageListResponse,
   ConversationSummary,
 } from '@ventascatalogo/contracts';
 
 interface ChatPanelProps {
   initialConversations: ConversationSummary[];
+  canWrite?: boolean;
 }
 
-export function ChatPanel({ initialConversations }: ChatPanelProps) {
+export function ChatPanel({ initialConversations, canWrite = false }: ChatPanelProps) {
   const [conversations, setConversations] = useState<ConversationSummary[]>(initialConversations);
   const [selectedId, setSelectedId] = useState<string | null>(initialConversations[0]?.id ?? null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [attaching, setAttaching] = useState<string | null>(null);
+  const [importing, setImporting] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -104,6 +110,61 @@ export function ChatPanel({ initialConversations }: ChatPanelProps) {
     }
   }
 
+  async function openAttachment(messageId: string) {
+    setAttaching(messageId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/v1/chat/messages/${messageId}/attachment`, {
+        headers: { accept: 'application/json' },
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+        throw new Error(payload?.message ?? 'No pudimos abrir el adjunto.');
+      }
+      const attachment = (await response.json()) as ChatAttachment;
+      window.open(attachment.url, '_blank', 'noopener,noreferrer');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Error inesperado.');
+    } finally {
+      setAttaching(null);
+    }
+  }
+
+  async function importAttachment(messageId: string) {
+    const confirmed = window.confirm(
+      '¿Importar este archivo al catálogo de la conversación? Se creará una versión nueva y no se activará automáticamente.',
+    );
+    if (!confirmed) return;
+    setImporting(messageId);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await fetch(`/api/v1/chat/messages/${messageId}/import`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | ChatMessageImportResponse
+        | { code?: string; message?: string }
+        | null;
+      if (!response.ok) {
+        throw new Error(
+          (payload as { message?: string } | null)?.message ?? 'No pudimos importar el archivo.',
+        );
+      }
+      const result = payload as ChatMessageImportResponse;
+      setNotice(
+        `Importados ${result.importedRows} productos (${result.quarantineRows} en cuarentena). ` +
+          `La versión quedó lista para activar en el catálogo.`,
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Error inesperado.');
+    } finally {
+      setImporting(null);
+    }
+  }
+
   if (conversations.length === 0) {
     return (
       <div className="empty">
@@ -160,6 +221,28 @@ export function ChatPanel({ initialConversations }: ChatPanelProps) {
                 {message.senderName ?? message.senderType} · {message.createdAt.slice(11, 16)}
               </span>
               <p>{message.body}</p>
+              {message.hasAttachment ? (
+                <span className="inline" style={{ gap: '0.4rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn btn--small btn--ghost"
+                    disabled={attaching === message.id}
+                    onClick={() => void openAttachment(message.id)}
+                  >
+                    {attaching === message.id ? 'Abriendo…' : '📎 Descargar adjunto'}
+                  </button>
+                  {canWrite ? (
+                    <button
+                      type="button"
+                      className="btn btn--small btn--secondary"
+                      disabled={importing === message.id}
+                      onClick={() => void importAttachment(message.id)}
+                    >
+                      {importing === message.id ? 'Importando…' : 'Importar al catálogo'}
+                    </button>
+                  ) : null}
+                </span>
+              ) : null}
             </article>
           ))}
           {messages.length === 0 && !loading ? (
@@ -186,6 +269,7 @@ export function ChatPanel({ initialConversations }: ChatPanelProps) {
             {sending ? 'Enviando…' : 'Enviar'}
           </button>
         </form>
+        {notice ? <div className="alert alert--ok">{notice}</div> : null}
         {error ? <div className="alert">{error}</div> : null}
       </section>
     </div>

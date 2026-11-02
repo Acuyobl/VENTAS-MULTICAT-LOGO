@@ -20,27 +20,16 @@ esfuerzos son estimaciones de 1 dev enfocado.
 
 ## P0 — Cerrar la promesa «como sea» (1–2 sprints)
 
-### 1. WhatsApp como entrada de catálogo (3–4 días)
+### 1. WhatsApp como entrada de catálogo (✅ implementado en v0.3.4)
 
-Hoy el webhook procesa **texto**; falta que un archivo o foto enviados por WhatsApp se conviertan en
-una importación.
+El webhook acepta **texto, imágenes y documentos**; descarga el media con Graph API, lo guarda en
+`vc-docs`, lo deja como adjunto del chat (`hasAttachment`) y el admin puede **descargarlo** o
+**importarlo al catálogo de la conversación** (`POST /chat/messages/:id/import`, sin activar la
+versión). Pendiente solo la **validación con credenciales reales** (token/phone id/app secret) y el
+envío de una respuesta automática de resumen (hoy el admin ve el adjunto en el chat).
 
-**Pasos**
-1. Extender `whatsapp-inbound.service` para detectar `document` e `image` en el payload de Cloud API.
-2. Descargar el media con `GET /{media-id}` (token) y guardar el buffer temporal (sin persistir en disco).
-3. Encolar el archivo en el pipeline existente (`ImportsService.preview`/`import`) usando el catálogo
-   activo o el que indique el usuario en el chat.
-4. Responder por WhatsApp con el resumen: productos detectados, filas en cuarentena y enlace a la
-   pantalla **Cargar catálogo** para confirmar (nunca importar sin confirmación).
-5. Adjuntar la conversación a la importación (`ImportJob.chatConversationId` o metadata) para trazabilidad.
-6. UI: en `/panel/importar` mostrar el origen «WhatsApp · fecha · teléfono» y el enlace al mensaje.
-7. Límites: 10 MB, tipos permitidos, firma HMAC obligatoria en producción, rate limit por teléfono.
-8. Tests: payload con document/foto (mock de Graph API), archivo grande rechazado, firma inválida 401.
-
-**Aceptación:** mandar un XLSX/PDF/foto por WhatsApp genera una importación pendiente de confirmar,
-visible en el backoffice y con respuesta al cliente.
-
-**Depende de:** `WHATSAPP_ACCESS_TOKEN`, `PHONE_NUMBER_ID`, `APP_SECRET` (para producción).
+**Aceptación cumplida en tests:** media entrante con caption, fallo de descarga sin romper webhook,
+attachment 200, import 201, 409 sin adjunto, 403 de audiencia/permiso y 404 cross-org.
 
 ### 2. Google Drive como fuente (3–5 días)
 

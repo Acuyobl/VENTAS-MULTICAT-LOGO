@@ -59,6 +59,7 @@ describe('chat mappers', () => {
       senderType: 'CUSTOMER',
       senderName: null,
       body: 'Hola',
+      hasAttachment: false,
       readAt: null,
       createdAt: '2026-10-28T18:00:00.000Z',
     });

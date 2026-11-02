@@ -64,6 +64,10 @@ export class StorageService implements OnModuleInit {
     return this.productsBucket;
   }
 
+  get docsBucketName(): string {
+    return this.docsBucket;
+  }
+
   /** Nombre del bucket público (`vc-public`). */
   get publicBucketName(): string {
     return this.publicBucket;

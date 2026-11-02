@@ -96,6 +96,13 @@ export const envSchema = z
     WHATSAPP_WABA_ID: z.string().optional().default(''),
     WHATSAPP_VERIFY_TOKEN: z.string().optional().default(''),
     WHATSAPP_APP_SECRET: z.string().optional().default(''),
+    /** Graph API para media entrante (fotos/documentos del chat). */
+    WHATSAPP_API_VERSION: z.string().default('v21.0'),
+    WHATSAPP_MEDIA_MAX_BYTES: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(10 * 1024 * 1024),
     PAYMENTS_DEFAULT_PROVIDER: z.enum(['sandbox', 'stripe']).default('sandbox'),
     /**
      * Pasarela sandbox para desarrollo/demos. Prohibida en producción:

@@ -187,6 +187,25 @@ export class ChatRepository {
     });
     return new Map(users.map((user) => [user.id, user.fullName]));
   }
+  /** Mensaje + conversación, scoped por organización (adjuntos/import). */
+  findMessageForOrganization(organizationId: string, messageId: string) {
+    return this.prisma.chatMessage.findFirst({
+      where: { id: messageId, conversation: { organizationId } },
+      include: {
+        conversation: {
+          select: { id: true, organizationId: true, catalogId: true, customerId: true },
+        },
+      },
+    });
+  }
+  /** Catálogo de la conversación con su moneda activa (import desde chat). */
+  findCatalogForImport(organizationId: string, catalogId: string) {
+    return this.prisma.catalog.findFirst({
+      where: { id: catalogId, organizationId, deletedAt: null },
+      select: { id: true, activeVersion: { select: { currency: true } } },
+    });
+  }
+
   private async customerNames(ids: string[]): Promise<Map<string, string>> {
     if (ids.length === 0) return new Map();
     const customers = await this.prisma.customer.findMany({

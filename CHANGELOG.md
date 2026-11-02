@@ -3,6 +3,24 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
+## [0.3.4] — 2026-11-02
+
+### Añadido
+- **WhatsApp como entrada de catálogo**: el webhook acepta `image` y `document`, descarga el media
+  de Graph API (límite 10 MB, tipos permitidos), lo guarda en `vc-docs` y lo deja como **adjunto del
+  chat** (`attachmentKey`) con el caption del cliente.
+- **Adjunto descargable**: `GET /chat/messages/:id/attachment` devuelve URL firmada, nombre y MIME.
+- **Importar desde el chat**: `POST /chat/messages/:id/import` analiza el adjunto con el importador
+  adaptativo y crea una versión en el catálogo de la conversación (sin activarla), informando filas,
+  cuarentena y warnings. La UI del chat muestra **Descargar adjunto** e **Importar al catálogo**.
+- **Preflight de integraciones**: `pnpm check:integrations` revisa IA, email, pagos, WhatsApp, Google
+  e infra sin mostrar secretos; hoy: 2/12 configuradas (el resto sigue con mocks/sandbox).
+- Variables `WHATSAPP_API_VERSION` y `WHATSAPP_MEDIA_MAX_BYTES` documentadas.
+
+### Pruebas
+- API: **374 unit** (62 archivos) y **162 e2e** (33 archivos; nuevo `whatsapp-media-import`).
+  Web: 19 pruebas.
+
 ## [0.3.3] — 2026-10-30
 
 ### Añadido

@@ -19,29 +19,29 @@ caras**: backoffice para administradores y colaboradores, y tienda/portal para l
 > vendible, publicable y cobrable — sin que toques una columna.»**
 >
 > Es la frase que guía el rediseño. Hoy **Excel/CSV, PDF con texto o escaneado, JSON, TSV, TXT,
-> fotos (OCR) y hojas de pedido están disponibles**; WhatsApp como entrada se muestra «en camino».
-> Ver [docs/11-POSICIONAMIENTO.md](docs/11-POSICIONAMIENTO.md).
+> fotos (OCR), hojas de pedido y archivos/fotos por WhatsApp están disponibles**; Google Drive sigue
+> «en camino». Ver [docs/11-POSICIONAMIENTO.md](docs/11-POSICIONAMIENTO.md).
 
-> **Estado actual — v0.3.2 (2026-10-29)**: F0 cerrado; F1 completo (catálogo versionado,
+> **Estado actual — v0.3.4 (2026-11-02)**: F0 cerrado; F1 completo (catálogo versionado,
 > **importador universal** CSV/TSV/TXT/JSON/XLSX/XLS/ODS/PDF, **OCR de fotos y PDF escaneados**,
-> **fotos incrustadas de Excel extraídas y vinculadas**, multi-hoja, tablas compuestas, renombrado,
-> imágenes con maqueta SVG de respaldo, ventas, tienda, portal y PWA); F2 funcional (pagos
-> sandbox/Stripe, links de pago, pagos manuales, reembolsos, recordatorios, reportes, conciliación,
-> gastos y utilidad); F3 con contenido IA + imágenes (3 diseños y variación por
-> plataforma/tono/objetivo), WhatsApp entrante/saliente, chat de staff y chat del cliente, **3 temas
-> visuales** y **rediseño de UI**. Además: **7 catálogos de ejemplo en `catalogs/`** (incluidos
-> **2 grandes de 50 productos con fotos reales**), **borrado con liberación de slug**, reporte
-> financiero en PDF y endurecimiento de producción (cuota de IA, Resend, secretos de pasarela,
-> `STORAGE_PUBLIC_URL`, outbox).
+> **fotos incrustadas de Excel**, multi-hoja, tablas compuestas, renombrado, maqueta SVG de respaldo,
+> ventas, tienda, portal y PWA); F2 funcional (pagos sandbox/Stripe, links de pago, pagos manuales,
+> reembolsos, recordatorios, reportes, conciliación, gastos y utilidad); F3 con contenido IA +
+> imágenes (3 diseños y variación por plataforma/tono/objetivo), WhatsApp entrante/saliente, **media
+> entrante por WhatsApp con adjunto e importación desde el chat**, chat de staff y chat del cliente,
+> **3 temas visuales** y **rediseño de UI**. Además: **7 catálogos de ejemplo** (2 grandes de 50
+> productos con fotos reales), borrado con liberación de slug, reporte financiero en PDF y
+> endurecimiento de producción (cuota de IA, Resend, secretos de pasarela, `STORAGE_PUBLIC_URL`,
+> outbox).
 >
-> **Calidad**: API **360 unit + 158 e2e**, web **19**; CI verde con cobertura (~1,1 MB).
+> **Calidad**: API **374 unit + 162 e2e**, web **19**; CI verde con cobertura (~1,1 MB).
+> **Credenciales**: `pnpm check:integrations` muestra qué falta para salir de mocks/sandbox.
 >
-> **Pendiente**: Google Drive, WhatsApp como **entrada** de catálogo, variantes talla/color,
-> conciliación programada, publicación real en redes, UI de consumo de IA, onboarding/planes/
-> facturación, credenciales reales de IA y pasarelas, blocklist `jti`/`sid` y umbrales de cobertura.
+> **Pendiente**: Google Drive, variantes talla/color, conciliación programada, publicación real en
+> redes, UI de consumo de IA, onboarding/planes/facturación, credenciales reales de IA/pasarelas/
+> WhatsApp, blocklist `jti`/`sid` y umbrales de cobertura.
 > Detalle en [`docs/08-ESTADO-F1.md`](docs/08-ESTADO-F1.md), [`docs/10-DEMO.md`](docs/10-DEMO.md),
-> [`docs/11-POSICIONAMIENTO.md`](docs/11-POSICIONAMIENTO.md) e hitos en
-> [`CHANGELOG.md`](CHANGELOG.md).
+> [`docs/12-PENDIENTES.md`](docs/12-PENDIENTES.md) e hitos en [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Qué hay en esta carpeta
 

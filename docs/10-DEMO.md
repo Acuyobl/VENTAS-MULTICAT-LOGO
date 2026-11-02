@@ -1,4 +1,4 @@
-# Guion de demo — VentasCatálogo v0.3.3
+# Guion de demo — VentasCatálogo v0.3.4
 
 Demo de **10–12 minutos** que recorre las dos caras y el ciclo completo: catálogo → cotización →
 pedido → cobro → tienda → portal, más contenido, temas y catálogos reales. Todo corre local; no
@@ -43,6 +43,10 @@ Credenciales: `admin@ventascatalogo.local` / `Demo1234!` (MFA autocompletado en 
 6. **OCR**: con `OCR_PROVIDER=tesseract` en la API, subir `catalogs/06-lista-ocr.png` (foto de una
    lista) y `catalogs/07-lista-ocr-escaneada.pdf` (PDF sin texto): el agente reconoce los productos
    y precios sin escribir una columna.
+7. **WhatsApp**: si hay credenciales, mandar una foto o un Excel al número del negocio → en
+   `/panel/chat` aparece el adjunto; tocá **Descargar adjunto** o **Importar al catálogo** (crea una
+   versión lista para activar). Sin credenciales, el flujo está cubierto por tests con Graph API
+   mockeada.
 
 ## 2. Catálogo real y productos (2 min)
 
@@ -89,11 +93,12 @@ Credenciales: `admin@ventascatalogo.local` / `Demo1234!` (MFA autocompletado en 
 ## 7. Cierre (1 min)
 
 - **Promesa**: «Subí tu catálogo como sea y el agente lo deja vendible, publicable y cobrable».
-  Hoy Excel/CSV (y hojas de pedido/data URI) están disponibles; PDF, foto y WhatsApp en camino.
-- **Calidad**: API 360 unit + 158 e2e, web 19; CI verde con cobertura (~1,1 MB); tags hasta
-  `v0.3.2`.
-- **Pendiente**: Drive, PDF/OCR, foto/visión, WhatsApp de entrada, variantes, publicación real,
-  onboarding/planes y credenciales reales.
+  Hoy Excel/CSV/PDF/JSON, fotos con OCR y archivos por WhatsApp están disponibles; Drive sigue en
+  camino.
+- **Calidad**: API 374 unit + 162 e2e, web 19; CI verde con cobertura (~1,1 MB); tags hasta
+  `v0.3.4`.
+- **Pendiente**: Drive, variantes, conciliación programada, publicación real, onboarding/planes,
+  UI de cuota IA y credenciales reales (`pnpm check:integrations`).
 
 ## Guion corto (30 s)
 
