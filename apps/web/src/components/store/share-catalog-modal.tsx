@@ -94,8 +94,8 @@ export function ShareCatalogModal({
               <QRCodeSVG
                 value={shareUrl}
                 size={184}
-                bgColor="#ffffff"
-                fgColor="#0f3b2b"
+                bgColor="#FFFBEB"
+                fgColor="#0F766E"
                 level="M"
               />
             ) : null}

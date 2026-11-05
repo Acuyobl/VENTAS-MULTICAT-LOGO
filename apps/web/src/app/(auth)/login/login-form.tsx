@@ -199,8 +199,8 @@ export function LoginForm({ initialEmail, nextPath }: LoginFormProps) {
               <QRCodeSVG
                 value={enrollment.otpauthUrl}
                 size={176}
-                bgColor="#fffdf7"
-                fgColor="#0f3b2b"
+                bgColor="#FFFBEB"
+                fgColor="#0F766E"
                 level="M"
               />
             </div>
