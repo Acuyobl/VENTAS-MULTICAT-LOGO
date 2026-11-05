@@ -3,6 +3,27 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 semántico adaptado a hitos de fase. Fechas en `America/Costa_Rica`.
 
+## [0.3.5] — 2026-11-04
+
+### Añadido
+- **Storefront de última generación con Comercio Conversacional**:
+  - **Buscador en vivo instantáneo**: Búsqueda interactiva en tiempo real por nombre, SKU, marca, categoría o descripción, con resaltado y contador dinámico de resultados.
+  - **Barra de controles de tienda**:
+    - Ordenamiento por: "Orden original", "Menor precio", "Mayor precio" y "Nombre A-Z".
+    - Alternador de vista: **Cuadrícula (Grid)** para vitrina vs. **Lista Compacta** para compra rápida.
+    - Filtro rápido "Solo disponibles" para ocultar productos agotados.
+  - **Modal para Compartir y Código QR**: Generación de código QR SVG nativo para escaneo directo en mostrador/vitrinas, copiado de enlace en 1 clic y botón para compartir catálogo en WhatsApp.
+  - **Checkout directo por WhatsApp**: Botón en el carrito que compila el pedido completo (productos, cantidades, precios unitarios, subtotal estimado y datos del cliente) y abre WhatsApp listo para enviar.
+  - **Consulta por WhatsApp en Ficha de Producto**: Botón en el modal de detalle para consultar disponibilidad de cualquier ítem en WhatsApp con sus datos prellenados.
+- **Operaciones avanzadas de catálogo (Backoffice)**:
+  - **Exportación a Excel (.xlsx) y CSV**: `GET /catalogs/:id/export?format=xlsx|csv` descarga la versión activa completa con SKU, Nombre, Categoría, Marca, Precio, Moneda, Stock, Descripción, URL de Imagen y Atributos (soporta UTF-8 BOM para tildes en Excel).
+  - **Duplicación / Clonación de Catálogos**: `POST /catalogs/:id/duplicate` clona un catálogo en una transacción atómica creando su versión activa v1 con todos los productos.
+  - **Ajuste masivo de precios (*Bulk Markup/Discount*)**: `POST /catalogs/:id/bulk-price/preview` y `POST /catalogs/:id/bulk-price/apply` permiten aumentar o rebajar precios por porcentaje o monto fijo a todo el catálogo o por categoría con simulación previa.
+
+### Pruebas
+- API: **384 unit** (62 archivos, +10 tests nuevos de operaciones de catálogo) y **162 e2e**.
+  Web: 19 unit tests pasando y verificación de tipos al 100% en todos los paquetes (`turbo run typecheck`).
+
 ## [0.3.4] — 2026-11-02
 
 ### Añadido

@@ -1,11 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import * as XLSX from 'xlsx';
 import type {
   AuthenticatedUser,
+  BulkPriceAdjustmentInput,
+  BulkPriceApplyResponse,
+  BulkPricePreviewResponse,
+  CatalogCategoriesResponse,
   CatalogCreateInput,
+  CatalogDuplicateInput,
   CatalogSummary,
   CatalogUpdateInput,
+  Currency,
 } from '@ventascatalogo/contracts';
+import { formatMoney, MINOR_FACTOR } from '@ventascatalogo/contracts';
 import { CatalogsRepository } from './catalogs.repository';
 import { AppException } from '../../common/errors/app-exception';
 import { PUBLIC_PRODUCT_IMAGE_URL_TTL_SECONDS, StorageService } from '../storage/storage.service';
@@ -227,6 +235,336 @@ export class CatalogsService {
       traceId: meta.traceId,
     });
   }
+
+  async duplicate(
+    user: AuthenticatedUser,
+    catalogId: string,
+    input: CatalogDuplicateInput,
+    meta: AuditMeta,
+  ): Promise<CatalogSummary> {
+    const original = await this.repo.findForMember(
+      catalogId,
+      user.id,
+      user.audience,
+      user.organizationId,
+    );
+    if (!original) {
+      throw new AppException('CATALOG_NOT_FOUND', 404);
+    }
+
+    let slug = input.slug?.trim() || slugifyName(input.name);
+    const existing = await this.repo.findCatalogBySlug(user.organizationId, slug);
+    if (existing) {
+      if (input.slug) {
+        throw new AppException('VALIDATION_FAILED', 409, {
+          reason: 'catalog_slug_taken',
+          slug: input.slug,
+        });
+      }
+      slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
+    }
+
+    const result = await this.repo.duplicateCatalog(catalogId, user.organizationId, user.id, {
+      name: input.name,
+      slug,
+      description: input.description,
+    });
+
+    if (!result) {
+      throw new AppException('CATALOG_NOT_FOUND', 404);
+    }
+
+    await this.audit.write({
+      organizationId: user.organizationId,
+      actorUserId: user.id,
+      action: 'catalog.duplicated',
+      entityType: 'catalog',
+      entityId: result.catalog.id,
+      after: {
+        sourceCatalogId: catalogId,
+        newCatalogId: result.catalog.id,
+        name: result.catalog.name,
+        slug: result.catalog.slug,
+        productCount: result.productCount,
+      },
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      traceId: meta.traceId,
+    });
+
+    return {
+      id: result.catalog.id,
+      name: result.catalog.name,
+      slug: result.catalog.slug,
+      description: result.catalog.description,
+      activeVersionId: result.catalog.activeVersionId,
+      activeVersionNumber: result.activeVersionNumber,
+      productCount: result.productCount,
+      currency: result.currency,
+      updatedAt: result.catalog.updatedAt.toISOString(),
+    } as CatalogSummary;
+  }
+
+  async export(
+    user: AuthenticatedUser,
+    catalogId: string,
+    format: 'xlsx' | 'csv' = 'xlsx',
+  ): Promise<{ buffer: Buffer; filename: string; contentType: string }> {
+    const catalog = await this.repo.findCatalogWithActiveProducts(catalogId, user.organizationId);
+    if (!catalog) {
+      throw new AppException('CATALOG_NOT_FOUND', 404);
+    }
+    if (!catalog.activeVersion) {
+      throw new AppException('NO_ACTIVE_VERSION', 409, {
+        reason: 'catalog_has_no_active_version',
+        catalogId,
+      });
+    }
+
+    const version = catalog.activeVersion;
+    const currency = version.currency as Currency;
+    const factor = MINOR_FACTOR[currency] ?? 1;
+
+    const rows = await Promise.all(
+      version.products.map(async (p) => {
+        const imageUrl = p.imageKey
+          ? await this.storage.presignGetObjectSafe(
+              p.imageKey,
+              PUBLIC_PRODUCT_IMAGE_URL_TTL_SECONDS,
+            )
+          : '';
+        const price = Number(p.priceMinor) / factor;
+
+        let attrString = '';
+        if (p.attributes) {
+          attrString =
+            typeof p.attributes === 'object'
+              ? JSON.stringify(p.attributes)
+              : String(p.attributes);
+        }
+
+        return {
+          SKU: p.sku,
+          Nombre: p.name,
+          Categoría: p.category ?? '',
+          Marca: p.brand ?? '',
+          Precio: price,
+          Moneda: p.currency,
+          Stock: p.stock !== null ? p.stock : '',
+          Descripción: p.description ?? '',
+          'URL de Imagen': imageUrl ?? '',
+          Atributos: attrString,
+        };
+      }),
+    );
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows, {
+      header: [
+        'SKU',
+        'Nombre',
+        'Categoría',
+        'Marca',
+        'Precio',
+        'Moneda',
+        'Stock',
+        'Descripción',
+        'URL de Imagen',
+        'Atributos',
+      ],
+    });
+    XLSX.utils.book_append_sheet(wb, ws, 'Productos');
+
+    if (format === 'csv') {
+      const csv = XLSX.utils.sheet_to_csv(ws);
+      const buffer = Buffer.from('\uFEFF' + csv, 'utf-8');
+      return {
+        buffer,
+        filename: `${catalog.slug}-productos.csv`,
+        contentType: 'text/csv; charset=utf-8',
+      };
+    }
+
+    const buffer = Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }));
+    return {
+      buffer,
+      filename: `${catalog.slug}-productos.xlsx`,
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    };
+  }
+
+  async getCategories(
+    user: AuthenticatedUser,
+    catalogId: string,
+  ): Promise<CatalogCategoriesResponse> {
+    const catalog = await this.repo.findForMember(
+      catalogId,
+      user.id,
+      user.audience,
+      user.organizationId,
+    );
+    if (!catalog) {
+      throw new AppException('CATALOG_NOT_FOUND', 404);
+    }
+    if (!catalog.activeVersionId) {
+      return { categories: [] };
+    }
+    const categories = await this.repo.getActiveCategories(catalogId, catalog.activeVersionId);
+    return { categories };
+  }
+
+  async previewBulkPriceAdjustment(
+    user: AuthenticatedUser,
+    catalogId: string,
+    input: BulkPriceAdjustmentInput,
+  ): Promise<BulkPricePreviewResponse> {
+    const catalog = await this.repo.findForMember(
+      catalogId,
+      user.id,
+      user.audience,
+      user.organizationId,
+    );
+    if (!catalog) {
+      throw new AppException('CATALOG_NOT_FOUND', 404);
+    }
+    if (!catalog.activeVersionId || !catalog.activeVersion) {
+      throw new AppException('NO_ACTIVE_VERSION', 409, {
+        reason: 'catalog_has_no_active_version',
+        catalogId,
+      });
+    }
+
+    const version = catalog.activeVersion;
+    const currency = version.currency as Currency;
+    const products = await this.repo.getActiveProductsForPriceAdjustment(
+      catalogId,
+      version.id,
+      input.scope,
+      input.category,
+    );
+
+    const sampleItems = products.map((product) => {
+      const newPriceMinor = calculateAdjustedPrice(
+        product.priceMinor,
+        currency,
+        input,
+      );
+      const differenceMinor = newPriceMinor - product.priceMinor;
+
+      return {
+        id: product.id,
+        sku: product.sku,
+        name: product.name,
+        category: product.category,
+        currentPriceMinor: product.priceMinor.toString(),
+        newPriceMinor: newPriceMinor.toString(),
+        differenceMinor: differenceMinor.toString(),
+        currentPriceFormatted: formatMoney(product.priceMinor, currency),
+        newPriceFormatted: formatMoney(newPriceMinor, currency),
+      };
+    });
+
+    return {
+      totalProducts: products.length,
+      currency,
+      sampleItems: sampleItems.slice(0, 50),
+    };
+  }
+
+  async applyBulkPriceAdjustment(
+    user: AuthenticatedUser,
+    catalogId: string,
+    input: BulkPriceAdjustmentInput,
+    meta: AuditMeta,
+  ): Promise<BulkPriceApplyResponse> {
+    const catalog = await this.repo.findForMember(
+      catalogId,
+      user.id,
+      user.audience,
+      user.organizationId,
+    );
+    if (!catalog) {
+      throw new AppException('CATALOG_NOT_FOUND', 404);
+    }
+    if (!catalog.activeVersionId || !catalog.activeVersion) {
+      throw new AppException('NO_ACTIVE_VERSION', 409, {
+        reason: 'catalog_has_no_active_version',
+        catalogId,
+      });
+    }
+
+    const version = catalog.activeVersion;
+    const currency = version.currency as Currency;
+    const products = await this.repo.getActiveProductsForPriceAdjustment(
+      catalogId,
+      version.id,
+      input.scope,
+      input.category,
+    );
+
+    const updates: Array<{ id: string; priceMinor: bigint }> = [];
+    for (const p of products) {
+      const newPriceMinor = calculateAdjustedPrice(p.priceMinor, currency, input);
+      if (newPriceMinor !== p.priceMinor) {
+        updates.push({ id: p.id, priceMinor: newPriceMinor });
+      }
+    }
+
+    const updatedCount = await this.repo.applyBulkProductPriceUpdates(updates);
+
+    await this.audit.write({
+      organizationId: user.organizationId,
+      actorUserId: user.id,
+      action: 'catalog.bulk_price_adjustment',
+      entityType: 'catalog',
+      entityId: catalog.id,
+      after: {
+        scope: input.scope,
+        category: input.category ?? null,
+        type: input.type,
+        direction: input.direction,
+        value: input.value,
+        totalProducts: products.length,
+        updatedCount,
+      },
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      traceId: meta.traceId,
+    });
+
+    return {
+      updatedCount,
+      message: `Se actualizaron ${updatedCount} productos correctamente.`,
+    };
+  }
+}
+
+export function calculateAdjustedPrice(
+  currentMinor: bigint,
+  currency: Currency,
+  input: {
+    type: 'PERCENTAGE' | 'FIXED';
+    direction: 'INCREASE' | 'DECREASE';
+    value: number;
+  },
+): bigint {
+  const factor = MINOR_FACTOR[currency] ?? 1;
+  let newMinor: bigint;
+
+  if (input.type === 'PERCENTAGE') {
+    const bp = BigInt(Math.round(input.value * 100));
+    const delta = (currentMinor * bp + 5000n) / 10000n;
+    newMinor = input.direction === 'INCREASE' ? currentMinor + delta : currentMinor - delta;
+  } else {
+    const deltaMinor = BigInt(Math.round(input.value * factor));
+    newMinor = input.direction === 'INCREASE' ? currentMinor + deltaMinor : currentMinor - deltaMinor;
+  }
+
+  if (newMinor <= 0n) {
+    newMinor = 1n;
+  }
+
+  return newMinor;
 }
 
 /** Slug URL-safe a partir del nombre (sin acentos, guiones simples). */

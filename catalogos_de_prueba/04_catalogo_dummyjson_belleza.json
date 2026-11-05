@@ -1,0 +1,57 @@
+[
+  {
+    "id": 1,
+    "title": "Mascara de Pestañas Lash Princess",
+    "description": "Efecto pestañas postizas con volumen y longitud extrema todo el día.",
+    "price": 9.99,
+    "category": "Belleza",
+    "brand": "Essence",
+    "sku": "BEAUTY-001",
+    "stock": 45,
+    "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/Essence%20Mascara%20Lash%20Princess/thumbnail.png"
+  },
+  {
+    "id": 2,
+    "title": "Paleta de Sombras con Espejo 12 Tonos",
+    "description": "Sombras de ojos ultra pigmentadas con acabado mate y satinado.",
+    "price": 19.99,
+    "category": "Belleza",
+    "brand": "Glamour Eyes",
+    "sku": "BEAUTY-002",
+    "stock": 28,
+    "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/Eyeshadow%20Palette%20with%20Mirror/thumbnail.png"
+  },
+  {
+    "id": 3,
+    "title": "Polvo Compacto Matificante",
+    "description": "Fórmula sedosa que sella el maquillaje y controla el brillo hasta 16 horas.",
+    "price": 14.5,
+    "category": "Belleza",
+    "brand": "Pure Skin",
+    "sku": "BEAUTY-003",
+    "stock": 60,
+    "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/Powder%20Canister/thumbnail.png"
+  },
+  {
+    "id": 4,
+    "title": "Perfume Floral Eau de Parfum 100ml",
+    "description": "Fragancia sofisticada con notas de jazmín, vainilla y bergamota.",
+    "price": 79.99,
+    "category": "Perfumería",
+    "brand": "Calvin Klein",
+    "sku": "FRAG-004",
+    "stock": 15,
+    "thumbnail": "https://cdn.dummyjson.com/products/images/fragrances/Calvin%20Klein%20CK%20One/thumbnail.png"
+  },
+  {
+    "id": 5,
+    "title": "Serum Facial Ácido Hialurónico",
+    "description": "Hidratación profunda antienvejecimiento para piel luminosa y firme.",
+    "price": 28,
+    "category": "Cuidado Facial",
+    "brand": "Dermacare",
+    "sku": "BEAUTY-005",
+    "stock": 34,
+    "thumbnail": "https://images.unsplash.com/photo-1620916566398-39f1143ab7be"
+  }
+]

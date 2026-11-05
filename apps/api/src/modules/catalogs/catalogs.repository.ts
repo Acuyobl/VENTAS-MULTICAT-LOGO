@@ -190,4 +190,184 @@ export class CatalogsRepository {
       }
     });
   }
+
+  async findCatalogWithActiveProducts(catalogId: string, organizationId: string) {
+    return this.prisma.catalog.findFirst({
+      where: { id: catalogId, organizationId, deletedAt: null },
+      include: {
+        activeVersion: {
+          include: {
+            products: {
+              where: { deletedAt: null },
+              orderBy: [{ category: 'asc' }, { name: 'asc' }],
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async duplicateCatalog(
+    originalCatalogId: string,
+    organizationId: string,
+    userId: string,
+    newCatalogData: { name: string; slug: string; description?: string | null },
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const original = await tx.catalog.findFirst({
+        where: { id: originalCatalogId, organizationId, deletedAt: null },
+        include: {
+          activeVersion: {
+            include: {
+              products: {
+                where: { deletedAt: null },
+              },
+            },
+          },
+        },
+      });
+
+      if (!original) return null;
+
+      const newCatalog = await tx.catalog.create({
+        data: {
+          organizationId,
+          name: newCatalogData.name,
+          slug: newCatalogData.slug,
+          description:
+            newCatalogData.description !== undefined
+              ? newCatalogData.description
+              : original.description,
+          settings: original.settings ?? undefined,
+        },
+      });
+
+      let activeVersionNumber: number | null = null;
+      let productCount = 0;
+      let currency: 'CRC' | 'USD' = 'CRC';
+
+      if (original.activeVersion) {
+        const origVer = original.activeVersion;
+        currency = origVer.currency as 'CRC' | 'USD';
+        productCount = origVer.products.length;
+        activeVersionNumber = 1;
+
+        const newVersion = await tx.catalogVersion.create({
+          data: {
+            catalogId: newCatalog.id,
+            versionNumber: 1,
+            status: 'ACTIVE',
+            currency: origVer.currency,
+            taxRateBp: origVer.taxRateBp,
+            taxIncluded: origVer.taxIncluded,
+            productCount: origVer.products.length,
+            sourceFileId: origVer.sourceFileId,
+            sourceChecksum: origVer.sourceChecksum,
+            importedAt: new Date(),
+            validatedAt: new Date(),
+            activatedAt: new Date(),
+            createdByUserId: userId,
+          },
+        });
+
+        if (origVer.products.length > 0) {
+          await tx.product.createMany({
+            data: origVer.products.map((p) => ({
+              catalogId: newCatalog.id,
+              catalogVersionId: newVersion.id,
+              sku: p.sku,
+              name: p.name,
+              description: p.description,
+              category: p.category,
+              brand: p.brand,
+              priceMinor: p.priceMinor,
+              costMinor: p.costMinor,
+              currency: p.currency,
+              stock: p.stock,
+              allowBackorder: p.allowBackorder,
+              attributes: p.attributes ?? undefined,
+              imageKey: p.imageKey,
+              isActive: p.isActive,
+            })),
+          });
+        }
+
+        await tx.catalog.update({
+          where: { id: newCatalog.id },
+          data: { activeVersionId: newVersion.id },
+        });
+
+        newCatalog.activeVersionId = newVersion.id;
+      }
+
+      return {
+        catalog: newCatalog,
+        activeVersionNumber,
+        productCount,
+        currency,
+      };
+    });
+  }
+
+  async getActiveCategories(catalogId: string, versionId: string): Promise<string[]> {
+    const rows = await this.prisma.product.findMany({
+      where: {
+        catalogId,
+        catalogVersionId: versionId,
+        deletedAt: null,
+        category: { not: null },
+      },
+      select: { category: true },
+      distinct: ['category'],
+      orderBy: { category: 'asc' },
+    });
+    const unique = new Set<string>();
+    for (const r of rows) {
+      if (r.category && r.category.trim()) {
+        unique.add(r.category.trim());
+      }
+    }
+    return Array.from(unique);
+  }
+
+  async getActiveProductsForPriceAdjustment(
+    catalogId: string,
+    versionId: string,
+    scope: 'ALL' | 'CATEGORY',
+    category?: string,
+  ) {
+    return this.prisma.product.findMany({
+      where: {
+        catalogId,
+        catalogVersionId: versionId,
+        deletedAt: null,
+        isActive: true,
+        ...(scope === 'CATEGORY' && category ? { category } : {}),
+      },
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        category: true,
+        priceMinor: true,
+        currency: true,
+      },
+      orderBy: [{ category: 'asc' }, { name: 'asc' }],
+    });
+  }
+
+  async applyBulkProductPriceUpdates(
+    updates: Array<{ id: string; priceMinor: bigint }>,
+  ): Promise<number> {
+    if (updates.length === 0) return 0;
+    await this.prisma.$transaction(
+      updates.map((u) =>
+        this.prisma.product.update({
+          where: { id: u.id },
+          data: { priceMinor: u.priceMinor },
+        }),
+      ),
+    );
+    return updates.length;
+  }
 }

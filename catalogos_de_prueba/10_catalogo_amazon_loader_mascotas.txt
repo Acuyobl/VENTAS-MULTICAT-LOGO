@@ -1,0 +1,6 @@
+sku	item-name	brand-name	item-price	quantity	main-image-url	product-description
+PET-DOG-01	Cama Ortopédica Viscoelástica para Perros Talla L	Paws & Comfort	49.99	25	https://images.unsplash.com/photo-1541599540903-216a46ca1dc0	Espuma de memoria de alta densidad con funda lavable e impermeable.
+PET-CAT-02	Rascador para Gatos Multinivel con Cueva y Hamaca	FelinePlay	62.50	14	https://images.unsplash.com/photo-1545249390-6bdfa286032f	Torre de 120cm con postes de sisal natural y felpa suave.
+PET-ACC-03	Bebedero Fuente Automática Silenciosa 2.5L	AquaPet	28.90	40	https://images.unsplash.com/photo-1601758228041-f3b2795255f1	Filtro de carbón activado triple y luz LED indicadora de nivel.
+PET-ACC-04	Arnés Reflectante Antitirones para Perro Mediano	SafeWalk	21.00	55	https://images.unsplash.com/photo-1576201836106-db1758fd1c97	Acolchado transpirable con asa de control superior y anillas dobles.
+PET-TOY-05	Juguete Interactivo Dispensador de Premios	SmartPaws	14.50	30	https://images.unsplash.com/photo-1535294435445-d7249524ef2e	Estimula la agilidad mental y reduce la ansiedad por separación.

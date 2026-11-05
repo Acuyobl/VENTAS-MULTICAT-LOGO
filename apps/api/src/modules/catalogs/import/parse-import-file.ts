@@ -229,6 +229,16 @@ function cleanPdfString(raw: string): string {
     .replace(/\\([()\\])/g, '$1');
 }
 
+function decodePdfHexString(rawHex: string): string {
+  const clean = rawHex.replace(/\s+/g, '');
+  if (!clean) return '';
+  try {
+    return Buffer.from(clean, 'hex').toString('latin1');
+  } catch {
+    return '';
+  }
+}
+
 /** Extrae texto de streams descompresores de un documento PDF. */
 export function extractPdfText(buffer: Buffer): string {
   const textChunks: string[] = [];
@@ -243,30 +253,48 @@ export function extractPdfText(buffer: Buffer): string {
 
     let decompressed: string | null = null;
     try {
-      decompressed = zlib.inflateSync(streamBuf).toString('utf8');
+      decompressed = zlib.inflateSync(streamBuf).toString('latin1');
     } catch {
       try {
-        decompressed = zlib.inflateRawSync(streamBuf).toString('utf8');
+        decompressed = zlib.inflateRawSync(streamBuf).toString('latin1');
       } catch {
-        decompressed = streamBuf.toString('utf8');
+        decompressed = streamBuf.toString('latin1');
       }
     }
 
     if (decompressed) {
+      // 1. Strings literales: (texto) Tj
       const tjRegex = /\(([^)]*)\)\s*Tj/g;
       let tjMatch: RegExpExecArray | null;
       while ((tjMatch = tjRegex.exec(decompressed)) !== null) {
         if (tjMatch[1]) textChunks.push(cleanPdfString(tjMatch[1]));
       }
 
+      // 2. Strings hexadecimales: <hex> Tj (comunes en pdf-lib y fuentes incrustadas)
+      const hexTjRegex = /<([0-9a-fA-F\s]+)>\s*Tj/g;
+      let hexTjMatch: RegExpExecArray | null;
+      while ((hexTjMatch = hexTjRegex.exec(decompressed)) !== null) {
+        const decoded = decodePdfHexString(hexTjMatch[1]);
+        if (decoded) textChunks.push(decoded);
+      }
+
+      // 3. Operador TJ en arreglos: [(parte1) <hex2> ...] TJ
       const bigTjRegex = /\[([^\]]*)\]\s*TJ/g;
       let bigTjMatch: RegExpExecArray | null;
       while ((bigTjMatch = bigTjRegex.exec(decompressed)) !== null) {
         const inner = bigTjMatch[1] ?? '';
-        const innerMatches = inner.match(/\(([^)]*)\)/g);
-        if (innerMatches) {
-          const joined = innerMatches.map((s) => cleanPdfString(s.slice(1, -1))).join('');
-          textChunks.push(joined);
+        const tokenRegex = /\(([^)]*)\)|<([0-9a-fA-F\s]+)>/g;
+        let tokenMatch: RegExpExecArray | null;
+        const joinedParts: string[] = [];
+        while ((tokenMatch = tokenRegex.exec(inner)) !== null) {
+          if (tokenMatch[1] !== undefined) {
+            joinedParts.push(cleanPdfString(tokenMatch[1]));
+          } else if (tokenMatch[2] !== undefined) {
+            joinedParts.push(decodePdfHexString(tokenMatch[2]));
+          }
+        }
+        if (joinedParts.length > 0) {
+          textChunks.push(joinedParts.join(''));
         }
       }
     }

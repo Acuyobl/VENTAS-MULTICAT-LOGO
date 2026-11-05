@@ -5,6 +5,7 @@ export * from './auth/schemas';
 export * from './catalogs/schemas';
 export * from './catalogs/versions';
 export * from './catalogs/adaptive-import';
+export * from './catalogs/operations';
 export * from './products/queries';
 export * from './sales/schemas';
 export * from './storefront/schemas';

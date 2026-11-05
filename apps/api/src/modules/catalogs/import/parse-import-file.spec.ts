@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   decodeCsvBuffer,
   detectDelimiter,
+  extractPdfText,
   makeUniqueHeaders,
   parseImportFile,
 } from './parse-import-file';
@@ -207,6 +208,21 @@ describe('importador universal · formatos adaptativos', () => {
     const parsed = parseImportFile(fakePdf, 'pdf');
     expect(parsed.headers).toEqual(['SKU', 'Nombre', 'Precio']);
     expect(parsed.rows.length).toBeGreaterThan(0);
+  });
+
+  it('extrae texto de PDFs codificados tanto en texto literal como hexadecimal (<hex> Tj)', () => {
+    const zlib = require('node:zlib');
+    const content = 'BT\n/F1 12 Tf\n(TENIS DEPORTIVO) Tj\nT*\n<435243203435303030> Tj\nET';
+    const compressed = zlib.deflateSync(Buffer.from(content, 'latin1'));
+    const pdfBuf = Buffer.from(
+      `%PDF-1.4\n1 0 obj\n<< /Length ${compressed.length} /Filter /FlateDecode >>\nstream\n` +
+      compressed.toString('binary') +
+      '\nendstream\nendobj\n%%EOF',
+      'binary'
+    );
+    const text = extractPdfText(pdfBuf);
+    expect(text).toContain('TENIS DEPORTIVO');
+    expect(text).toContain('CRC 45000');
   });
 
   it('analiza y combina múltiples pestañas de Excel descartando hojas de portada', () => {

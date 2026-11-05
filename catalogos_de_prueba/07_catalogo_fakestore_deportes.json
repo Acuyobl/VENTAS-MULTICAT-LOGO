@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "title": "Zapatillas Running Nitro Cushion",
+    "price": 89.95,
+    "description": "Amortiguación reactiva ultraligera para carreras de media y larga distancia.",
+    "category": "Calzado Deportivo",
+    "image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff"
+  },
+  {
+    "id": 2,
+    "title": "Mochila Impermeable Senderismo 30L",
+    "price": 54.5,
+    "description": "Compartimento para bolsa de agua, soporte lumbar y funda de lluvia.",
+    "category": "Deportes y Outdoor",
+    "image": "https://fakestoreapi.com/img/81fPKd-2AYL._AC_SL1500_.jpg"
+  },
+  {
+    "id": 3,
+    "title": "Botella Térmica Deportiva 750ml",
+    "price": 18,
+    "description": "Aislamiento de doble pared al vacío: 24 horas frío y 12 horas caliente.",
+    "category": "Accesorios Deportivos",
+    "image": "https://images.unsplash.com/photo-1589365278144-c9e705f843ba"
+  },
+  {
+    "id": 4,
+    "title": "Zapatillas Casual Cuero Blanco",
+    "price": 75,
+    "description": "Diseño retro atemporal con suela de goma vulcanizada de alta durabilidad.",
+    "category": "Calzado Casual",
+    "image": "https://images.unsplash.com/photo-1560343090-f0409e92791a"
+  },
+  {
+    "id": 5,
+    "title": "Gafas de Sol Deportivas Polarizadas UV400",
+    "price": 32.9,
+    "description": "Lentes antirreflejo resistentes a impactos para ciclismo y trail running.",
+    "category": "Accesorios Deportivos",
+    "image": "https://images.unsplash.com/photo-1572635196237-14b3f281503f"
+  }
+]
