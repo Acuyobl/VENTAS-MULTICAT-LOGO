@@ -36,9 +36,9 @@
   --danger: #dc2626;
   --ok: #059669;
 
-  --font-display: 'Fraunces Variable', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
-  --font-body: 'Archivo Variable', 'Segoe UI', sans-serif;
-  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --font-display: 'Plus Jakarta Sans', 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Inter Variable', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Cascadia Code', 'Courier New', monospace;
   --shadow: 0 24px 60px rgba(19, 46, 43, 0.12);
   --shadow-small: 4px 4px 0 rgba(19, 46, 43, 0.1);
   --radius: 3px;
@@ -70,14 +70,7 @@ body {
 }
 
 body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  pointer-events: none;
-  opacity: 0.17;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.32'/%3E%3C/svg%3E");
-  mix-blend-mode: multiply;
+  display: none;
 }
 
 ::selection {
@@ -105,6 +98,15 @@ h1,
 h2,
 h3,
 h4,
+h5,
+h6 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
 p {
   margin: 0;
 }
@@ -126,18 +128,15 @@ svg {
 
 .display {
   font-family: var(--font-display);
-  font-weight: 540;
-  font-variation-settings:
-    'SOFT' 40,
-    'WONK' 1,
-    'opsz' 72;
-  letter-spacing: -0.045em;
-  line-height: 0.94;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
 }
 
 .display em {
-  color: var(--coral);
-  font-style: italic;
+  color: var(--orange);
+  font-style: normal;
+  font-weight: 800;
 }
 
 .eyebrow {
