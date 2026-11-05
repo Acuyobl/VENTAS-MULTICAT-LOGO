@@ -23,12 +23,12 @@ export const APP_THEME_META: Record<
     colors: ['#4338CA', '#F8FAFC', '#06B6D4'],
   },
   COMPACTO: {
-    label: 'Compacta (Haute Noir & Coral)',
-    tagline: 'Ciruela #2E1065 · Crema Rosé #FDF2F8 · Coral #F43F5E',
+    label: 'Compacta (Navy & Electric Lime)',
+    tagline: 'Azul Navy #111827 · Cool White #F3F4F6 · Electric Lime #A3E635',
     description:
-      'Boutique de alta densidad y moda: Ciruela imperial profundo (#2E1065), fondo crema rosé sutil (#FDF2F8) y acento coral/frambuesa llamativo (#F43F5E). Rail angosto y tipografía mono de alta precisión.',
+      'Tendencia cibernética de alta densidad: Azul navy profundo (#111827), fondo cool white limpio (#F3F4F6) y acentos en electric lime neón (#A3E635). Rail angosto, tipografía mono de alta precisión y máximo contraste.',
     layout: 'Rail angosto · Máxima densidad',
-    colors: ['#2E1065', '#FDF2F8', '#F43F5E'],
+    colors: ['#111827', '#F3F4F6', '#A3E635'],
   },
 };
 
