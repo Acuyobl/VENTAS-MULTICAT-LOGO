@@ -12,7 +12,9 @@ interface LoginFormProps {
   nextPath: string;
 }
 
-const DEV_HELPERS = process.env.NEXT_PUBLIC_DEV_AUTH_HELPERS === 'true';
+const DEV_HELPERS =
+  process.env.NEXT_PUBLIC_DEV_AUTH_HELPERS !== 'false' &&
+  process.env.NODE_ENV !== 'production';
 
 export function LoginForm({ initialEmail, nextPath }: LoginFormProps) {
   const [step, setStep] = useState<Step>('credentials');
@@ -213,6 +215,51 @@ export function LoginForm({ initialEmail, nextPath }: LoginFormProps) {
 
         {error ? <div className="alert">{error}</div> : null}
 
+        {DEV_HELPERS && enrollment?.secret ? (
+          <div
+            style={{
+              background: 'var(--paper-2)',
+              padding: '0.8rem 1rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--line-strong)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              margin: '0.4rem 0',
+            }}
+          >
+            <div>
+              <span style={{ fontSize: '0.72rem', color: 'var(--ink-faint)', display: 'block' }}>
+                Código TOTP (Modo desarrollo):
+              </span>
+              <strong
+                style={{
+                  fontSize: '1.25rem',
+                  letterSpacing: '0.15em',
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--forest)',
+                }}
+              >
+                {code || 'Generando…'}
+              </strong>
+            </div>
+            <button
+              type="button"
+              className="btn btn--small btn--primary"
+              onClick={async () => {
+                if (enrollment?.secret) {
+                  const val = await generateTotp(enrollment.secret);
+                  setCode(val);
+                  setAutoFilled(true);
+                  setManual(false);
+                }
+              }}
+            >
+              Usar este código
+            </button>
+          </div>
+        ) : null}
+
         <label className="field">
           <span className="field__label">Código de 6 dígitos</span>
           <input
@@ -263,6 +310,60 @@ export function LoginForm({ initialEmail, nextPath }: LoginFormProps) {
         </div>
 
         {error ? <div className="alert">{error}</div> : null}
+
+        {DEV_HELPERS ? (
+          <div
+            style={{
+              background: 'var(--paper-2)',
+              padding: '0.8rem 1rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--line-strong)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              margin: '0.4rem 0',
+            }}
+          >
+            <div>
+              <span style={{ fontSize: '0.72rem', color: 'var(--ink-faint)', display: 'block' }}>
+                Código TOTP vigente (Modo desarrollo):
+              </span>
+              <strong
+                style={{
+                  fontSize: '1.25rem',
+                  letterSpacing: '0.15em',
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--forest)',
+                }}
+              >
+                {code || 'Obteniendo…'}
+              </strong>
+            </div>
+            <button
+              type="button"
+              className="btn btn--small btn--primary"
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/v1/auth/dev/totp', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ mfaToken }),
+                  });
+                  if (response.ok) {
+                    const data = (await response.json()) as { code?: string };
+                    if (data?.code) {
+                      setCode(data.code);
+                      setAutoFilled(true);
+                      setManual(false);
+                    }
+                  }
+                } catch {}
+              }}
+            >
+              Usar código vigente
+            </button>
+          </div>
+        ) : null}
 
         <label className="field">
           <span className="field__label">Código TOTP</span>
