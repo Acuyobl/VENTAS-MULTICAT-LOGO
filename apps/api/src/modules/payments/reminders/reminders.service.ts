@@ -109,13 +109,13 @@ export class RemindersService {
         reason: 'customer_phone_missing',
       });
     }
-    if (!this.whatsapp.isConfigured()) {
+    if (!this.whatsapp.isConfigured(user.organizationId)) {
       throw new AppException('INTEGRATION_NOT_CONFIGURED', 409, {
         provider: 'WHATSAPP',
         reason: 'whatsapp_not_configured',
       });
     }
-    const result = await this.whatsapp.sendText(to, body);
+    const result = await this.whatsapp.sendText(to, body, user.organizationId);
     const reminder = await this.persist(user, order.id, order.catalogId, {
       channel: 'WHATSAPP',
       to,

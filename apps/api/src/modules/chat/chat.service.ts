@@ -236,14 +236,14 @@ export class ChatService {
           conversationId: conversation.id,
         });
       }
-      if (!this.whatsapp.isConfigured()) {
-        // Sin credenciales no se guarda el mensaje: el staff puede reintentar.
+      if (!this.whatsapp.isConfigured(conversation.organizationId)) {
+        // Sin credenciales o sesión QR no se guarda el mensaje: el staff puede reintentar.
         throw new AppException('INTEGRATION_NOT_CONFIGURED', 409, {
           provider: 'WHATSAPP',
           reason: 'whatsapp_not_configured',
         });
       }
-      const sent = await this.whatsapp.sendText(phone, body);
+      const sent = await this.whatsapp.sendText(phone, body, conversation.organizationId);
       if (!sent.ok) {
         throw new AppException('INTERNAL_ERROR', 502, {
           reason: 'whatsapp_send_failed',

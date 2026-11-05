@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { WhatsappBaileysService } from './whatsapp-baileys.service';
 
 export interface WhatsappSendResult {
   ok: boolean;
@@ -8,24 +9,36 @@ export interface WhatsappSendResult {
 }
 
 /**
- * Cliente mínimo de WhatsApp Cloud API (Meta) sin SDK. Si faltan credenciales
- * (`WHATSAPP_ACCESS_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID`) el remitente queda como
- * no configurado y los endpoints deben responder 409 `INTEGRATION_NOT_CONFIGURED`.
+ * Cliente de WhatsApp unificado:
+ * 1. Soporta conexión por código QR (Baileys) vinculada en tiempo real.
+ * 2. Si no hay sesión QR activa, recurre a Meta Cloud API si cuenta con tokens.
  */
 @Injectable()
 export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    @Optional() private readonly baileys?: WhatsappBaileysService,
+  ) {}
 
-  isConfigured(): boolean {
+  isConfigured(organizationId?: string): boolean {
+    if (organizationId && this.baileys?.isConnected(organizationId)) {
+      return true;
+    }
     return Boolean(
       this.config.get<string>('WHATSAPP_ACCESS_TOKEN') &&
       this.config.get<string>('WHATSAPP_PHONE_NUMBER_ID'),
     );
   }
 
-  async sendText(to: string, body: string): Promise<WhatsappSendResult> {
+  async sendText(to: string, body: string, organizationId?: string): Promise<WhatsappSendResult> {
+    // 1. Intento por sesión QR activa (Baileys)
+    if (organizationId && this.baileys?.isConnected(organizationId)) {
+      return this.baileys.sendMessage(organizationId, to, body);
+    }
+
+    // 2. Fallback a WhatsApp Cloud API (Meta)
     const token = this.config.get<string>('WHATSAPP_ACCESS_TOKEN');
     const phoneNumberId = this.config.get<string>('WHATSAPP_PHONE_NUMBER_ID');
     if (!token || !phoneNumberId) {

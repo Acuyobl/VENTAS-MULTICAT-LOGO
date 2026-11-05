@@ -135,6 +135,45 @@ export class WhatsappInboundService {
     return processed;
   }
 
+  /** Procesa mensajes entrantes directos de la sesión vinculada por QR (Baileys) */
+  async processDirectMessage(input: {
+    organizationId: string;
+    from: string;
+    contactName: string | null;
+    text: string;
+    attachmentKey?: string | null;
+  }): Promise<{ conversationId: string; messageId: string } | null> {
+    const catalog = await this.prisma.catalog.findFirst({
+      where: { organizationId: input.organizationId, deletedAt: null },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
+    if (!catalog) return null;
+
+    const { conversation } = await this.ensureConversation({
+      organizationId: input.organizationId,
+      catalogId: catalog.id,
+      from: input.from,
+      contactName: input.contactName,
+    });
+
+    const created = await this.prisma.chatMessage.create({
+      data: {
+        conversationId: conversation.id,
+        senderType: 'CUSTOMER',
+        body: input.text,
+        attachmentKey: input.attachmentKey ?? null,
+      },
+    });
+
+    await this.prisma.chatConversation.update({
+      where: { id: conversation.id },
+      data: { lastMessageAt: created.createdAt, channel: 'WHATSAPP' },
+    });
+
+    return { conversationId: conversation.id, messageId: created.id };
+  }
+
   private async downloadMedia(
     media: InboundMediaMessage,
     downloader: WhatsappMediaDownloader,

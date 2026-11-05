@@ -3,6 +3,7 @@ import type { ConversationListResponse } from '@ventascatalogo/contracts';
 import { tryApiFetch } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { ChatPanel } from '@/components/backoffice/chat-panel';
+import { WhatsappConnectPanel } from '@/components/backoffice/whatsapp-connect-panel';
 
 export const metadata: Metadata = {
   title: 'Chat',
@@ -35,6 +36,10 @@ export default async function ChatPage() {
           <span>conversaciones activas</span>
         </div>
       </header>
+
+      <div style={{ marginBottom: '1.25rem' }}>
+        <WhatsappConnectPanel canManage={canWrite} />
+      </div>
 
       <ChatPanel
         initialConversations={conversations?.items ?? []}

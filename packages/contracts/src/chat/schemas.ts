@@ -88,3 +88,20 @@ export const customerChatSchema = z.object({
 });
 
 export type CustomerChat = z.infer<typeof customerChatSchema>;
+
+export const whatsappSessionStatusSchema = z.enum([
+  'DISCONNECTED',
+  'SCAN_QR',
+  'CONNECTING',
+  'CONNECTED',
+]);
+export type WhatsappSessionStatus = z.infer<typeof whatsappSessionStatusSchema>;
+
+export const whatsappSessionInfoSchema = z.object({
+  status: whatsappSessionStatusSchema,
+  qr: z.string().nullable(),
+  phone: z.string().nullable(),
+  name: z.string().nullable(),
+  connectedAt: z.string().nullable(),
+});
+export type WhatsappSessionInfo = z.infer<typeof whatsappSessionInfoSchema>;

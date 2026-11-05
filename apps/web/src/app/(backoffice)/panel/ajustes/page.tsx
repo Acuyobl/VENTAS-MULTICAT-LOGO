@@ -10,6 +10,7 @@ import { SettingsForm } from '@/components/backoffice/settings-form';
 import { GatewayConfigPanel } from '@/components/backoffice/gateway-config';
 import { ImageDesignPicker } from '@/components/backoffice/image-design-picker';
 import { AppThemePicker } from '@/components/backoffice/app-theme-picker';
+import { WhatsappConnectPanel } from '@/components/backoffice/whatsapp-connect-panel';
 
 export const metadata: Metadata = {
   title: 'Ajustes',
@@ -40,11 +41,12 @@ export default async function SettingsPage() {
           </p>
         </div>
         <div className="page-head__aside">
-          <strong>4</strong>
-          <span>políticas configurables</span>
+          <strong>5</strong>
+          <span>módulos configurables</span>
         </div>
       </header>
 
+      <WhatsappConnectPanel canManage={canManage} />
       <SettingsForm initial={settings} canManage={canManage} />
       <AppThemePicker initialTheme={settings?.appTheme ?? 'CLASICO'} canManage={canManage} />
       <ImageDesignPicker
