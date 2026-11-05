@@ -2686,23 +2686,61 @@ svg {
 html[data-theme='MODERNO'] {
   --font-display: 'Archivo Variable', 'Segoe UI', sans-serif;
   --font-body: 'Archivo Variable', 'Segoe UI', sans-serif;
-  --paper: #fffbeb;
-  --paper-1: #fffdf5;
-  --paper-2: #fef3c7;
-  --paper-3: #fde68a;
-  --forest: #0f766e;
-  --forest-2: #115e59;
-  --orange: #f97316;
-  --coral: #f97316;
-  --coral-dark: #ea580c;
-  --mango: #f97316;
-  --line: #e5d5bc;
-  --line-strong: #c8bba5;
-  --ink: #132e2b;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+
+  /* Tríada Tendencia: Cobalto Profundo (#4338CA), Nieve Glaciar (#F8FAFC) y Cian Neón (#06B6D4) */
+  --forest: #4338ca;
+  --forest-2: #3730a3;
+  --forest-dark: #312e81;
+  --forest-light: #6366f1;
+  --forest-tint: #e0e7ff;
+  --forest-rgb: 67, 56, 202;
+
+  --paper: #f8fafc;
+  --paper-1: #ffffff;
+  --paper-2: #ffffff;
+  --paper-3: #f1f5f9;
+  --paper-rgb: 248, 250, 252;
+
+  --orange: #06b6d4;
+  --orange-dark: #0891b2;
+  --orange-light: #cffafe;
+  --orange-tint: #ecfeff;
+  --orange-rgb: 6, 182, 212;
+
+  --coral: #06b6d4;
+  --coral-dark: #0891b2;
+  --mango: #06b6d4;
+  --accent: #06b6d4;
+
+  --ink: #0f172a;
   --ink-soft: #334155;
   --ink-faint: #64748b;
-  --shadow-small: none;
-  font-size: 17px;
+  --white: #ffffff;
+
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  --moss: #0d9488;
+  --sky: #38bdf8;
+  --danger: #ef4444;
+  --ok: #10b981;
+
+  --shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.08);
+  --shadow-small: 0 4px 12px rgba(15, 23, 42, 0.05);
+  --radius: 8px;
+  font-size: 16px;
+}
+
+html[data-theme='MODERNO'] body {
+  background:
+    radial-gradient(circle at 10% -10%, rgba(6, 182, 212, 0.12), transparent 32rem),
+    radial-gradient(circle at 90% 5%, rgba(67, 56, 202, 0.09), transparent 34rem),
+    var(--paper);
+}
+
+html[data-theme='MODERNO'] ::selection {
+  background: #06b6d4;
+  color: #ffffff;
 }
 
 html[data-theme='MODERNO'] .bo {
@@ -2714,13 +2752,24 @@ html[data-theme='MODERNO'] .bo__rail {
   min-height: auto;
   flex-direction: row;
   align-items: center;
-  gap: 0.9rem;
-  padding: 0.5rem 1rem;
+  gap: 1.2rem;
+  padding: 0.75rem 1.75rem;
+  background: #0f172a;
+  border-bottom: 1px solid #1e293b;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.15);
 }
 
 html[data-theme='MODERNO'] .bo__brand {
   padding: 0;
   border: 0;
+}
+
+html[data-theme='MODERNO'] .bo__brand a {
+  color: #ffffff;
+}
+
+html[data-theme='MODERNO'] .bo__brand a span {
+  color: #06b6d4;
 }
 
 html[data-theme='MODERNO'] .bo__brand small {
@@ -2729,23 +2778,33 @@ html[data-theme='MODERNO'] .bo__brand small {
 
 html[data-theme='MODERNO'] .bo__nav {
   display: flex;
-  margin: 0 0 0 1rem;
-  gap: 0.1rem;
+  margin: 0;
+  gap: 0.3rem;
   overflow-x: auto;
+  scrollbar-width: none;
 }
 
 html[data-theme='MODERNO'] .bo__nav a {
   border-left: 0;
-  border-bottom: 2px solid transparent;
-  padding: 0.42rem 0.55rem;
-  font-size: 0.82rem;
+  border-bottom: 0;
+  border-radius: 6px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.84rem;
+  font-weight: 500;
   white-space: nowrap;
+  color: #94a3b8;
+  transition: all 160ms ease;
 }
 
-html[data-theme='MODERNO'] .bo__nav a:hover,
+html[data-theme='MODERNO'] .bo__nav a:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 html[data-theme='MODERNO'] .bo__nav a[data-active='true'] {
-  border-color: var(--mango);
-  background: rgba(251, 247, 237, 0.06);
+  color: #ffffff;
+  background: #4338ca;
+  box-shadow: 0 2px 8px rgba(67, 56, 202, 0.45);
 }
 
 html[data-theme='MODERNO'] .bo__nav-index {
@@ -2758,7 +2817,7 @@ html[data-theme='MODERNO'] .bo__rail-foot {
   border: 0;
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.75rem;
 }
 
 html[data-theme='MODERNO'] .bo__user-meta {
@@ -2766,97 +2825,229 @@ html[data-theme='MODERNO'] .bo__user-meta {
 }
 
 html[data-theme='MODERNO'] .bo__content {
-  padding: 1.6rem 2rem;
+  padding: 1.8rem 2.5rem;
+}
+
+html[data-theme='MODERNO'] .panel {
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04);
 }
 
 html[data-theme='MODERNO'] .display {
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.035em;
 }
 
+html[data-theme='MODERNO'] .product-card {
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+html[data-theme='MODERNO'] .product-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 28px -4px rgba(67, 56, 202, 0.12);
+  border-color: #cbd5e1;
+}
+
 html[data-theme='MODERNO'] .product-grid {
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 1.4rem;
 }
 
 html[data-theme='MODERNO'] .store__main {
-  max-width: 1180px;
+  max-width: 1240px;
+}
+
+html[data-theme='MODERNO'] .product-modal-card {
+  background: rgba(248, 250, 252, 0.97);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.25);
+  border-radius: 14px;
 }
 
 html[data-theme='COMPACTO'] {
   --font-display: 'IBM Plex Mono', 'Courier New', monospace;
-  --paper: #fffbeb;
-  --paper-1: #fffdf5;
-  --paper-2: #fef3c7;
-  --paper-3: #fde68a;
-  --forest: #0f766e;
-  --forest-2: #115e59;
-  --orange: #f97316;
-  --coral: #f97316;
-  --line: #e5d5bc;
-  --line-strong: #c8bba5;
+  --font-body: 'Archivo Variable', 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+
+  /* Tríada Tendencia: Ciruela Imperial (#2E1065), Crema Rosé (#FDF2F8) y Coral Sunset (#F43F5E) */
+  --forest: #2e1065;
+  --forest-2: #3b0764;
+  --forest-dark: #1e0b3c;
+  --forest-light: #581c87;
+  --forest-tint: #f3e8ff;
+  --forest-rgb: 46, 16, 101;
+
+  --paper: #fdf2f8;
+  --paper-1: #ffffff;
+  --paper-2: #ffffff;
+  --paper-3: #fce7f3;
+  --paper-rgb: 253, 242, 248;
+
+  --orange: #f43f5e;
+  --orange-dark: #e11d48;
+  --orange-light: #ffe4e6;
+  --orange-tint: #fff1f2;
+  --orange-rgb: 244, 63, 94;
+
+  --coral: #f43f5e;
+  --coral-dark: #e11d48;
+  --mango: #f43f5e;
+  --accent: #f43f5e;
+
+  --ink: #1f102f;
+  --ink-soft: #4a1d6e;
+  --ink-faint: #701a75;
+  --white: #ffffff;
+
+  --line: #fbcfe8;
+  --line-strong: #f472b6;
+  --moss: #0d9488;
+  --sky: #38bdf8;
+  --danger: #be123c;
+  --ok: #059669;
+
+  --shadow: 0 16px 36px rgba(46, 16, 101, 0.08);
+  --shadow-small: 2px 2px 0 rgba(46, 16, 101, 0.1);
+  --radius: 4px;
   font-size: 14.5px;
 }
 
+html[data-theme='COMPACTO'] body {
+  background:
+    radial-gradient(circle at 12% -8%, rgba(244, 63, 94, 0.09), transparent 28rem),
+    radial-gradient(circle at 88% 2%, rgba(91, 33, 182, 0.08), transparent 30rem),
+    var(--paper);
+}
+
+html[data-theme='COMPACTO'] ::selection {
+  background: #f43f5e;
+  color: #ffffff;
+}
+
 html[data-theme='COMPACTO'] .bo {
-  grid-template-columns: 13rem minmax(0, 1fr);
+  grid-template-columns: 13.5rem minmax(0, 1fr);
 }
 
 html[data-theme='COMPACTO'] .bo__rail {
-  padding: 1rem 0.7rem;
+  padding: 1rem 0.75rem;
+  background: #2e1065;
+  border-right: 1px solid #3b0764;
+}
+
+html[data-theme='COMPACTO'] .bo__brand a {
+  color: #ffffff;
+}
+
+html[data-theme='COMPACTO'] .bo__brand a span {
+  color: #f43f5e;
+}
+
+html[data-theme='COMPACTO'] .bo__brand small {
+  color: #d8b4fe;
 }
 
 html[data-theme='COMPACTO'] .bo__nav {
-  margin-top: 0.7rem;
-  gap: 0.1rem;
+  margin-top: 0.8rem;
+  gap: 0.15rem;
 }
 
 html[data-theme='COMPACTO'] .bo__nav a {
-  padding: 0.38rem 0.4rem;
-  gap: 0.45rem;
-  font-size: 0.76rem;
+  padding: 0.4rem 0.6rem;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: #e9d5ff;
+  border-radius: 4px;
+  border-left: 2px solid transparent;
+  transition: all 140ms ease;
+}
+
+html[data-theme='COMPACTO'] .bo__nav a:hover {
+  background: rgba(244, 63, 94, 0.14);
+  color: #ffffff;
+}
+
+html[data-theme='COMPACTO'] .bo__nav a[data-active='true'] {
+  background: rgba(244, 63, 94, 0.22);
+  color: #ffffff;
+  border-left-color: #f43f5e;
+  font-weight: 600;
 }
 
 html[data-theme='COMPACTO'] .bo__nav-index {
-  display: none;
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: #f472b6;
 }
 
 html[data-theme='COMPACTO'] .bo__content {
-  padding: 1rem 1.2rem;
+  padding: 1rem 1.4rem;
 }
 
 html[data-theme='COMPACTO'] .display {
-  font-size: clamp(1.5rem, 3vw, 2.1rem);
-  letter-spacing: -0.01em;
+  font-size: clamp(1.4rem, 2.8vw, 1.95rem);
+  letter-spacing: -0.015em;
+  font-family: var(--font-display);
+}
+
+html[data-theme='COMPACTO'] .panel {
+  border: 1px solid #fbcfe8;
+  background: #ffffff;
 }
 
 html[data-theme='COMPACTO'] .panel__head {
-  padding: 0.6rem 0.8rem;
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid #fce7f3;
 }
 
 html[data-theme='COMPACTO'] .panel__body {
-  padding: 0.8rem;
+  padding: 0.85rem;
 }
 
 html[data-theme='COMPACTO'] .panel__foot {
-  padding: 0.5rem 0.8rem;
+  padding: 0.5rem 0.85rem;
+  border-top: 1px solid #fce7f3;
 }
 
 html[data-theme='COMPACTO'] .table th,
 html[data-theme='COMPACTO'] .table td {
-  padding: 0.45rem 0.6rem;
+  padding: 0.45rem 0.65rem;
 }
 
 html[data-theme='COMPACTO'] .product-card {
   min-height: 16rem;
+  border: 1px solid #fbcfe8;
+  background: #ffffff;
+  border-radius: 6px;
+  transition: transform 140ms ease, border-color 140ms ease;
+}
+
+html[data-theme='COMPACTO'] .product-card:hover {
+  transform: translateY(-2px);
+  border-color: #f43f5e;
 }
 
 html[data-theme='COMPACTO'] .product-grid {
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+  gap: 0.9rem;
 }
 
 html[data-theme='COMPACTO'] .store__main {
-  max-width: 1080px;
+  max-width: 1100px;
   padding-inline: 1rem;
+}
+
+html[data-theme='COMPACTO'] .product-modal-card {
+  background: rgba(253, 242, 248, 0.98);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  box-shadow: 0 20px 50px rgba(46, 16, 101, 0.25);
+  border-radius: 8px;
 }
 
 /* Miniaturas del selector de temas */
@@ -2945,39 +3136,75 @@ html[data-theme='COMPACTO'] .store__main {
   width: 55%;
 }
 
+.theme-card__preview[data-preview='CLASICO'] {
+  background: #fffbeb;
+}
+.theme-card__preview[data-preview='CLASICO'] .theme-preview__rail {
+  background: #0f766e;
+}
+.theme-card__preview[data-preview='CLASICO'] .theme-preview__title {
+  color: #0f766e;
+}
+.theme-card__preview[data-preview='CLASICO'] .theme-preview__lines i:first-child {
+  background: #f97316;
+}
+
+.theme-card__preview[data-preview='MODERNO'] {
+  background: #f8fafc;
+}
 .theme-card__preview[data-preview='MODERNO'] .theme-preview__rail {
   display: none;
 }
 .theme-card__preview[data-preview='MODERNO'] .theme-preview__bar {
   display: block;
+  background: #0f172a;
+  border-bottom: 2px solid #06b6d4;
 }
 .theme-card__preview[data-preview='MODERNO'] .theme-preview__title {
   left: 8%;
   top: 34%;
   font-family: 'Archivo Variable', sans-serif;
-  font-weight: 600;
+  font-weight: 700;
+  color: #4338ca;
 }
 .theme-card__preview[data-preview='MODERNO'] .theme-preview__lines {
   left: 8%;
   top: 64%;
 }
+.theme-card__preview[data-preview='MODERNO'] .theme-preview__lines i:first-child {
+  background: #06b6d4;
+}
+.theme-card__preview[data-preview='MODERNO'] .theme-preview__lines i:nth-child(2) {
+  background: #4338ca;
+}
 
+.theme-card__preview[data-preview='COMPACTO'] {
+  background: #fdf2f8;
+}
 .theme-card__preview[data-preview='COMPACTO'] .theme-preview__rail {
-  width: 18%;
+  width: 20%;
+  background: #2e1065;
 }
 .theme-card__preview[data-preview='COMPACTO'] .theme-preview__title {
-  left: 24%;
+  left: 26%;
   top: 34%;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 1.2rem;
+  font-size: 1.25rem;
+  color: #2e1065;
 }
 .theme-card__preview[data-preview='COMPACTO'] .theme-preview__lines {
-  left: 24%;
+  left: 26%;
   top: 60%;
   gap: 3px;
 }
 .theme-card__preview[data-preview='COMPACTO'] .theme-preview__lines i {
   height: 4px;
+}
+.theme-card__preview[data-preview='COMPACTO'] .theme-preview__lines i:first-child {
+  background: #f43f5e;
+}
+.theme-card__preview[data-preview='COMPACTO'] .theme-preview__lines i:nth-child(2) {
+  background: #f472b6;
 }
 
 .theme-card__body {

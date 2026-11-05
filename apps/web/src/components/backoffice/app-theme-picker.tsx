@@ -86,16 +86,38 @@ export function AppThemePicker({ initialTheme, canManage }: AppThemePickerProps)
                   </span>
                 </span>
                 <span className="theme-card__body">
-                  <strong>{meta.label}</strong>
-                  {saved === key ? (
-                    <span className="badge badge--ok">Activo</span>
-                  ) : (
-                    <span className="badge">Disponible</span>
-                  )}
+                  <span className="theme-card__header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                    <strong>{meta.label}</strong>
+                    {saved === key ? (
+                      <span className="badge badge--ok">Activo</span>
+                    ) : (
+                      <span className="badge">Disponible</span>
+                    )}
+                  </span>
+                  <span className="theme-card__swatches" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', margin: '4px 0' }}>
+                    {meta.colors.map((c) => (
+                      <span
+                        key={c}
+                        style={{
+                          width: '16px',
+                          height: '16px',
+                          borderRadius: '999px',
+                          backgroundColor: c,
+                          border: '1.5px solid rgba(0, 0, 0, 0.12)',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                          display: 'inline-block',
+                        }}
+                        title={c}
+                      />
+                    ))}
+                    <span className="mono faint" style={{ fontSize: '0.66rem', marginLeft: '4px' }}>
+                      {meta.colors.join(' · ')}
+                    </span>
+                  </span>
                   <span className="mono faint" style={{ fontSize: '0.68rem' }}>
                     {meta.tagline} · {meta.layout}
                   </span>
-                  <span style={{ fontSize: '0.76rem' }}>{meta.description}</span>
+                  <span style={{ fontSize: '0.76rem', color: 'var(--ink-soft)' }}>{meta.description}</span>
                 </span>
               </button>
             );
