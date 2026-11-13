@@ -9,8 +9,7 @@ idioma: es-CR
 
 # VentasCatálogo — paquete documental
 
-Aplicación de ventas multicatálogo con IA: importa catálogos desde Excel/CSV y hojas de pedido (y
-próximamente Drive, PDF, foto y WhatsApp), vende, cobra, lleva finanzas, atiende por WhatsApp y
+Aplicación de ventas multicatálogo con IA: importa catálogos desde Excel/CSV, links de Drive, PDF, foto y WhatsApp, vende, cobra, lleva finanzas, atiende por WhatsApp y
 chat, y genera contenido para redes sociales con IA. Cada catálogo es una unidad de negocio aislada.
 
 **Implementación actual: v0.2.9 (2026-10-29).** F0 cerrado; F1 completo; F2 funcional; F3 con
@@ -37,6 +36,7 @@ en orden, pero cada uno sirve por separado.
 | 10 | [Guion de demo](10-DEMO.md) | Recorrido actualizado a v0.2.9: dos caras, temas, chat, catálogos de ejemplo y plan B | 90 | 5 min |
 | 11 | [Posicionamiento](11-POSICIONAMIENTO.md) | Frase norte «Subí tu catálogo como sea», anatomía de la promesa y hoja de ruta | 70 | 10 min |
 | 12 | [Pendientes por pasos](12-PENDIENTES.md) | Backlog priorizado (P0/P1/P2) con pasos, aceptación, esfuerzo y bloqueos de credenciales | 150 | 15 min |
+| 13 | [Importar desde link](13-IMPORTAR-DESDE-LINK.md) | Cómo cargar un catálogo pegando un link de Drive o una URL directa; endpoints y límites | 95 | 5 min |
 
 Además, [`CHANGELOG.md`](../CHANGELOG.md) resume los hitos desde `v0.1.0` hasta `v0.2.9`, y
 [`catalogs/`](../catalogs/README.md) contiene los 5 catálogos de ejemplo cargables.

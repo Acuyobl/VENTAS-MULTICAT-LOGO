@@ -9,6 +9,8 @@ import { CatalogVersionsController } from './catalog-versions.controller';
 import { CatalogVersionsRepository } from './catalog-versions.repository';
 import { CatalogVersionsService } from './catalog-versions.service';
 import { CatalogImportsController } from './imports.controller';
+import { FolderImportController } from './folder-import.controller';
+import { FolderImportService } from './folder-import.service';
 import { ImportsRepository } from './imports.repository';
 import { ImportsService } from './imports.service';
 import { OcrService } from './import/ocr/ocr.service';
@@ -20,6 +22,7 @@ import { OcrService } from './import/ocr/ocr.service';
     PublicCatalogsController,
     CatalogVersionsController,
     CatalogImportsController,
+    FolderImportController,
   ],
   providers: [
     CatalogsRepository,
@@ -31,6 +34,7 @@ import { OcrService } from './import/ocr/ocr.service';
     ImportTemplatesRepository,
     AdaptiveImportService,
     OcrService,
+    FolderImportService,
   ],
   exports: [CatalogsRepository, CatalogsService, AdaptiveImportService, ImportsService],
 })

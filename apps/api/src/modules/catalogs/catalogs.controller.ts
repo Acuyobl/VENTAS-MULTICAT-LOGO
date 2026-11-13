@@ -108,6 +108,16 @@ export class CatalogsController {
     res.end(buffer);
   }
 
+  /** Subcarpetas del catálogo (categorías con conteo de productos). */
+  @Get(':id/subcatalogs')
+  @RequirePermissions('catalog:read')
+  subcatalogs(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<Array<{ name: string; count: number }>> {
+    return this.catalogs.subcatalogs(user, id);
+  }
+
   @Get(':id/categories')
   @RequirePermissions('catalog:read')
   categories(

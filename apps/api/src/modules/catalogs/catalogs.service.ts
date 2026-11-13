@@ -61,10 +61,12 @@ export class CatalogsService {
     if (input.slug && input.slug !== catalog.slug) {
       const existing = await this.repo.findCatalogBySlug(user.organizationId, input.slug);
       if (existing && existing.id !== id) {
-        throw new AppException('VALIDATION_FAILED', 409, {
-          reason: 'catalog_slug_taken',
-          slug: input.slug,
-        });
+        throw new AppException(
+          'VALIDATION_FAILED',
+          409,
+          { reason: 'catalog_slug_taken', slug: input.slug },
+          'Ya existe un catálogo con ese nombre. Elegí otro nombre o actualizá el catálogo existente.',
+        );
       }
       slug = input.slug;
     } else if (input.name && !input.slug && input.name !== catalog.name) {
@@ -112,6 +114,28 @@ export class CatalogsService {
     } as CatalogSummary;
   }
 
+  /** Subcarpetas (categorías) del catálogo con su conteo de productos. */
+  async subcatalogs(
+    user: AuthenticatedUser,
+    catalogId: string,
+  ): Promise<Array<{ name: string; count: number }>> {
+    const catalog = await this.repo.findForMember(
+      catalogId,
+      user.id,
+      user.audience,
+      user.organizationId,
+    );
+    if (!catalog) {
+      throw new AppException('CATALOG_NOT_FOUND', 404);
+    }
+    if (!catalog.activeVersionId) return [];
+    const filas = await this.repo.listCategories(catalogId, catalog.activeVersionId);
+    return filas
+      .filter((fila) => Boolean(fila.category))
+      .map((fila) => ({ name: fila.category as string, count: fila._count._all }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'es'));
+  }
+
   async create(
     user: AuthenticatedUser,
     input: CatalogCreateInput,
@@ -120,10 +144,12 @@ export class CatalogsService {
     const slug = input.slug ?? slugifyName(input.name);
     const existing = await this.repo.findCatalogBySlug(user.organizationId, slug);
     if (existing) {
-      throw new AppException('VALIDATION_FAILED', 409, {
-        reason: 'catalog_slug_taken',
-        slug,
-      });
+      throw new AppException(
+        'VALIDATION_FAILED',
+        409,
+        { reason: 'catalog_slug_taken', slug },
+        'Ya existe un catálogo con ese nombre. Elegí otro nombre o actualizá el catálogo existente.',
+      );
     }
     const catalog = await this.repo.createCatalog({
       organizationId: user.organizationId,
@@ -256,10 +282,12 @@ export class CatalogsService {
     const existing = await this.repo.findCatalogBySlug(user.organizationId, slug);
     if (existing) {
       if (input.slug) {
-        throw new AppException('VALIDATION_FAILED', 409, {
-          reason: 'catalog_slug_taken',
-          slug: input.slug,
-        });
+        throw new AppException(
+          'VALIDATION_FAILED',
+          409,
+          { reason: 'catalog_slug_taken', slug: input.slug },
+          'Ya existe un catálogo con ese nombre. Elegí otro nombre o actualizá el catálogo existente.',
+        );
       }
       slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
     }

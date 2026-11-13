@@ -39,6 +39,14 @@ interface ExtraFieldRow {
 
 type ImportResultWithMeta = ImportResult & { mode?: string; carriedOver?: number };
 
+interface LinkEntry {
+  id: string;
+  name: string;
+  kind: 'file' | 'folder';
+  url: string;
+  extension?: string;
+}
+
 function downloadIssues(result: ImportResult) {
   const header = 'fila,severidad,codigo,mensaje\n';
   const rows = result.issues
@@ -69,6 +77,18 @@ export function ImportPanel({
   const [activeCatalogId, setActiveCatalogId] = useState<string | null>(catalogId ?? null);
   const [_activeCatalogName, setActiveCatalogName] = useState<string | null>(catalogName ?? null);
   const [file, setFile] = useState<File | null>(null);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkEntries, setLinkEntries] = useState<LinkEntry[]>([]);
+  const [selectedLink, setSelectedLink] = useState<LinkEntry | null>(null);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [folderRunning, setFolderRunning] = useState(false);
+  const [bulkUrl, setBulkUrl] = useState('');
+  const [bulkName, setBulkName] = useState('');
+  const [parentCatalog, setParentCatalog] = useState<{ id: string; name: string } | null>(null);
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [folderJobs, setFolderJobs] = useState<
+    Array<{ name: string; status: 'pendiente' | 'cargando' | 'listo' | 'error'; detalle?: string }>
+  >([]);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [mapping, setMapping] = useState<Record<MappingKey, string>>({
     sku: '',
@@ -111,9 +131,222 @@ export function ImportPanel({
     return previewResponse.proposal;
   }
 
+  async function cargarTodasLasCarpetas() {
+    const url = bulkUrl.trim();
+    const nombre = bulkName.trim();
+    if (!url) {
+      setError('Pegá el link de la carpeta principal de Drive.');
+      return;
+    }
+    if (nombre.length < 2) {
+      setError('Escribí el nombre del catálogo principal (ej. Catálogo Cliente).');
+      return;
+    }
+    setBulkRunning(true);
+    setError(null);
+    setFolderJobs([]);
+    setParentCatalog(null);
+    try {
+      // 1) obtener el catálogo del link (si ya se cargó, se reutiliza)
+      const catalogResponse = await fetch('/api/v1/catalogs/link-catalog', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ url, name: nombre }),
+      });
+      const catalogPayload = (await catalogResponse.json().catch(() => null)) as
+        | { id?: string; name?: string; existing?: boolean; message?: string }
+        | null;
+      if (!catalogResponse.ok || !catalogPayload?.id) {
+        throw new Error(catalogPayload?.message ?? 'No pudimos crear el catálogo principal.');
+      }
+      setParentCatalog({ id: catalogPayload.id, name: catalogPayload.name ?? nombre });
+      if (catalogPayload.existing) {
+        setFolderJobs([
+          {
+            name: catalogPayload.name ?? nombre,
+            status: 'listo',
+            detalle: 'ya estaba cargado: se reutiliza sin descargar',
+          },
+        ]);
+        router.refresh();
+        return;
+      }
+
+      // 2) listar carpetas del link
+      const response = await fetch('/api/v1/catalogs/link-list', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { entries?: LinkEntry[]; message?: string }
+        | null;
+      if (!response.ok) {
+        throw new Error(payload?.message ?? 'No pudimos leer el link.');
+      }
+      const carpetas = (payload?.entries ?? []).filter((entrada) => entrada.kind === 'folder');
+      if (carpetas.length === 0) {
+        throw new Error('El link no contiene carpetas. Para un archivo usá la sección de abajo.');
+      }
+
+      // 3) importar cada carpeta dentro del catálogo principal
+      await cargarCarpetas(carpetas, catalogPayload.id);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Error inesperado.');
+    } finally {
+      setBulkRunning(false);
+    }
+  }
+
+  async function cargarCarpetas(entradas: LinkEntry[], catalogIdDestino?: string) {
+    if (entradas.length === 0) return;
+    const cola: Array<{ nombre: string; url: string }> = entradas.map((entrada) => ({
+      nombre: entrada.name,
+      url: entrada.url,
+    }));
+    setFolderRunning(true);
+    setError(null);
+    setFolderJobs(cola.map((item) => ({ name: item.nombre, status: 'pendiente' })));
+    let procesadas = 0;
+    for (let indice = 0; indice < cola.length && procesadas < 60; indice += 1) {
+      if (indice >= cola.length) break;
+      procesadas += 1;
+      const actual = cola[indice];
+      setFolderJobs((previos) =>
+        previos.map((job, i) => (i === indice ? { ...job, status: 'cargando' } : job)),
+      );
+      try {
+        const response = await fetch('/api/v1/catalogs/import-folder', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'application/json' },
+          body: JSON.stringify({
+              url: actual.url,
+              name: actual.nombre,
+              maxImages: 300,
+              catalogId: catalogIdDestino,
+            }),
+        });
+        const payload = (await response.json().catch(() => null)) as
+          | {
+              kind?: string;
+              importedRows?: number;
+              quarantineRows?: number;
+              activated?: boolean;
+              warning?: string;
+              reason?: string;
+              folders?: Array<{ name: string; url: string }>;
+              message?: string;
+            }
+          | null;
+        if (!response.ok) {
+          throw new Error(payload?.message ?? 'No pudimos cargar la carpeta.');
+        }
+        if (payload?.kind === 'catalog') {
+          const detalle =
+            `${payload.importedRows ?? 0} productos` +
+            ((payload.quarantineRows ?? 0) > 0
+              ? `, ${payload.quarantineRows} en cuarentena`
+              : '') +
+            (payload.activated ? ' · publicado' : ' · borrador') +
+            (payload.warning ? ` · ${payload.warning}` : '');
+          setFolderJobs((previos) =>
+            previos.map((job, i) => (i === indice ? { ...job, status: 'listo', detalle } : job)),
+          );
+        } else if (payload?.kind === 'container' && payload.folders?.length) {
+          const hijos = payload.folders;
+          cola.splice(indice + 1, 0, ...hijos.map((hijo) => ({ nombre: hijo.name, url: hijo.url })));
+          setFolderJobs((previos) => [
+            ...previos,
+            ...hijos.map((hijo) => ({ name: hijo.name, status: 'pendiente' as const })),
+          ]);
+          setFolderJobs((previos) =>
+            previos.map((job, i) =>
+              i === indice
+                ? { ...job, status: 'listo', detalle: 'carpeta contenedora: se cargan sus subcarpetas' }
+                : job,
+            ),
+          );
+        } else {
+          setFolderJobs((previos) =>
+            previos.map((job, i) =>
+              i === indice
+                ? { ...job, status: 'error', detalle: payload?.reason ?? 'carpeta vacía' }
+                : job,
+            ),
+          );
+        }
+      } catch (caught) {
+        setFolderJobs((previos) =>
+          previos.map((job, i) =>
+            i === indice
+              ? {
+                  ...job,
+                  status: 'error',
+                  detalle: caught instanceof Error ? caught.message : 'Error inesperado',
+                }
+              : job,
+          ),
+        );
+      }
+    }
+    setFolderRunning(false);
+    router.refresh();
+  }
+
+  async function explorarLink(urlOverride?: string) {
+    const destino = (urlOverride ?? linkUrl).trim();
+    if (!destino) {
+      setError('Pegá el link del archivo o de la carpeta.');
+      return;
+    }
+    setLinkLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      let effectiveId = activeCatalogId ?? catalogId;
+      if (!effectiveId && onEnsureCatalog) {
+        const created = await onEnsureCatalog();
+        effectiveId = created.id;
+        setActiveCatalogId(created.id);
+        setActiveCatalogName(created.name);
+      }
+      if (!effectiveId) {
+        throw new Error('Elegí o creá un catálogo antes de explorar el link.');
+      }
+      const response = await fetch(`/api/v1/catalogs/${effectiveId}/imports/link/list`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ url: destino }),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { entries?: LinkEntry[]; message?: string }
+        | null;
+      if (!response.ok) {
+        throw new Error(payload?.message ?? 'No pudimos leer el link.');
+      }
+      const entries = payload?.entries ?? [];
+      if (entries.length === 0) {
+        throw new Error('El link no devolvió archivos.');
+      }
+      setLinkUrl(destino);
+      setLinkEntries(entries);
+      setSelectedLink(entries.find((entry) => entry.kind === 'file') ?? entries[0]);
+    } catch (caught) {
+      setLinkEntries([]);
+      setSelectedLink(null);
+      setError(caught instanceof Error ? caught.message : 'Error inesperado.');
+    } finally {
+      setLinkLoading(false);
+    }
+  }
+
   async function analyze() {
-    if (!file) {
+    if (!file && !selectedLink) {
       setError('Elegí un archivo para importar.');
+      return;
+    }
+    if (!file && selectedLink?.kind === 'folder') {
+      setError('Elegí un archivo de la lista (o abrí la subcarpeta).');
       return;
     }
     setAnalyzing(true);
@@ -130,14 +363,28 @@ export function ImportPanel({
       if (!effectiveId) {
         throw new Error('Elegí o creá un catálogo antes de analizar.');
       }
-      const form = new FormData();
-      form.append('file', file);
-      form.append('useAgent', 'true');
-      const response = await fetch(`/api/v1/catalogs/${effectiveId}/imports/preview`, {
-        method: 'POST',
-        body: form,
-        headers: { accept: 'application/json' },
-      });
+      let response: Response;
+      if (file) {
+        const form = new FormData();
+        form.append('file', file);
+        form.append('useAgent', 'true');
+        response = await fetch(`/api/v1/catalogs/${effectiveId}/imports/preview`, {
+          method: 'POST',
+          body: form,
+          headers: { accept: 'application/json' },
+        });
+      } else {
+        response = await fetch(`/api/v1/catalogs/${effectiveId}/imports/from-link/preview`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'application/json' },
+          body: JSON.stringify({
+            url: linkUrl.trim(),
+            fileUrl: selectedLink?.url,
+            name: selectedLink?.name,
+            useAgent: 'true',
+          }),
+        });
+      }
       const payload = (await response.json().catch(() => null)) as
         ImportPreview | { message?: string } | null;
       if (!response.ok) {
@@ -183,8 +430,12 @@ export function ImportPanel({
 
   async function importCatalog(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
-    if (!file) {
+    if (!file && !selectedLink) {
       setError('Elegí un archivo para importar.');
+      return;
+    }
+    if (!file && selectedLink?.kind === 'folder') {
+      setError('Elegí un archivo de la lista (o abrí la subcarpeta).');
       return;
     }
     if (mode === 'REPLACE') {
@@ -209,8 +460,20 @@ export function ImportPanel({
       if (!effectiveId) {
         throw new Error('Elegí o creá un catálogo antes de importar.');
       }
+      const payloadLink: Record<string, unknown> = {
+        url: linkUrl.trim(),
+        fileUrl: selectedLink?.url,
+        name: selectedLink?.name,
+        currency,
+        taxRateBp,
+        taxIncluded: String(taxIncluded),
+        mode,
+        saveTemplate: String(saveTemplate),
+      };
+      if (saveTemplate && templateName.trim()) payloadLink.templateName = templateName.trim();
+
       const form = new FormData();
-      form.append('file', file);
+      if (file) form.append('file', file);
       form.append('currency', currency);
       form.append('taxRateBp', taxRateBp);
       form.append('taxIncluded', String(taxIncluded));
@@ -223,6 +486,7 @@ export function ImportPanel({
       );
       if (Object.keys(explicitMapping).length > 0) {
         form.append('mapping', JSON.stringify(explicitMapping));
+        payloadLink.mapping = explicitMapping;
       }
       const selectedExtras = extraFields
         .filter((field) => field.include)
@@ -234,13 +498,19 @@ export function ImportPanel({
         }));
       if (selectedExtras.length > 0) {
         form.append('extraFields', JSON.stringify(selectedExtras));
+        payloadLink.extraFields = selectedExtras;
       }
 
-      const response = await fetch(`/api/v1/catalogs/${effectiveId}/imports`, {
-        method: 'POST',
-        body: form,
-        headers: { accept: 'application/json' },
-      });
+      const response = await fetch(
+        `/api/v1/catalogs/${effectiveId}/imports${file ? '' : '/from-link'}`,
+        {
+          method: 'POST',
+          body: file ? form : JSON.stringify(payloadLink),
+          headers: file
+            ? { accept: 'application/json' }
+            : { 'content-type': 'application/json', accept: 'application/json' },
+        },
+      );
       const payload = (await response.json().catch(() => null)) as
         ImportResultWithMeta | { message?: string } | null;
       if (!response.ok) {
@@ -250,7 +520,13 @@ export function ImportPanel({
       }
       setResult(payload as ImportResultWithMeta);
       const imported = payload as ImportResultWithMeta;
-      if (activateVersion) {
+      if (imported.importedRows === 0) {
+        setActivatedSuccess(false);
+        setError(
+          `La versión v${imported.versionNumber} quedó en borrador con 0 productos y no se puede activar. ` +
+            'Revisá los motivos de la cuarentena (tabla de abajo) y corregí el archivo antes de reintentar.',
+        );
+      } else if (activateVersion) {
         const activateResponse = await fetch(
           `/api/v1/catalogs/${effectiveId}/versions/${imported.catalogVersionId}/activate`,
           { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' },
@@ -296,6 +572,9 @@ export function ImportPanel({
 
       setFile(null);
       setPreview(null);
+      setLinkEntries([]);
+      setSelectedLink(null);
+      setLinkUrl('');
       if (fileInput.current) fileInput.current.value = '';
       router.refresh();
     } catch (caught) {
@@ -341,6 +620,52 @@ export function ImportPanel({
       </div>
 
       <div className="panel__body">
+        <div
+          className="panel"
+          style={{ padding: '0.9rem', marginBottom: '1rem', borderColor: 'var(--color-ok)' }}
+        >
+          <strong>Cargar todas las carpetas de Drive como catálogos</strong>
+          <p style={{ fontSize: '0.85rem', margin: '0.35rem 0 0.6rem 0' }}>
+            Pegá el link de la carpeta principal: cada subcarpeta se convierte en un catálogo con su
+            nombre, y sus fotos se cargan como productos (precio provisional 1.00).
+          </p>
+          <div className="inline" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+            <input
+              className="input"
+              style={{ minWidth: '16rem', flex: '0 0 18rem' }}
+              value={bulkName}
+              onChange={(event) => setBulkName(event.target.value)}
+              placeholder="Nombre del catálogo (ej. Catálogo Cliente)"
+              disabled={!canWrite || bulkRunning || folderRunning}
+            />
+            <input
+              className="input"
+              style={{ minWidth: '24rem', flex: 1 }}
+              value={bulkUrl}
+              onChange={(event) => setBulkUrl(event.target.value)}
+              placeholder="https://drive.google.com/drive/folders/…"
+              disabled={!canWrite || bulkRunning || folderRunning}
+            />
+            <button
+              type="button"
+              className="btn btn--primary"
+              disabled={!canWrite || !bulkUrl.trim() || bulkRunning || folderRunning}
+              onClick={() => void cargarTodasLasCarpetas()}
+            >
+              {bulkRunning || folderRunning ? 'Cargando catálogos…' : 'Cargar todas las carpetas'}
+            </button>
+          </div>
+          {parentCatalog ? (
+            <p style={{ fontSize: '0.84rem', margin: '0.5rem 0 0 0' }}>
+              Catálogo <strong>«{parentCatalog.name}»</strong> creado ·{' '}
+              <Link href={`/panel/catalogos/${parentCatalog.id}`}>ver catálogo y subcarpetas →</Link>
+            </p>
+          ) : null}
+          <p className="mono faint" style={{ fontSize: '0.7rem', margin: '0.45rem 0 0 0' }}>
+            Puede tardar varios minutos: se bajan las fotos de Drive y se suben al almacenamiento.
+          </p>
+        </div>
+
         <div className="form-grid">
           <label className="field">
             <span className="field__label">Archivo</span>
@@ -365,7 +690,7 @@ export function ImportPanel({
             <button
               type="button"
               className="btn btn--small btn--secondary"
-              disabled={!canWrite || !file || analyzing}
+              disabled={!canWrite || (!file && !selectedLink) || analyzing}
               onClick={() => void analyze()}
             >
               {analyzing ? 'Analizando…' : 'Analizar con IA'}
@@ -374,6 +699,116 @@ export function ImportPanel({
               Propone mapeo, campos extra e ignora columnas de totales. Después podés editarlo.
             </span>
           </div>
+        </div>
+
+        <div style={{ marginTop: '1rem' }} className="stack">
+          <label className="field">
+            <span className="field__label">…o cargar desde un link</span>
+            <div className="inline" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+              <input
+                className="input"
+                style={{ minWidth: '24rem', flex: 1 }}
+                value={linkUrl}
+                onChange={(event) => setLinkUrl(event.target.value)}
+                placeholder="https://drive.google.com/drive/folders/… o URL directa a .xlsx/.csv/.pdf"
+                disabled={!canWrite || importing || analyzing}
+              />
+              <button
+                type="button"
+                className="btn btn--small btn--secondary"
+                disabled={!canWrite || !linkUrl.trim() || linkLoading}
+                onClick={() => void explorarLink()}
+              >
+                {linkLoading ? 'Leyendo…' : 'Explorar link'}
+              </button>
+            </div>
+          </label>
+
+          {linkEntries.length > 0 ? (
+            <div className="stack" style={{ gap: '0.5rem' }}>
+              <select
+                className="select"
+                value={selectedLink?.url ?? ''}
+                onChange={(event) =>
+                  setSelectedLink(linkEntries.find((entry) => entry.url === event.target.value) ?? null)
+                }
+              >
+                {linkEntries.map((entry) => (
+                  <option key={`${entry.kind}-${entry.id || entry.name}`} value={entry.url}>
+                    {entry.kind === 'folder' ? '[carpeta]' : '[archivo]'} {entry.name}
+                  </option>
+                ))}
+              </select>
+              {selectedLink?.kind === 'folder' ? (
+                <button
+                  type="button"
+                  className="btn btn--small btn--ghost"
+                  onClick={() => void explorarLink(selectedLink.url)}
+                >
+                  Abrir esa carpeta
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
+          {linkEntries.some((entrada) => entrada.kind === 'folder') ? (
+            <div className="stack" style={{ gap: '0.5rem' }}>
+              <div className="inline" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+                {selectedLink?.kind === 'folder' ? (
+                  <button
+                    type="button"
+                    className="btn btn--small btn--secondary"
+                    disabled={!canWrite || folderRunning}
+                    onClick={() => void cargarCarpetas([selectedLink])}
+                  >
+                    Crear catálogo con esta carpeta
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="btn btn--small btn--primary"
+                  disabled={!canWrite || folderRunning}
+                  onClick={() =>
+                    void cargarCarpetas(linkEntries.filter((entrada) => entrada.kind === 'folder'))
+                  }
+                >
+                  {folderRunning
+                    ? 'Creando catálogos…'
+                    : `Cargar ${
+                        linkEntries.filter((entrada) => entrada.kind === 'folder').length
+                      } carpetas como subcatálogos`}
+                </button>
+              </div>
+              <p className="mono faint" style={{ fontSize: '0.72rem', margin: 0 }}>
+                Cada carpeta se vuelve un catálogo con su nombre. Las fotos se cargan como productos
+                con precio provisional 1.00 (máx. 100 por carpeta) y la marca como categoría.
+              </p>
+              {folderJobs.length > 0 ? (
+                <ul
+                  className="mono"
+                  style={{
+                    fontSize: '0.74rem',
+                    maxHeight: '16rem',
+                    overflow: 'auto',
+                    margin: 0,
+                    paddingLeft: '1rem',
+                  }}
+                >
+                  {folderJobs.map((job, indice) => (
+                    <li key={`${job.name}-${indice}`}>
+                      <strong>{job.name}</strong> — {job.status}
+                      {job.detalle ? ` · ${job.detalle}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
+
+          <p className="mono faint" style={{ fontSize: '0.72rem', margin: 0 }}>
+            En Drive, compartí el archivo o la carpeta como “cualquiera con el enlace”. Si es una
+            carpeta, explorala y elegí el archivo a importar.
+          </p>
         </div>
 
         {preview ? (
@@ -636,7 +1071,7 @@ export function ImportPanel({
               <button
                 type="button"
                 className="btn"
-                disabled={!canWrite || importing || !file}
+                disabled={!canWrite || importing || (!file && !selectedLink)}
                 onClick={() => void importCatalog()}
               >
                 {importing ? 'Importando y validando…' : 'Importar con este plan'}
@@ -644,7 +1079,7 @@ export function ImportPanel({
               <button
                 type="button"
                 className="btn btn--ghost"
-                disabled={!canWrite || importing || !file}
+                disabled={!canWrite || importing || (!file && !selectedLink)}
                 onClick={() => {
                   setPreview(null);
                   void importCatalog();
@@ -666,7 +1101,7 @@ export function ImportPanel({
               <button
                 type="button"
                 className="btn btn--secondary"
-                disabled={!canWrite || importing || !file}
+                disabled={!canWrite || importing || (!file && !selectedLink)}
                 onClick={() => void importCatalog()}
               >
                 {importing ? 'Importando…' : 'Importar sin analizar'}
@@ -693,7 +1128,11 @@ export function ImportPanel({
             <div style={{ marginTop: '1.2rem' }} aria-live="polite">
             <div className={result.quarantineRows > 0 ? 'alert' : 'alert alert--ok'}>
               <div>
-                <strong>¡Versión v{result.versionNumber} lista con {result.importedRows} productos cargados!</strong>
+                <strong>
+                  {result.importedRows > 0
+                    ? `¡Versión v${result.versionNumber} lista con ${result.importedRows} productos cargados!`
+                    : `Versión v${result.versionNumber} en borrador: 0 productos cargados`}
+                </strong>
                 <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.86rem' }}>
                   {result.totalRows} filas leídas · {result.importedRows} productos creados
                   {result.quarantineRows > 0 ? ` · ${result.quarantineRows} en cuarentena` : ''}
@@ -704,9 +1143,14 @@ export function ImportPanel({
                     <span> (El archivo ya estaba registrado: se conservaron los {result.importedRows} productos de esta versión).</span>
                   ) : null}
                 </p>
-                {activateVersion || activatedSuccess ? (
+                {activatedSuccess ? (
                   <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.82rem', color: 'var(--color-ok)' }}>
                     ✓ Versión activa en la tienda pública y catálogo.
+                  </p>
+                ) : result.importedRows === 0 ? (
+                  <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.82rem', color: 'var(--color-warn)' }}>
+                    No se activó: la versión necesita al menos un producto. Revisá los motivos en la
+                    tabla de filas en cuarentena y descargá el CSV para corregir el archivo.
                   </p>
                 ) : (
                   <div style={{ marginTop: '0.5rem' }}>

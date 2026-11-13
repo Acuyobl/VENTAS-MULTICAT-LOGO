@@ -42,6 +42,11 @@ export default async function CatalogDetailPage({ params }: CatalogDetailPagePro
     loadError = caught instanceof Error ? caught.message : 'No pudimos leer las versiones.';
   }
 
+  const subcatalogos = await tryApiFetch<Array<{ name: string; count: number }>>(
+    `/catalogs/${catalogId}/subcatalogs`,
+  );
+  const subcarpetas = subcatalogos ?? [];
+
   const session = await getSession();
   const canWrite = session?.permissions.includes('catalog:write') ?? false;
   const active = versions.find((version) => version.isActive) ?? null;
@@ -114,6 +119,46 @@ export default async function CatalogDetailPage({ params }: CatalogDetailPagePro
           canWrite={canWrite}
         />
       </div>
+
+      {subcarpetas.length > 0 ? (
+        <section className="panel" style={{ marginBottom: '1.2rem' }}>
+          <div className="panel__head">
+            <h2>Subcarpetas del catálogo</h2>
+            <span className="mono faint">{subcarpetas.length} subcarpetas · elegí una para ver sus productos</span>
+          </div>
+          <div className="panel__body stack" style={{ gap: '0.7rem' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(14rem, 1fr))',
+                gap: '0.6rem',
+              }}
+            >
+              {subcarpetas.map((subcarpeta) => (
+                <Link
+                  key={subcarpeta.name}
+                  href={`/panel/productos?catalogo=${catalog.id}&categoria=${encodeURIComponent(subcarpeta.name)}`}
+                  className="panel"
+                  style={{ padding: '0.8rem', textDecoration: 'none' }}
+                >
+                  <strong style={{ display: 'block' }}>{subcarpeta.name}</strong>
+                  <span className="mono faint" style={{ fontSize: '0.75rem' }}>
+                    {subcarpeta.count} productos · ver →
+                  </span>
+                </Link>
+              ))}
+            </div>
+            <div>
+              <Link
+                className="btn btn--small btn--ghost"
+                href={`/panel/productos?catalogo=${catalog.id}`}
+              >
+                Ver todos los productos del catálogo
+              </Link>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {loadError ? (
         <div className="alert" style={{ marginBottom: '1.2rem' }}>

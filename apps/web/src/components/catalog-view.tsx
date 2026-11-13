@@ -30,6 +30,11 @@ export function CatalogView({ catalog, category, basePath }: CatalogViewProps) {
   }, [basePath]);
 
   const categories = [...new Set(catalog.products.map((product) => product.category ?? 'General'))];
+  const categoryCounts = catalog.products.reduce<Record<string, number>>((acc, product) => {
+    const key = product.category ?? 'General';
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
 
   // 1. Filtrado base por categoría
   const categoryProducts = category
@@ -131,18 +136,34 @@ export function CatalogView({ catalog, category, basePath }: CatalogViewProps) {
               cliente, sin sorpresas al final.
             </p>
             {categories.length > 1 ? (
-              <div className="filter-row">
-                <Link className="filter-chip" data-active={!category} href={basePath}>
-                  Todos
+              <div
+                className="filter-row filter-row--categories"
+                role="tablist"
+                aria-label="Subcarpetas del catálogo"
+              >
+                <Link
+                  className="filter-chip filter-chip--category"
+                  data-active={!category}
+                  href={basePath}
+                  role="tab"
+                  aria-selected={!category}
+                  style={{ '--chip-index': 0 } as CSSProperties}
+                >
+                  <span>Todos</span>
+                  <span className="filter-chip__count">{catalog.products.length}</span>
                 </Link>
-                {categories.map((item) => (
+                {categories.map((item, index) => (
                   <Link
-                    className="filter-chip"
+                    className="filter-chip filter-chip--category"
                     data-active={category === item}
                     href={`${basePath}?categoria=${encodeURIComponent(item)}`}
                     key={item}
+                    role="tab"
+                    aria-selected={category === item}
+                    style={{ '--chip-index': index + 1 } as CSSProperties}
                   >
-                    {item}
+                    <span>{item}</span>
+                    <span className="filter-chip__count">{categoryCounts[item] ?? 0}</span>
                   </Link>
                 ))}
               </div>

@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -25,12 +25,23 @@ import {
   type MappingTemplateCreateInput,
   type MappingTemplateListResponse,
 } from '@ventascatalogo/contracts';
-import { ImportsService, MAX_IMPORT_FILE_BYTES } from './imports.service';
+import {
+  ImportsService,
+  MAX_UPLOAD_GUARD_BYTES,
+  maxImportFileMb,
+} from './imports.service';
+import {
+  RemoteImportError,
+  downloadRemoteFile,
+  elegirArchivoDeCatalogo,
+  resolveRemoteLink,
+} from './import/remote-source';
 import { AdaptiveImportService } from './adaptive-import.service';
 import { Audience } from '../../common/decorators/audience.decorator';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { apiException } from '../../common/errors/api-error-codes';
 import type { AuditMeta } from '../../common/audit/audit.types';
 
 const idSchema = z.string().uuid();
@@ -45,12 +56,69 @@ function metaFrom(req: RequestWithTrace): AuditMeta {
   };
 }
 
+const linkBodySchema = z.object({
+  url: z.string().url(),
+  fileUrl: z.string().url().optional(),
+  name: z.string().min(1).max(255).optional(),
+}).passthrough();
+
+type LinkBody = z.infer<typeof linkBodySchema> & Record<string, unknown>;
+
+function opcionesDeLink(body: LinkBody): Record<string, unknown> {
+  const { url: _url, fileUrl: _fileUrl, name: _name, ...resto } = body;
+  return resto as Record<string, unknown>;
+}
+
+/** Convierte un link (archivo o carpeta de Drive) en un archivo tipo Multer. */
+async function archivoDesdeLink(body: LinkBody): Promise<Express.Multer.File> {
+  try {
+    const nombre = body.name;
+    if (body.fileUrl) {
+      const descargado = await downloadRemoteFile(body.fileUrl);
+      return multerFile(descargado, nombre);
+    }
+    const listado = await resolveRemoteLink(body.url);
+    const archivo = elegirArchivoDeCatalogo(listado.entries);
+    if (!archivo) {
+      throw new RemoteImportError(
+        'Esa carpeta no tiene archivos importables. AbrÃƒÂ­ una subcarpeta o pegÃƒÂ¡ el link del archivo.',
+        'REMOTE_NO_FILES',
+      );
+    }
+    const descargado = await downloadRemoteFile(archivo.url);
+    return multerFile(descargado, nombre ?? archivo.name);
+  } catch (error) {
+    if (error instanceof RemoteImportError) {
+      throw apiException('INVALID_IMPORT_FILE', 400, { remoteCode: error.code }, error.message);
+    }
+    throw error;
+  }
+}
+
+function multerFile(
+  descargado: { buffer: Buffer; originalname: string; mimetype: string },
+  nombre?: string,
+): Express.Multer.File {
+  return {
+    fieldname: 'file',
+    originalname: nombre ?? descargado.originalname,
+    encoding: '7bit',
+    mimetype: descargado.mimetype,
+    size: descargado.buffer.byteLength,
+    buffer: descargado.buffer,
+    destination: '',
+    filename: descargado.originalname,
+    path: '',
+    stream: undefined,
+  } as unknown as Express.Multer.File;
+}
+
 /**
- * Importación de catálogo (F1). Multipart con campo `file` + opciones
+ * ImportaciÃ³n de catÃ¡logo (F1). Multipart con campo `file` + opciones
  * `currency`, `taxRateBp`, `taxIncluded`, `mapping` (JSON) y `delimiter`.
  *
- * Respuestas: `201` cuando se crea una versión nueva, `200` cuando el mismo
- * SHA-256 ya se importó en este catálogo (`idempotent: true`).
+ * Respuestas: `201` cuando se crea una versiÃ³n nueva, `200` cuando el mismo
+ * SHA-256 ya se importÃ³ en este catÃ¡logo (`idempotent: true`).
  */
 @Controller('catalogs')
 @Audience('staff')
@@ -69,7 +137,7 @@ export class CatalogImportsController {
       type: 'object',
       required: ['file'],
       properties: {
-        file: { type: 'string', format: 'binary', description: 'CSV o XLSX (≤10 MB).' },
+        file: { type: 'string', format: 'binary', description: 'CSV, XLSX, PDF o imagen (límite en IMPORT_MAX_MB, 300 MB por defecto).' },
         currency: { type: 'string', enum: ['CRC', 'USD'], default: 'CRC' },
         taxRateBp: { type: 'integer', default: 1300 },
         taxIncluded: { type: 'boolean', default: true },
@@ -84,7 +152,7 @@ export class CatalogImportsController {
     },
   })
   @UseInterceptors(
-    FileInterceptor('file', { limits: { fileSize: MAX_IMPORT_FILE_BYTES, files: 1 } }),
+    FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_GUARD_BYTES, files: 1 } }),
   )
   async create(
     @CurrentUser() user: AuthenticatedUser,
@@ -110,7 +178,7 @@ export class CatalogImportsController {
   @RequirePermissions('catalog:write')
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
-    FileInterceptor('file', { limits: { fileSize: MAX_IMPORT_FILE_BYTES, files: 1 } }),
+    FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_GUARD_BYTES, files: 1 } }),
   )
   preview(
     @CurrentUser() user: AuthenticatedUser,
@@ -126,6 +194,66 @@ export class CatalogImportsController {
       body: body ?? {},
       meta: metaFrom(req),
     });
+  }
+
+  /** Lista el contenido de un link (carpeta de Drive) o el archivo apuntado. */
+  @Post(':catalogId/imports/link/list')
+  @HttpCode(200)
+  @RequirePermissions('catalog:write')
+  async listFromLink(
+    @Param('catalogId', new ZodValidationPipe(idSchema)) _catalogId: string,
+    @Body(new ZodValidationPipe(linkBodySchema)) body: LinkBody,
+  ) {
+    try {
+      return await resolveRemoteLink(body.url);
+    } catch (error) {
+      if (error instanceof RemoteImportError) {
+        throw apiException('INVALID_IMPORT_FILE', 400, { remoteCode: error.code }, error.message);
+      }
+      throw error;
+    }
+  }
+
+  /** Analiza (preview) un catÃ¡logo descargado desde un link. */
+  @Post(':catalogId/imports/from-link/preview')
+  @HttpCode(200)
+  @RequirePermissions('catalog:write')
+  async previewFromLink(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('catalogId', new ZodValidationPipe(idSchema)) catalogId: string,
+    @Body(new ZodValidationPipe(linkBodySchema)) body: LinkBody,
+    @Req() req: RequestWithTrace,
+  ): Promise<ImportPreview> {
+    const file = await archivoDesdeLink(body);
+    return this.adaptive.preview({
+      user,
+      catalogId,
+      file,
+      body: opcionesDeLink(body),
+      meta: metaFrom(req),
+    });
+  }
+
+  /** Importa un catÃ¡logo descargado desde un link. */
+  @Post(':catalogId/imports/from-link')
+  @RequirePermissions('catalog:write')
+  async createFromLink(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('catalogId', new ZodValidationPipe(idSchema)) catalogId: string,
+    @Body(new ZodValidationPipe(linkBodySchema)) body: LinkBody,
+    @Req() req: RequestWithTrace,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ImportResult> {
+    const file = await archivoDesdeLink(body);
+    const result = await this.imports.importFile({
+      user,
+      catalogId,
+      file,
+      body: opcionesDeLink(body),
+      meta: metaFrom(req),
+    });
+    res.status(result.idempotent ? 200 : 201);
+    return result;
   }
 
   @Get(':catalogId/import-templates')

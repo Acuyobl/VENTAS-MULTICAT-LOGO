@@ -36,7 +36,7 @@ endurecimiento). El estado consolidado al 2026-10-29 está en §3.29; lo pendien
 | Método y ruta | Resultado |
 |---|---|
 | `GET /catalogs/:catalogId/versions` | Versiones desc por número, con estado, productos e instantes |
-| `POST /catalogs/:catalogId/imports` | Multipart `file` (CSV/XLSX ≤10 MB) + `currency`, `taxRateBp`, `taxIncluded`, `mapping`. **201** nuevo · **200** idempotente |
+| `POST /catalogs/:catalogId/imports` | Multipart `file` (CSV/XLSX/PDF/imagen ≤300 MB, `IMPORT_MAX_MB`) + `currency`, `taxRateBp`, `taxIncluded`, `mapping`. **201** nuevo · **200** idempotente |
 | `GET /catalogs/:catalogId/imports/:jobId` | Resultado completo con cuarentena |
 | `POST .../versions/:versionId/activate` | Transacción: anterior `ARCHIVED`, nueva `ACTIVE`, puntero actualizado |
 | `POST .../versions/:versionId/validate` · `/archive` | Transiciones del ciclo de vida |
@@ -736,7 +736,7 @@ columnas:
 | Formatos | CSV, TSV, TXT, JSON, XLSX, XLS, XLSM/XLSB, ODS y **PDF con texto** (extracción de streams) |
 | Estructuras | Multi-hoja (descarta portadas), tablas compuestas, hojas de pedido, archivos sin cabecera de una fila, delimitador `,` `;` `\|` o tabulador |
 | Enlaces imagen | Hoja auxiliar «Imagenes» vinculada por cliente/pedido, URLs http(s), data URI base64 y **maqueta SVG** de respaldo si la foto no se puede descargar |
-| Seguridad | Extensiones ejecutables/comprimidas bloqueadas con `UNSUPPORTED_FILE_TYPE`; 10 MB por archivo |
+| Seguridad | Extensiones ejecutables/comprimidas bloqueadas con `UNSUPPORTED_FILE_TYPE`; 300 MB por archivo (`IMPORT_MAX_MB`) |
 | Catálogo | **Renombrar** nombre y slug desde la lista/detalle; borrar libera el slug; versión activa y cuarentena |
 | UI | Rediseño de paneles y tarjetas, estudio de contenido renovado, modal de detalle en la tienda y mejoras de accesibilidad/estados vacíos |
 

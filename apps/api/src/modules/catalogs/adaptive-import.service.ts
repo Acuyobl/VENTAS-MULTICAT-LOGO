@@ -15,7 +15,8 @@ import { CatalogsRepository } from './catalogs.repository';
 import { ImportTemplatesRepository, toMappingTemplate } from './import-templates.repository';
 import { AiProviderFactory } from '../ai/ai-provider.factory';
 import {
-  MAX_IMPORT_FILE_BYTES,
+  maxImportFileBytes,
+  maxImportFileMb,
   parseImportOptions,
   resolveImportExtension,
 } from './imports.service';
@@ -85,12 +86,12 @@ export class AdaptiveImportService {
         'Falta el archivo en el campo "file".',
       );
     }
-    if (file.size > MAX_IMPORT_FILE_BYTES) {
+    if (file.size > maxImportFileBytes()) {
       throw apiException(
         'INVALID_IMPORT_FILE',
         400,
-        { maxBytes: MAX_IMPORT_FILE_BYTES, size: file.size },
-        'El archivo supera el límite de 10 MB.',
+        { maxBytes: maxImportFileBytes(), size: file.size },
+        `El archivo supera el límite de ${maxImportFileMb()} MB.`,
       );
     }
 

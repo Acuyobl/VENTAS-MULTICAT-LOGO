@@ -34,8 +34,19 @@ import { ImportTemplatesRepository } from './import-templates.repository';
 import { OcrService } from './import/ocr/ocr.service';
 import { parseImportFileWithOcr } from './import/ocr/ocr-import';
 import { imageContentType } from './import/ocr/ocr-provider';
+import { limpiarParaGuardar } from './import/sanitize-text';
 
-export const MAX_IMPORT_FILE_BYTES = 10 * 1024 * 1024;
+/** Tamaño máximo por archivo de importación, en MB (IMPORT_MAX_MB, 50 por defecto). */
+export function maxImportFileMb(): number {
+  return Math.max(1, Number.parseInt(process.env.IMPORT_MAX_MB ?? '300', 10) || 300);
+}
+
+export function maxImportFileBytes(): number {
+  return maxImportFileMb() * 1024 * 1024;
+}
+
+/** Tope duro del interceptor multipart; el límite real se valida en el servicio. */
+export const MAX_UPLOAD_GUARD_BYTES = 1024 * 1024 * 1024;
 
 export const BLOCKED_EXTENSIONS = new Set(['exe', 'dll', 'bin', 'zip', 'tar', 'gz', 'iso', 'so']);
 
@@ -202,12 +213,12 @@ export class ImportsService {
         'Falta el archivo en el campo "file".',
       );
     }
-    if (file.size > MAX_IMPORT_FILE_BYTES) {
+    if (file.size > maxImportFileBytes()) {
       throw apiException(
         'INVALID_IMPORT_FILE',
         400,
-        { maxBytes: MAX_IMPORT_FILE_BYTES, size: file.size },
-        'El archivo supera el límite de 10 MB.',
+        { maxBytes: maxImportFileBytes(), size: file.size },
+        `El archivo supera el límite de ${maxImportFileMb()} MB.`,
       );
     }
     if (!file.buffer || file.buffer.length === 0) {
@@ -294,6 +305,17 @@ export class ImportsService {
     });
     const issues = [...validation.issues, ...images.warnings];
 
+    // Postgres no acepta `\u0000` en columnas text: el OCR de PDF/imágenes a
+    // veces lo devuelve y hacía fallar la importación con 500. Se limpia todo
+    // lo que se persiste (productos, issues, mapeo, campos extra).
+    const datosSeguros = limpiarParaGuardar({
+      fileName: file.originalname ?? null,
+      mapping,
+      products: images.products,
+      issues,
+      extraFields,
+    });
+
     const persisted = await this.repo.persist({
       catalogId,
       versionId,
@@ -303,14 +325,14 @@ export class ImportsService {
       taxIncluded: options.taxIncluded,
       checksum,
       sourceFileId,
-      fileName: file.originalname ?? null,
-      mapping,
+      fileName: datosSeguros.fileName,
+      mapping: datosSeguros.mapping,
       totalRows: validation.totalRows,
       quarantineRows: validation.quarantineRows,
-      products: images.products,
-      issues,
+      products: datosSeguros.products,
+      issues: datosSeguros.issues,
       mode: plan.mode,
-      extraFields,
+      extraFields: datosSeguros.extraFields,
       templateId: matchedTemplate?.id ?? null,
     });
 

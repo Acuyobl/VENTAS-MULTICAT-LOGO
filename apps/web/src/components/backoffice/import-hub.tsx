@@ -52,7 +52,17 @@ export function ImportHub({ catalogs, canWrite }: ImportHubProps) {
     }
     if (createdCatalog) return createdCatalog;
 
-    const catalogName = name.trim() || 'Nuevo Catálogo';
+    // Si no hay nombre, se genera uno único para no chocar con un catálogo
+    // anterior (el backend rechaza nombres/slugs repetidos con 409).
+    const catalogName =
+      name.trim() ||
+      `Catálogo ${new Date().toLocaleString('es-CR', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })}`;
     const response = await fetch('/api/v1/catalogs', {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json' },

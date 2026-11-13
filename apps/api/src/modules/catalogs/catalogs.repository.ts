@@ -36,6 +36,20 @@ export class CatalogsRepository {
     });
   }
 
+  findCatalogByDriveFolder(organizationId: string, driveFolderId: string) {
+    return this.prisma.catalog.findFirst({
+      where: { organizationId, driveFolderId, deletedAt: null },
+      include: { activeVersion: true },
+    });
+  }
+
+  setDriveFolder(catalogId: string, driveFolderId: string) {
+    return this.prisma.catalog.update({
+      where: { id: catalogId },
+      data: { driveFolderId },
+    });
+  }
+
   findCatalogBySlug(organizationId: string, slug: string) {
     return this.prisma.catalog.findFirst({
       where: { organizationId, slug },
@@ -63,6 +77,20 @@ export class CatalogsRepository {
     return this.prisma.catalog.update({
       where: { id },
       data,
+    });
+  }
+
+  /** Conteo de productos por categoría dentro de una versión. */
+  listCategories(catalogId: string, versionId: string) {
+    return this.prisma.product.groupBy({
+      by: ['category'],
+      where: {
+        catalogId,
+        catalogVersionId: versionId,
+        isActive: true,
+        deletedAt: null,
+      },
+      _count: { _all: true },
     });
   }
 
