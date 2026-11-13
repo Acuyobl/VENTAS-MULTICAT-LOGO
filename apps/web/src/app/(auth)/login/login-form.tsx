@@ -357,7 +357,9 @@ export function LoginForm({ initialEmail, nextPath }: LoginFormProps) {
                       setManual(false);
                     }
                   }
-                } catch {}
+                } catch {
+                  // Autocompletado best-effort: si falla, el usuario escribe el código a mano.
+                }
               }}
             >
               Usar código vigente
