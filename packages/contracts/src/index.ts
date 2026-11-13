@@ -16,6 +16,8 @@ export * from './organizations/theme';
 export * from './reports/schemas';
 export * from './ai/schemas';
 export * from './ai/usage';
+export * from './approvals/schemas';
+export * from './routines/schemas';
 export * from './chat/schemas';
 export * from './finance/schemas';
 export * from './payments/gateways';

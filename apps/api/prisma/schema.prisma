@@ -149,6 +149,10 @@ model Organization {
   updatedAt             DateTime     @updatedAt @db.Timestamptz(3)
   memberships           Membership[]
   catalogs              Catalog[]
+  aiBudgetPolicy        AiBudgetPolicy?
+  budgetIncidents       AiBudgetIncident[]
+  approvalRequests      ApprovalRequest[]
+  routines              Routine[]
 
   @@map("organizations")
 }
@@ -955,4 +959,117 @@ model IdempotencyKey {
   @@unique([organizationId, key, scope])
   @@index([expiresAt])
   @@map("idempotency_keys")
+}
+
+// ---------------------------------------------------------------------------
+// Gobernanza: presupuesto de IA, aprobaciones y rutinas programadas
+// ---------------------------------------------------------------------------
+
+enum ApprovalStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum RoutineRunStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+  SKIPPED
+}
+
+enum BudgetIncidentKind {
+  WARNING
+  HARD_STOP
+}
+
+/// Presupuesto mensual de IA por organización. `monthlyBudgetMicroUsd = 0`
+/// significa "sin límite explícito": se usa la cuota en tokens del plan.
+model AiBudgetPolicy {
+  id                    String       @id @default(uuid(7)) @db.Uuid
+  organizationId        String       @unique @db.Uuid
+  monthlyBudgetMicroUsd Int          @default(0)
+  alertPercent          Int          @default(80)
+  hardStop              Boolean      @default(true)
+  updatedByUserId       String?      @db.Uuid
+  createdAt             DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime     @updatedAt @db.Timestamptz(3)
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("ai_budget_policies")
+}
+
+/// Evento de umbral alcanzado (aviso) o de corte (hard stop) en un período.
+model AiBudgetIncident {
+  id             String             @id @default(uuid(7)) @db.Uuid
+  organizationId String             @db.Uuid
+  period         String
+  kind           BudgetIncidentKind
+  spentMicroUsd  Int
+  limitMicroUsd  Int
+  createdAt      DateTime           @default(now()) @db.Timestamptz(3)
+  acknowledgedAt DateTime?          @db.Timestamptz(3)
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, period, kind])
+  @@index([organizationId, period])
+  @@map("ai_budget_incidents")
+}
+
+/// Solicitud de aprobación genérica para acciones con efecto (dinero, publicación).
+model ApprovalRequest {
+  id                String         @id @default(uuid(7)) @db.Uuid
+  organizationId    String         @db.Uuid
+  entityType        String
+  entityId          String
+  action            String
+  payload           Json?
+  status            ApprovalStatus @default(REQUESTED)
+  requestedByUserId String         @db.Uuid
+  decidedByUserId   String?        @db.Uuid
+  decisionNote      String?
+  decidedAt         DateTime?      @db.Timestamptz(3)
+  createdAt         DateTime       @default(now()) @db.Timestamptz(3)
+  organization      Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status, createdAt])
+  @@index([entityType, entityId])
+  @@map("approval_requests")
+}
+
+/// Rutina programada por organización (reporte de consumo, limpieza, vencimientos).
+model Routine {
+  id              String       @id @default(uuid(7)) @db.Uuid
+  organizationId  String       @db.Uuid
+  key             String
+  name            String
+  enabled         Boolean      @default(true)
+  intervalMinutes Int          @default(1440)
+  config          Json?
+  nextRunAt       DateTime     @db.Timestamptz(3)
+  lastRunAt       DateTime?    @db.Timestamptz(3)
+  createdAt       DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime     @updatedAt @db.Timestamptz(3)
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  runs            RoutineRun[]
+
+  @@unique([organizationId, key])
+  @@index([enabled, nextRunAt])
+  @@map("routines")
+}
+
+/// Ejecución concreta de una rutina, con su resultado o error.
+model RoutineRun {
+  id         String           @id @default(uuid(7)) @db.Uuid
+  routineId  String           @db.Uuid
+  status     RoutineRunStatus @default(RUNNING)
+  startedAt  DateTime         @default(now()) @db.Timestamptz(3)
+  finishedAt DateTime?        @db.Timestamptz(3)
+  output     Json?
+  error      String?
+  routine    Routine          @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  @@index([routineId, startedAt])
+  @@map("routine_runs")
 }

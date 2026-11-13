@@ -22,6 +22,10 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { HealthModule } from './modules/health/health.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
+import { AiGovernanceModule } from './modules/ai-governance/ai-governance.module';
+import { ApprovalsModule } from './modules/approvals/approvals.module';
+import { RoutinesModule } from './modules/routines/routines.module';
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { validateEnv } from './config/env.schema';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -89,6 +93,9 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     ExpensesModule,
     HealthModule,
     OutboxModule,
+    AiGovernanceModule,
+    ApprovalsModule,
+    RoutinesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
@@ -96,6 +103,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     { provide: APP_GUARD, useClass: AudienceGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
     { provide: APP_INTERCEPTOR, useClass: EncodingGuardInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
   ],
 })

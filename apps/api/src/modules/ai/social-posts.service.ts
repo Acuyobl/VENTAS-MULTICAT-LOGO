@@ -20,6 +20,7 @@ import type { ProductPhoto } from './image/image-provider';
 import { buildSocialPrompt, type SocialPromptProduct } from './prompt-builder';
 import { parseSocialPostText } from './social-post.parser';
 import { SocialPostsRepository } from './social-posts.repository';
+import { AiGovernanceService } from '../ai-governance/ai-governance.service';
 import { AppException } from '../../common/errors/app-exception';
 import { AuditService } from '../audit/audit.service';
 import { StorageService } from '../storage/storage.service';
@@ -34,6 +35,7 @@ export class SocialPostsService {
 
   constructor(
     private readonly repo: SocialPostsRepository,
+    private readonly governance: AiGovernanceService,
     private readonly providerFactory: AiProviderFactory,
     private readonly imageFactory: ImageProviderFactory,
     private readonly storage: StorageService,
@@ -73,23 +75,14 @@ export class SocialPostsService {
       extraInstructions: input.extraInstructions,
     });
 
-    const monthlyQuota = this.config.get<number>('AI_MONTHLY_QUOTA_TOKENS', 2_000_000);
-    if (monthlyQuota > 0) {
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
+    // Gobernanza: presupuesto de la organización (hard stop) o cuota de tokens
+    // del plan. Corta antes de gastar en el proveedor.
+    await this.governance.assertCanSpend(user.organizationId, 0, {
+      feature: 'social_post',
+      userId: user.id,
+    });
 
-      const consumedTokens = await this.repo.sumMonthlyTokens(user.organizationId, startOfMonth);
-
-      if (consumedTokens >= monthlyQuota) {
-        throw new AppException('RATE_LIMITED', 429, {
-          reason: 'ai_monthly_quota_exceeded',
-          consumedTokens,
-          monthlyQuota,
-        });
-      }
-    }
-
+    const startedAt = Date.now();
     const provider = this.providerFactory.createProvider();
     let completion;
     try {
@@ -113,6 +106,7 @@ export class SocialPostsService {
       throw new AppException('AI_PROVIDER_ERROR', 502, { provider: provider.name });
     }
 
+    const latencyMs = Date.now() - startedAt;
     const parsed = parseSocialPostText(completion.text);
     const pricing = {
       usdPer1kInput: this.config.get<number>('AI_USD_PER_1K_INPUT', 0.00027),
@@ -144,6 +138,22 @@ export class SocialPostsService {
       tokensIn: completion.usage.tokensIn,
       tokensOut: completion.usage.tokensOut,
       costMicroUsd,
+    });
+
+    // Libro de uso: una fila por llamada real al proveedor de texto.
+    await this.governance.record({
+      organizationId: user.organizationId,
+      feature: 'social_post',
+      provider: completion.provider,
+      model: completion.model,
+      promptTemplateKey: prompt.templateKey,
+      promptVersion: prompt.version,
+      tokensIn: completion.usage.tokensIn,
+      tokensOut: completion.usage.tokensOut,
+      costMicroUsd,
+      latencyMs,
+      userId: user.id,
+      socialPostId: post.id,
     });
 
     await this.audit.write({
@@ -244,6 +254,14 @@ export class SocialPostsService {
     design: ImageDesignKey,
     meta: AuditMeta,
   ): Promise<SocialPostRow> {
+    // La imagen también gasta: respeta el mismo presupuesto/cuota.
+    await this.governance.assertCanSpend(user.organizationId, 0, {
+      feature: 'image',
+      userId: user.id,
+      socialPostId: post.id,
+    });
+
+    const startedAt = Date.now();
     const provider = this.imageFactory.createProvider();
     const imagePrompt = buildImagePrompt({ post, products, customPrompt, design });
     const productImage = await this.loadProductPhoto(products);
@@ -254,6 +272,14 @@ export class SocialPostsService {
       productImage,
       design,
     });
+    const latencyMs = Date.now() - startedAt;
+    // El contrato `GeneratedImage` todavía no expone costo; si un proveedor lo
+    // devuelve lo registramos, y si no se asume 0.
+    const generatedCost = (generated as { costMicroUsd?: number }).costMicroUsd;
+    const imageCostMicroUsd =
+      typeof generatedCost === 'number' && Number.isFinite(generatedCost)
+        ? Math.max(0, Math.round(generatedCost))
+        : 0;
 
     const key = `${IMAGE_KEY_PREFIX}/${user.organizationId}/${post.id}.${generated.ext}`;
     await this.storage.putPublicObject(key, generated.buffer, generated.contentType);
@@ -263,6 +289,22 @@ export class SocialPostsService {
       imageProvider: provider.name,
       imageModel: provider.model,
       imageDesign: design,
+    });
+
+    // Libro de uso: una fila por imagen generada (feature 'image').
+    await this.governance.record({
+      organizationId: user.organizationId,
+      feature: 'image',
+      provider: provider.name,
+      model: provider.model,
+      promptTemplateKey: `image.${design}`,
+      promptVersion: 1,
+      tokensIn: 0,
+      tokensOut: 0,
+      costMicroUsd: imageCostMicroUsd,
+      latencyMs,
+      userId: user.id,
+      socialPostId: post.id,
     });
 
     await this.audit.write({
