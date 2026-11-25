@@ -45,6 +45,9 @@ graphify-out/.graphify_partial.txt
 # Prisma
 apps/api/prisma/*.db
 
+# Datos de ejecución de la API (sesiones de WhatsApp / Baileys)
+apps/api/.data/
+
 # OCR: modelos descargados por tesseract.js
 *.traineddata
 .tesseract-cache/

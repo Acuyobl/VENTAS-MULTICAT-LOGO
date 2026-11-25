@@ -37,6 +37,7 @@ en orden, pero cada uno sirve por separado.
 | 11 | [Posicionamiento](11-POSICIONAMIENTO.md) | Frase norte «Subí tu catálogo como sea», anatomía de la promesa y hoja de ruta | 70 | 10 min |
 | 12 | [Pendientes por pasos](12-PENDIENTES.md) | Backlog priorizado (P0/P1/P2) con pasos, aceptación, esfuerzo y bloqueos de credenciales | 150 | 15 min |
 | 13 | [Importar desde link](13-IMPORTAR-DESDE-LINK.md) | Cómo cargar un catálogo pegando un link de Drive o una URL directa; endpoints y límites | 95 | 5 min |
+| 14 | [Plantilla de prompt — consumo IA](14-PLANTILLA-PROMPT-CONSUMO-IA.md) | Cómo aplicar el patrón de gobernanza de `/panel/consumo-ia` a cualquier proceso: prompt copiable, invariantes y criterios de aceptación | 242 | 10 min |
 
 Además, [`CHANGELOG.md`](../CHANGELOG.md) resume los hitos desde `v0.1.0` hasta `v0.2.9`, y
 [`catalogs/`](../catalogs/README.md) contiene los 5 catálogos de ejemplo cargables.
